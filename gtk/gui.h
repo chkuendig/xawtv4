@@ -41,6 +41,8 @@ void gtk_screensaver_disable(Display *dpy);
 void gtk_screensaver_enable(Display *dpy);
 void gtk_unclutter(GtkWidget *widget);
 
+void gtk_redirect_stderr_to_gui(GtkWindow *parent);
+
 gint gtk_sort_iter_compare_int(GtkTreeModel *model,
 			       GtkTreeIter  *a,
 			       GtkTreeIter  *b,

@@ -199,6 +199,8 @@ main(int argc, char **argv)
     if (!tty && gtk_init_check(&argc, &argv)) {
 	/* x11 */
 	mtt_device_init(0,0);
+	if (!debug)
+	    gtk_redirect_stderr_to_gui(NULL);
 	vbi = vbi_open(vbidev,debug,sim);
 	if (NULL == vbi)
 	    exit(1);

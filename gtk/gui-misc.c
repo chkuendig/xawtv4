@@ -222,6 +222,94 @@ void gtk_unclutter(GtkWidget *widget)
 
 /* ---------------------------------------------------------------------------- */
 
+struct stderr_handler {
+    GtkWidget  *win,*label;
+    char       *messages;
+    size_t     msgsize;
+    int        pipe_stderr;
+    int        real_stderr;
+    GIOChannel *ch;
+    guint      id;
+};
+
+static gboolean
+stderr_data(GIOChannel *source, GIOCondition condition,
+	    gpointer data)
+{
+    struct stderr_handler *h = data;
+    char buf[1024];
+    int rc;
+    
+    rc = read(h->pipe_stderr,buf,sizeof(buf)-1);
+    if (rc <= 0) {
+	/* shouldn't happen */
+	dup2(h->real_stderr,2);
+	close(h->pipe_stderr);
+	close(h->real_stderr);
+	gtk_widget_destroy(h->win);
+	free(h);
+	fprintf(stderr,"Oops: stderr redirection broke\n");
+	return FALSE;
+    }
+    buf[rc] = 0;
+
+    h->messages = realloc(h->messages,h->msgsize+rc);
+    if (!h->messages) {
+	/* oom */
+	h->msgsize = 0;
+	return TRUE;
+    }
+    strcpy(h->messages+h->msgsize,buf);
+    h->msgsize += rc;
+
+    gtk_label_set_text(GTK_LABEL(h->label),h->messages);
+    gtk_widget_show_all(h->win);
+    return TRUE;
+}
+
+static void stderr_hide(GtkDialog *dialog, gint arg1, gpointer user_data)
+{
+    struct stderr_handler *h = user_data;
+
+    if (h->messages) {
+	free(h->messages);
+	h->messages = NULL;
+	h->msgsize  = 0;
+    }
+    gtk_widget_hide(h->win);
+}
+
+void gtk_redirect_stderr_to_gui(GtkWindow *parent)
+{
+    struct stderr_handler *h;
+    GtkBox *box;
+    int p[2];
+
+    h = malloc(sizeof(*h));
+    memset(h,0,sizeof(*h));
+
+    h->win = gtk_dialog_new_with_buttons("stderr messages", parent, 0,
+					 GTK_STOCK_OK, GTK_RESPONSE_OK,
+					 NULL);
+    box = GTK_BOX(GTK_DIALOG(h->win)->vbox);
+    gtk_box_set_spacing(box, SPACING);
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+    h->label = gtk_label_new("");
+    gtk_box_pack_start(box, h->label, TRUE, TRUE, 0);
+    g_signal_connect(h->win, "response", G_CALLBACK(stderr_hide), h);
+
+    pipe(p);
+    h->pipe_stderr = p[0];
+    h->real_stderr = dup(2);
+    dup2(p[1],2);
+    close(p[1]);
+
+    h->ch = g_io_channel_unix_new(h->pipe_stderr);
+    h->id = g_io_add_watch(h->ch, G_IO_IN, stderr_data, h);
+}
+
+/* ---------------------------------------------------------------------------- */
+
 static void dialog_destroy(GtkDialog *dialog,
 			   gint arg1,
 			   gpointer user_data)

@@ -109,6 +109,8 @@ main(int argc, char *argv[])
 	/* setup gtk gui */
 	dvbscan_create_window(1);
 	gtk_widget_show_all(dvbscan_win);
+	if (!debug)
+	    gtk_redirect_stderr_to_gui(GTK_WINDOW(dvbscan_win));
     } else {
 	/* enter tty mode */
 	fprintf(stderr,"can't open display\n");

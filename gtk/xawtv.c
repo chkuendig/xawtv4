@@ -1014,6 +1014,8 @@ main(int argc, char *argv[])
 	gtk_window_set_default_size(GTK_WINDOW(main_win), 320, 240);
     gtk_widget_show(main_win);
     gtk_unclutter(video);
+    if (!debug)
+	gtk_redirect_stderr_to_gui(GTK_WINDOW(main_win));
 
     gc = gdk_gc_new(video->window);
     logo = gdk_pixmap_create_from_xpm_d(video->window,

@@ -46,7 +46,7 @@
 #include "dvb-monitor.h"
 #include "gui.h"
 
-#define APPNAME "radio" // FIXME
+#define APPNAME "dvbradio"
 
 /* ------------------------------------------------------------------------ */
 
@@ -501,6 +501,7 @@ main(int argc, char *argv[])
 	/* gtk window */
 	create_window();
 	gtk_widget_show_all(main_win);
+	gtk_redirect_stderr_to_gui(GTK_WINDOW(main_win));
     }
 
     /* enter main loop */
