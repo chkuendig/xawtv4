@@ -323,9 +323,16 @@ resize_event(Widget widget, XtPointer client_data, XEvent *event, Boolean *d)
 	break;
     }
 #else
-    /* trigger reconfigure */
-    if (DISPLAY_GRAB == display_mode)
+    switch (display_mode) {
+    case DISPLAY_OVERLAY:
+    case DISPLAY_GRAB:
+	/* trigger reconfigure */
 	command_pending++;
+	break;
+    default:
+	/* nothing */
+	break;
+    };
 #endif
 }
 

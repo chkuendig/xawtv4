@@ -972,6 +972,8 @@ grabber_init(char *dev)
 	    do_va_cmd(2,"setinput",val);
 	if (devs.video.flags & CAN_CAPTURE)
 	    display_mode = DISPLAY_GRAB;
+	if (devs.video.flags & CAN_OVERLAY)
+	    display_mode = DISPLAY_OVERLAY;
 
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
@@ -1046,7 +1048,13 @@ usage(void)
 	    "  -f  -fullscreen     startup in fullscreen mode\n");
 
     fprintf(stderr,"\n");
+    cfg_help_cmdline(cmd_opts_devices,6,16);
+
+    fprintf(stderr,"\n");
     cfg_help_cmdline(cmd_opts_x11,6,16);
+
+    fprintf(stderr,"\n");
+    cfg_help_cmdline(cmd_opts_record,6,16);
     
     fprintf(stderr,
 	    "\n"
@@ -1092,6 +1100,8 @@ handle_cmdline_args(int *argc, char **argv)
     }
 
     cfg_parse_cmdline(argc,argv,cmd_opts_x11);
+    cfg_parse_cmdline(argc,argv,cmd_opts_record);
+    cfg_parse_cmdline(argc,argv,cmd_opts_devices);
     if (args.writeconfig)
 	write_config_file("options");
 
@@ -1442,6 +1452,37 @@ grabdisplay_loop(Widget widget, struct blit_handle *blit)
     return;
 }
 
+static void
+overlay_loop(Widget widget)
+{
+    Dimension width, height;
+    fd_set rd;
+
+    /* video setup */
+    ng_dev_open(&devs.video);
+    
+    /* go start overlay */
+    XtVaGetValues(widget, XtNwidth,&width, XtNheight,&height, NULL);
+    devs.video.v->overlay(devs.video.handle,1,1,
+			  XtWindow(widget), width, height);
+    for (;;) {
+	XtInputMask x11mask;
+	while (0 != (x11mask = XtAppPending(app_context)))
+	    XtAppProcessEvent(app_context,x11mask);
+	if (command_pending)
+	    break;
+	FD_ZERO(&rd);
+	FD_SET(ConnectionNumber(dpy),&rd);
+	select(ConnectionNumber(dpy)+1,&rd,NULL,NULL,NULL);
+    }
+    devs.video.v->overlay(devs.video.handle,0,1,
+			  XtWindow(widget), width, height);
+
+    /* cleanup */
+    ng_dev_close(&devs.video);
+    return;
+}
+
 #ifdef HAVE_DVB
 
 static void
@@ -1534,6 +1575,10 @@ int xt_main_loop()
 	case DISPLAY_NONE:
 	    if (debug)
 		fprintf(stderr,"display mode \"none\"\n");
+	    break;
+	case DISPLAY_OVERLAY:
+	    if (devs.video.type != NG_DEV_NONE)
+		overlay_loop(tv);
 	    break;
 	case DISPLAY_GRAB:
 	    if (devs.video.type != NG_DEV_NONE)

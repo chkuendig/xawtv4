@@ -46,10 +46,12 @@ static struct ng_attribute* v4l2_attrs(void *handle);
 static int     v4l2_read_attr(struct ng_attribute*);
 static void    v4l2_write_attr(struct ng_attribute*, int val);
 
+#if 0
 /* overlay */
 static int   v4l2_setupfb(void *handle, struct ng_video_fmt *fmt, void *base);
 static int   v4l2_overlay(void *handle, struct ng_video_fmt *fmt, int x, int y,
 			  struct OVERLAY_CLIP *oc, int count, int aspect);
+#endif
 
 /* capture video */
 static int v4l2_setformat(void *handle, struct ng_video_fmt *fmt);
@@ -127,8 +129,10 @@ struct ng_vid_driver v4l2_driver = {
     .capabilities  = v4l2_flags,
     .list_attrs    = v4l2_attrs,
 
+#if 0
     .setupfb       = v4l2_setupfb,
     .overlay       = v4l2_overlay,
+#endif
 
     .setformat     = v4l2_setformat,
     .startvideo    = v4l2_startvideo,
@@ -597,8 +601,10 @@ static int v4l2_flags(void *handle)
     struct v4l2_handle *h = handle;
     int ret = 0;
 
+#if 0
     if (h->cap.capabilities & V4L2_CAP_VIDEO_OVERLAY && !h->ov_error)
 	ret |= CAN_OVERLAY;
+#endif
     if (h->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)
 	ret |= CAN_CAPTURE;
     if (h->cap.capabilities & V4L2_CAP_TUNER)
@@ -657,6 +663,8 @@ v4l2_tuned(void *handle)
 
 /* ---------------------------------------------------------------------- */
 /* overlay                                                                */
+
+#if 0
 
 static int
 v4l2_setupfb(void *handle, struct ng_video_fmt *fmt, void *base)
@@ -784,6 +792,8 @@ v4l2_overlay(void *handle, struct ng_video_fmt *fmt, int x, int y,
 
     return 0;
 }
+
+#endif
 
 /* ---------------------------------------------------------------------- */
 /* capture helpers                                                        */

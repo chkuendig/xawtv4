@@ -2,3 +2,4 @@ dvb-signal
 probe
 xvideo
 sysfs
+alsamixer

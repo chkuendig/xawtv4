@@ -464,14 +464,20 @@ mixer_channels(char *device)
 	 elem = snd_mixer_elem_next(elem)) {
 	if (!snd_mixer_selem_is_active(elem))
 	    continue;
-	snd_mixer_selem_get_id(elem,sid);
+	if (snd_mixer_selem_is_enumerated(elem))
+	    continue;
+	if (!snd_mixer_selem_has_playback_volume(elem) &&
+	    !snd_mixer_selem_has_capture_volume(elem))
+	    continue;
 
+	snd_mixer_selem_get_id(elem,sid);
 	info = realloc(info,sizeof(*info) * (n+2));
 	memset(info+n,0,sizeof(*info)*2);
 	snprintf(info[n].device, sizeof(info[n].device), "%d", n);
-	snprintf(info[n].name, sizeof(info[n].name), "%s,%d",
+	snprintf(info[n].name, sizeof(info[n].name), "%s [%s%s]",
 		 snd_mixer_selem_id_get_name(sid),
-		 snd_mixer_selem_id_get_index(sid));
+		 snd_mixer_selem_has_playback_volume(elem) ? "play" : "",
+		 snd_mixer_selem_has_capture_volume(elem)  ? "rec"  : "");
 	n++;
     }
     

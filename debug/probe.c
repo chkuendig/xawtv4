@@ -6,12 +6,16 @@
 #include <errno.h>
 #include <string.h>
 
+#include <X11/Xlib.h>
+
 #include "grab-ng.h"
 #include "devs.h"
 #include "dvb.h"
+#include "atoms.h"
 
 int verbose;
 int debug;
+Display *dpy;
 
 /* ------------------------------------------------------------------ */
 
@@ -110,48 +114,13 @@ print_mix(struct ng_mix_driver *mix)
     return 0;
 }
 
-/* ------------------------------------------------------------------ */
-
-static void
-usage(FILE *out)
-{
-    fprintf(out,
-	    "debug tool -- probe devices\n"
-	    "\n"
-	    "options:\n"
-	    "  -h          print this help text\n"
-	    "  -v          be verbose\n"
-	    "  -d          debug messages\n");
-};
-
-int main(int argc, char *argv[])
+static int print_devices(void)
 {
     struct list_head *item;
     struct ng_mix_driver *mix;
     struct ng_dsp_driver *dsp;
     struct ng_vid_driver *vid;
-    int c;
 
-    ng_init();
-    for (;;) {
-	if (-1 == (c = getopt(argc, argv, "hvd")))
-	    break;
-	switch (c) {
-	case 'v':
-	    verbose = 1;
-	    break;
-	case 'd':
-	    debug = 1;
-	    break;
-	case 'h':
-	    usage(stdout);
-	    exit(0);
-	default:
-	    usage(stderr);
-	    exit(1);
-	}
-    }
-    
     /* dvb devices */
     fprintf(stderr,"probing dvb devices ...\n");
     print_dvb();
@@ -192,6 +161,52 @@ int main(int argc, char *argv[])
 	print_mix(mix);
     }
     fprintf(stderr,"\n");
+}
 
+/* ------------------------------------------------------------------ */
+
+static void
+usage(FILE *out)
+{
+    fprintf(out,
+	    "debug tool -- probe devices\n"
+	    "\n"
+	    "options:\n"
+	    "  -h          print this help text\n"
+	    "  -v          be verbose\n"
+	    "  -d          debug messages\n");
+};
+
+int main(int argc, char *argv[])
+{
+    int c;
+
+    ng_init();
+    for (;;) {
+	if (-1 == (c = getopt(argc, argv, "hvd")))
+	    break;
+	switch (c) {
+	case 'v':
+	    verbose = 1;
+	    break;
+	case 'd':
+	    debug = 1;
+	    break;
+	case 'h':
+	    usage(stdout);
+	    exit(0);
+	default:
+	    usage(stderr);
+	    exit(1);
+	}
+    }
+
+    /* init X11 for xvideo ports */
+    dpy = XOpenDisplay(NULL);
+    if (dpy) {
+	init_atoms(dpy);
+    }
+
+    print_devices();
     return 0;
 }

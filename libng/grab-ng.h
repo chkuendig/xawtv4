@@ -346,11 +346,16 @@ struct ng_vid_driver {
     /* attributes */
     int   (*capabilities)(void *handle);
     struct ng_attribute* (*list_attrs)(void *handle);
-    
+
+#if 0
     /* overlay */
     int   (*setupfb)(void *handle, struct ng_video_fmt *fmt, void *base);
     int   (*overlay)(void *handle, struct ng_video_fmt *fmt, int x, int y,
 		     struct OVERLAY_CLIP *oc, int count, int aspect);
+#else
+    int   (*overlay)(void *handle,  int enable, int aspect,
+		     long window, int dw, int dh);
+#endif
     
     /* capture */
     int   (*setformat)(void *handle, struct ng_video_fmt *fmt);
@@ -561,8 +566,6 @@ struct ng_video_conv* ng_conv_find_from(unsigned int out, int *i);
 struct ng_video_conv* ng_conv_find_match(unsigned int in, unsigned int out);
 
 int ng_vid_init(char *device, struct ng_devstate *dev);
-int ng_vid_screen(struct ng_devstate *dev, struct ng_video_fmt *screen,
-		  void *base);
 
 int ng_dsp_init(char *device, struct ng_devstate *dev, int record);
 struct ng_attribute* ng_mix_init(char *device, char *channel);

@@ -17,6 +17,8 @@ extern enum display_mode display_mode;
 extern enum tuning_mode  tuning_mode;
 
 extern struct cfg_cmdline cmd_opts_x11[];
+extern struct cfg_cmdline cmd_opts_record[];
+extern struct cfg_cmdline cmd_opts_devices[];
 
 /* ----------------------------------------------------------------------- */
 

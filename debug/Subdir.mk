@@ -12,9 +12,15 @@ ifeq ($(FOUND_DVB),yes)
 TARGETS-debug += \
 	debug/dvb-signal
 endif
+ifeq ($(FOUND_ALSA),yes)
+TARGETS-debug += \
+	debug/alsamixer
+endif
 
 debug/probe: \
 	debug/probe.o \
+	x11/xv.o \
+	x11/atoms.o \
 	$(OBJS-dvb) \
 	common/devs.o \
 	common/parseconfig.o \
@@ -28,8 +34,9 @@ debug/dvb-signal: \
 
 debug/xvideo: debug/xvideo.o
 
-debug/probe      : LDLIBS  += -ljpeg -lm
+debug/probe      : LDLIBS  += $(ATHENA_LIBS) -ljpeg -lm
 debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
+debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)
 
 debug/probe      : LDFLAGS += $(DLFLAGS)
 debug/dvb-signal : LDFLAGS += $(DLFLAGS)

@@ -2,6 +2,8 @@
  * device and device attribute handling
  */
 
+#define _GNU_SOURCE
+
 #include "config.h"
 
 #include <stdio.h>
@@ -102,7 +104,7 @@ static void device_print_line(char *name, char *entry, int def)
 
 static void device_print(char *name, int add)
 {
-    fprintf(stderr,"   device configuration \"%s\"%s:\n",
+    fprintf(stderr,"device configuration \"%s\"%s:\n",
 	    name, add ? " (NEW)" : "");
     device_print_line(name, "bus",     0);
     device_print_line(name, "video",   0);
@@ -490,12 +492,20 @@ int device_fini()
 
 int device_init(char *name)
 {
-    char *device;
+    char *device, *list;
     int err;
 
     memset(&devs,0,sizeof(devs));
     if (NULL == name)
 	name = cfg_sections_first("devs");
+
+    if (0 == cfg_entries_count("devs",name))
+	cfg_sections_for_each("devs",list)
+	    if (NULL != strcasestr(list,name))
+		name = list;
+    
+    fprintf(stderr,"using: ");
+    device_print(name,0);
 
     /* video4linux */
     device = cfg_get_str("devs", name, "video");
@@ -531,3 +541,5 @@ int device_init(char *name)
     device_fini();
     return err;
 }
+
+/* ------------------------------------------------------------------------------ */

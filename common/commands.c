@@ -401,20 +401,6 @@ audio_off(void)
 
 /* ----------------------------------------------------------------------- */
 
-#ifndef HAVE_STRCASESTR
-static char* strcasestr(char *haystack, char *needle)
-{
-    int hlen = strlen(haystack);
-    int nlen = strlen(needle);
-    int offset;
-
-    for (offset = 0; offset <= hlen - nlen; offset++)
-	if (0 == strncasecmp(haystack+offset,needle,nlen))
-	    return haystack+offset;
-    return NULL;
-}
-#endif
-
 static int tuning_handler(char *name, int argc, char **argv)
 {
     struct ng_attribute *mute;
@@ -434,24 +420,29 @@ static int tuning_handler(char *name, int argc, char **argv)
 	newfreq = (unsigned long)(atof(argv[0])*16);
 
     if (0 == strcasecmp("setchannel",name)) {
-	if (0 == strcasecmp(argv[0],"next") && curr_channel) {
-	    newchannel = cfg_sections_next(freqtab,curr_channel);
+	if (NULL == freqtab) {
+	    fprintf(stderr,"can't tune channels: freqtab not set (yet)\n");
+	} else if (0 == strcasecmp(argv[0],"next")) {
+	    if (curr_channel)
+		newchannel = cfg_sections_next(freqtab,curr_channel);
 	    if (NULL == newchannel)
-		/* wrap around */
+		/* wrap around and no current channel */
 		newchannel = cfg_sections_first(freqtab);
 	} else if (0 == strcasecmp(argv[0],"prev") && curr_channel) {
 	    newchannel = cfg_sections_prev(freqtab,curr_channel);
 	} else {
 	    newchannel = argv[0];
 	}
-	newstation = cfg_search("stations",NULL,"channel",newchannel);
+	if (newchannel)
+	    newstation = cfg_search("stations",NULL,"channel",newchannel);
     }
 
     if (0 == strcasecmp("setstation",name)) {
-	if (0 == strcasecmp(argv[0],"next") && curr_station) {
-	    newstation = cfg_sections_next("stations", curr_station);
+	if (0 == strcasecmp(argv[0],"next")) {
+	    if (curr_station)
+		newstation = cfg_sections_next("stations", curr_station);
 	    if (NULL == newstation)
-		/* wrap around */
+		/* wrap around and no current station */
 		newstation = cfg_sections_first("stations");
 	} else if (0 == strcasecmp(argv[0],"prev") && curr_station) {
 	    newstation = cfg_sections_prev("stations", curr_station);

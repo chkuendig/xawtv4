@@ -47,10 +47,12 @@ static struct ng_attribute* v4l_attrs(void *handle);
 static int     v4l_read_attr(struct ng_attribute*);
 static void    v4l_write_attr(struct ng_attribute*, int val);
 
+#if 0
 /* overlay */
 static int   v4l_setupfb(void *handle, struct ng_video_fmt *fmt, void *base);
 static int   v4l_overlay(void *handle, struct ng_video_fmt *fmt, int x, int y,
 			 struct OVERLAY_CLIP *oc, int count, int aspect);
+#endif
 
 /* capture video */
 static int v4l_setformat(void *handle, struct ng_video_fmt *fmt);
@@ -117,8 +119,10 @@ static unsigned short format2palette[VIDEO_FMT_COUNT] = {
     [ VIDEO_YUV420P ]  = VIDEO_PALETTE_YUV420P,
 };
 
+#if 0
 /* pass 0/1 by reference */
 static int                      one = 1, zero = 0;
+#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -171,7 +175,7 @@ struct v4l_handle {
 
 struct ng_vid_driver v4l_driver = {
     .name          = "v4l",
-
+    
     .init          = v4l_init,
     .open          = v4l_open,
     .close         = v4l_close,
@@ -181,9 +185,11 @@ struct ng_vid_driver v4l_driver = {
     
     .capabilities  = v4l_flags,
     .list_attrs    = v4l_attrs,
-    
+
+#if 0
     .setupfb       = v4l_setupfb,
     .overlay       = v4l_overlay,
+#endif
     
     .setformat     = v4l_setformat,
     .startvideo    = v4l_startvideo,
@@ -575,8 +581,10 @@ static int v4l_flags(void *handle)
     struct v4l_handle *h = handle;
     int ret = 0;
 
+#if 0
     if (h->capability.type & VID_TYPE_OVERLAY)
 	ret |= CAN_OVERLAY;
+#endif
     if (h->capability.type & VID_TYPE_CAPTURE &&
 	!h->ov_error)
 	ret |= CAN_CAPTURE;
@@ -771,6 +779,8 @@ v4l_tuned(void *handle)
 /* ---------------------------------------------------------------------- */
 /* do overlay                                                             */
 
+#if 0
+
 int
 v4l_setupfb(void *handle, struct ng_video_fmt *fmt, void *base)
 {
@@ -939,6 +949,16 @@ v4l_overlay(void *handle, struct ng_video_fmt *fmt, int x, int y,
 		fmt->width,fmt->height,x,y,count);
     return 0;
 }
+
+#else
+
+static void
+v4l_overlay_set(struct v4l_handle *h, int state)
+{
+    /* dummy */
+}
+
+#endif
 
 /* ---------------------------------------------------------------------- */
 

@@ -636,29 +636,6 @@ int ng_vid_init(char *device, struct ng_devstate *dev)
     return 0;
 }
 
-int ng_vid_screen(struct ng_devstate *dev, struct ng_video_fmt *screen, void *base)
-{
-    if (!(dev->flags & CAN_OVERLAY))
-	return -1;
-
-#ifdef __linux__
-    switch (system(ng_v4l_conf)) {
-    case -1: /* can't run */
-	fprintf(stderr,"could'nt start v4l-conf\n");
-	break;
-    case 0: /* ok */
-	break;
-    default: /* non-zero return */
-	fprintf(stderr,"v4l-conf had some trouble, "
-		"trying to continue anyway\n");
-	break;
-    }
-#endif
-
-    dev->v->setupfb(dev->handle,screen,base);
-    return 0;
-}
-
 int ng_dsp_init(char *device, struct ng_devstate *dev, int record)
 {
     struct list_head *item;

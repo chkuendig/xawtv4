@@ -43,9 +43,9 @@ struct ng_video_filter *cur_filter;
 
 /* ----------------------------------------------------------------------- */
 
+/* x11 apps */
 struct cfg_cmdline cmd_opts_x11[] = {
     {
-	/* x11 extentions */
 	.cmdline = "randr",
 	.option  = { O_EXT_XRANDR },
 	.yesno   = 1,
@@ -66,8 +66,13 @@ struct cfg_cmdline cmd_opts_x11[] = {
 	.yesno   = 1,
 	.desc    = "enable/disable OpenGL (via GLX extention)",
     },{
+	/* end of list */
+    }
+};
 
-	/* misc other */
+/* recording */
+struct cfg_cmdline cmd_opts_record[] = {
+    {
 	.cmdline  = "bufcount",
 	.option   = { O_REC_BUFCOUNT },
 	.needsarg = 1,
@@ -77,6 +82,38 @@ struct cfg_cmdline cmd_opts_x11[] = {
 	.option   = { O_REC_THREADS },
 	.needsarg = 1,
 	.desc     = "number of compression threads (for capture)",
+    },{
+	/* end of list */
+    }
+};
+
+/* devices */
+struct cfg_cmdline cmd_opts_devices[] = {
+    {
+	.cmdline  = "video",
+	.option   = { "devs", "cmdline", "video" },
+	.needsarg = 1,
+	.desc     = "video4linux device",
+    },{
+	.cmdline  = "vbi",
+	.option   = { "devs", "cmdline", "vbi" },
+	.needsarg = 1,
+	.desc     = "vbi device",
+    },{
+	.cmdline  = "dvb",
+	.option   = { "devs", "cmdline", "dvb" },
+	.needsarg = 1,
+	.desc     = "dvb adapter",
+    },{
+	.cmdline  = "sndrec",
+	.option   = { "devs", "cmdline", "sndrec" },
+	.needsarg = 1,
+	.desc     = "sound device (for recording)",
+    },{
+	.cmdline  = "sndplay",
+	.option   = { "devs", "cmdline", "sndplay" },
+	.needsarg = 1,
+	.desc     = "sound device (for playback)",
     },{
 	/* end of list */
     }
