@@ -389,7 +389,7 @@ dnl ---------------------------------------------------------------------
 dnl write out stuff
 AC_OUTPUT(Makefile xawtv.spec)
 for dir in \
-	common console debug fonts jwz libvbi vbistuff x11 structs \
+	common console debug jwz vbistuff x11 structs \
 	libng libng/plugins libng/contrib-plugins mk
 do
 	test -d $dir && continue

@@ -108,7 +108,7 @@ Makefile: $(srcdir)/Makefile.in $(srcdir)/configure
 	$(srcdir)/configure
 
 $(srcdir)/configure: $(srcdir)/configure.ac
-	(cd $(srcdir); autoconf && autoheader && rm -rf autom4te.cache)
+	(cd $(srcdir); ./autogen.sh)
 
 install:: all
 	$(INSTALL_DIR) $(bindir)
