@@ -845,10 +845,13 @@ usage(void)
     fprintf(stderr,
 #if 0
 	    "station:\n"
-	    "  this is one of the stations listed in $HOME/.xawtv\n"
+	    "  this is one of the stations listed in $HOME/.tv/stations\n"
 	    "\n"
 #endif
+#if 0
+	    /* outdated right now, so don't confuse users */
 	    "Check the manual page for a more detailed description.\n"
+#endif
 	    "\n"
 	    "--\n"
 	    "Gerd Knorr <kraxel@bytesex.org>\n");
