@@ -461,12 +461,21 @@ static void xv_image_init(Display *dpy)
 	return;
     }
     for (i = 0; i < adaptors; i++) {
-	if ((ai[i].type & XvInputMask) &&
-	    (ai[i].type & XvImageMask) &&
-	    (im_port == UNSET)) {
-	    im_port = ai[i].base_id;
-	    im_adaptor = i;
+	if (!(ai[i].type & XvInputMask))
+	    continue;
+	if (!(ai[i].type & XvImageMask))
+	    continue;
+	if (Success != XvGrabPort(dpy,ai[i].base_id,CurrentTime)) {
+	    if (debug)
+		fprintf(stderr, "blit: xv: can't grab port %ld\n",
+			ai[i].base_id);
+	    continue;
 	}
+	if (debug)
+	    fprintf(stderr, "blit: xv: grabbed port %ld\n", ai[i].base_id);
+	im_port = ai[i].base_id;
+	im_adaptor = i;
+	break;
     }
     if (UNSET == im_port)
 	return;
