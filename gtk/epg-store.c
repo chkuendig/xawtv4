@@ -413,7 +413,10 @@ static gboolean is_visible(EpgStore *st, struct epgitem *epg, time_t now)
 {
     gboolean matches = FALSE;
     gboolean playing = FALSE;
+    gboolean stale = FALSE;
 
+    if (epg->stop < now)
+	stale = TRUE;
     if (epg->start <= now && epg->stop > now)
 	playing = TRUE;
     if (epg->playing != playing) {
@@ -423,14 +426,14 @@ static gboolean is_visible(EpgStore *st, struct epgitem *epg, time_t now)
 
     switch (st->filter_type) {
     case EPG_FILTER_NOFILTER:
-	matches = TRUE;
+	matches = !stale;
 	break;
     case EPG_FILTER_NOW:
 	matches = playing;
 	break;
     case EPG_FILTER_STATION:
 	if (epg->tsid == st->filter_tsid && epg->pnr == st->filter_pnr)
-	    matches = TRUE;
+	    matches = !stale;
 	break;
     case EPG_FILTER_NEXT:
     case EPG_FILTER_TEXT:

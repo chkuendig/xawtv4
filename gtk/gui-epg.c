@@ -14,13 +14,13 @@
 #include "gui.h"
 #include "epg-store.h"
 
-GtkWidget* epg_win;
+GtkWidget *epg_win;
+GtkWidget *epg_status;
 
 static int standalone;
 
-static GtkWidget* epg_textview;
-static GtkWidget* epg_treeview;
-static GtkWidget* epg_status;
+static GtkWidget *epg_textview;
+static GtkWidget *epg_treeview;
 
 static EpgStore *epg_store;
 
@@ -227,7 +227,7 @@ void create_epgwin(GtkWindow* parent)
 
     /* status line */
     epg_status = gtk_widget_new(GTK_TYPE_LABEL,
-				"label",  "not used (yet) status line",
+				"label",  "Ready.",
 				"xalign", 0.0,
 				NULL);
 
@@ -426,13 +426,7 @@ void epgwin_show(struct epgitem* epg)
 
 static void do_refresh(void)
 {
-    char buf[32];
-    int n;
-
     epg_store_refresh(epg_store);
-    n = gtk_tree_model_iter_n_children(GTK_TREE_MODEL(epg_store), NULL);
-    snprintf(buf,sizeof(buf),"%d entries",n);
-    gtk_label_set_label(GTK_LABEL(epg_status),buf);
 }
 
 static void do_filter(enum epg_filter type)

@@ -91,6 +91,8 @@ static gboolean tune_timeout(gpointer data)
 {
     static time_t last_tune;
     static char *list = NULL;
+    static int n;
+    char buf[64];
 
     if (list) {
 	if (time(NULL) - last_tune < tune_secs)
@@ -98,9 +100,12 @@ static gboolean tune_timeout(gpointer data)
 	if (time(NULL) - eit_last_new_record < tune_secs)
 	    return TRUE;
 	list = cfg_sections_next("dvb-ts",list);
+	n++;
     }
-    if (!list)
+    if (!list) {
 	list = cfg_sections_first("dvb-ts");
+	n = 1;
+    }
     if (!list) {
 	fprintf(stderr,
 		"Hmm, no DVB streams found.  Probably you don't have scanned\n"
@@ -108,10 +113,11 @@ static gboolean tune_timeout(gpointer data)
 	return FALSE;
     }
 
-    if (debug)
-	fprintf(stderr,"tune: %s\n",list);
     last_tune = time(NULL);
     dvb_frontend_tune(devs.dvb, "dvb-ts", list);
+    snprintf(buf,sizeof(buf),"Scanning TSID %s (%d/%d).",
+	     list, n, cfg_sections_count("dvb-ts"));
+    gtk_label_set_label(GTK_LABEL(epg_status),buf);
 	
     return TRUE;
 }

@@ -129,7 +129,8 @@ void analog_set_channel(char *channel);
 /* ------------------------------------------------------------------- */
 /* gui-epg.c                                                           */
 
-extern GtkWidget     *epg_win;
+extern GtkWidget *epg_win;
+extern GtkWidget *epg_status;
 
 extern void create_epgwin(GtkWindow* parent);
 extern void epgwin_hide();
