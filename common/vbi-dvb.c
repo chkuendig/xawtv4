@@ -34,6 +34,7 @@
 #include <libzvbi.h>
 
 #if (VBI_VERSION_MAJOR == 0) && (VBI_VERSION_MINOR <= 2) && (VBI_VERSION_MICRO <= 5)
+#warning you should upgrade zvbi
 
 #include "vbi-dvb.h"
 #include "misc.h"

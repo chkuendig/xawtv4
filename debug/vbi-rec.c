@@ -85,6 +85,51 @@ usage(FILE *out, char *argv0)
 	    name);
 };
 
+static int write_stream(int stream, char *filename, int sec)
+{
+    time_t start, now;
+    char buffer[4096];
+    int file;
+    int count;
+    int rc;
+    
+    file = open(filename, O_WRONLY | O_TRUNC | O_CREAT, 0666);
+    if (-1 == file) {
+	fprintf(stderr,"open %s: %s\n",filename,strerror(errno));
+	exit(1);
+    }
+
+    count = 0;
+    start = time(NULL);
+    if (-1 != stream) {
+	for (;;) {
+	    rc = read(stream, buffer, sizeof(buffer));
+	    switch (rc) {
+	    case -1:
+		perror("read");
+		exit(1);
+	    case 0:
+		fprintf(stderr,"EOF\n");
+		exit(1);
+	    default:
+		write(file, buffer, rc);
+		count += rc;
+		break;
+	    }
+	    now = time(NULL);
+	    fprintf(stderr,"  %02ld:%02ld - %8d\r",
+		    (now - start) / 60,
+		    (now - start) % 60,
+		    count);
+	    if (-1 != sec && now - start >= sec)
+		break;
+	}
+	fprintf(stderr,"\n");
+    }
+    close(file);
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     struct dvb_state *dvb;
@@ -94,26 +139,25 @@ int main(int argc, char *argv[])
     char demux[32];
     char dvr[32];
     char filename[32];
-    char buffer[4096];
-    time_t start, now;
     int adapter = 0;
     int ts = 0;
     int pes = 0;
-    int count = 0;
+    int pes_pid = 0;
     int stream = -1;
     int sec = -1;
-    int file;
-    int c,rc,nr;
+    int c,nr;
     
     for (;;) {
-	if (-1 == (c = getopt(argc, argv, "hvtp:s:")))
+	if (-1 == (c = getopt(argc, argv, "hvtp?s:")))
 	    break;
 	switch (c) {
 	case 't':
 	    ts=1;
 	    break;
 	case 'p':
-	    pes = atoi(optarg);
+	    pes = 1;
+	    if (optarg)
+		pes_pid = atoi(optarg);
 	    break;
 	case 's':
 	    sec = atoi(optarg);
@@ -163,18 +207,26 @@ int main(int argc, char *argv[])
 	    fprintf(stderr,"open %s: %s\n",demux,strerror(errno));
 	    exit(1);
 	}
-	if (-1 == set_demux_filter(stream,pes))
-	    exit(1);
 
-	snprintf(filename, sizeof(filename), "%d-%d.pes", info->tsid, pes);
-	file = open(filename, O_WRONLY | O_TRUNC | O_CREAT, 0666);
-	if (-1 == file) {
-	    fprintf(stderr,"open %s: %s\n",filename,strerror(errno));
-	    exit(1);
+	list_for_each(item,&info->programs) {
+	    pr = list_entry(item, struct psi_program, next);
+	    if (0 == pr->t_pid)
+		continue;
+	    if (pes_pid  &&  pes_pid != pr->t_pid)
+		continue;
+	    if (-1 == set_demux_filter(stream,pr->t_pid))
+		exit(1);
+	    snprintf(filename, sizeof(filename), "%d-%d.pes",
+		     info->tsid, pr->t_pid);
+	    fprintf(stderr,"recording pes (pid %d) to %s\n",
+		    pr->t_pid,filename);
+	    write_stream(stream,filename,sec);
 	}
-	fprintf(stderr,"recording pes (pid %d) to %s\n",pes,filename);
+	close(stream);
+	stream = -1;
+    }
 	
-    } else if (ts) {
+    if (ts) {
 	/* multiple streams as TS */
 	stream = open(dvr,O_RDONLY);
 	if (-1 == stream) {
@@ -183,11 +235,6 @@ int main(int argc, char *argv[])
 	}
 
 	snprintf(filename, sizeof(filename), "%d.ts", info->tsid);
-	file = open(filename, O_WRONLY | O_TRUNC | O_CREAT, 0666);
-	if (-1 == file) {
-	    fprintf(stderr,"open %s: %s\n",filename,strerror(errno));
-	    exit(1);
-	}
 	fprintf(stderr,"recording ts to %s\n",filename);
 
 	nr = 0;
@@ -204,33 +251,7 @@ int main(int argc, char *argv[])
 	    if (0 == add_dvr_filter(demux, pr->t_pid, nr++))
 		fprintf(stderr, "  added pid %d tt %s\n", pr->t_pid, pr->name);
 	}
-    }
-
-    start = time(NULL);
-    if (-1 != stream) {
-	for (;;) {
-	    rc = read(stream, buffer, sizeof(buffer));
-	    switch (rc) {
-	    case -1:
-		perror("read");
-		exit(1);
-	    case 0:
-		fprintf(stderr,"EOF\n");
-		exit(1);
-	    default:
-		write(file, buffer, rc);
-		count += rc;
-		break;
-	    }
-	    now = time(NULL);
-	    fprintf(stderr,"  %02ld:%02ld - %8d\r",
-		    (now - start) / 60,
-		    (now - start) % 60,
-		    count);
-	    if (-1 != sec && now - start >= sec)
-		break;
-	}
-	fprintf(stderr,"\n");
+	write_stream(stream,filename,sec);
     }
 
     psi_info_free(info);

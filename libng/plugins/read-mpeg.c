@@ -371,8 +371,9 @@ static struct ng_video_buf* mpeg_ps_vdata(void *handle, unsigned int *drop)
 	data = mpeg_get_data(h,h->video_offset+off,size-off);
 	if (NULL == data)
 	    return NULL;
-	h->video_offset += size;
+	mpeg_check_video_fmt(h, data);
 	put_video(h,data,size-off);
+	h->video_offset += size;
     }
 }
 
@@ -430,18 +431,20 @@ static void* mpeg_ts_open(char *moviename)
 	struct psi_info *info;
 	info = psi_info_alloc();
 	pos = 0;
-	if (-1 == mpeg_find_ts_packet(h, 0x0000, &pos))
+	if (-1 == mpeg_find_ts_packet(h, 0x0000, &pos)) {
+	    fprintf(stderr,"mpeg ts: no pids given and no PAT found\n");
 	    goto fail;
+	}
 	mpeg_parse_psi(info,h,1);
 	
 	/* program map */
 	if (NULL == info->pr || !info->pr->pnr) {
-	    fprintf(stderr,"mpeg: no pids given and no ts pat found\n");
+	    fprintf(stderr,"mpeg ts: no pids given and no PAT found\n");
 	    goto fail;
 	}
 	pos = 0;
 	if (-1 == mpeg_find_ts_packet(h, info->pr->p_pid, &pos)) {
-	    fprintf(stderr,"mpeg: no ts pmt found for pid=%d]\n",h->p_pid);
+	    fprintf(stderr,"mpeg ts: no PMT found for pid=%d\n",h->p_pid);
 	    goto fail;
 	}
 	mpeg_parse_psi(info,h,1);

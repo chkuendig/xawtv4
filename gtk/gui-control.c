@@ -1438,7 +1438,7 @@ void create_control(void)
 		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 
     /* build menus */
-    control_accel_group = gtk_accel_group_new ();
+    control_accel_group = gtk_accel_group_new();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<control>",
 					control_accel_group);
     gtk_item_factory_create_items(item_factory, DIMOF(menu_items),

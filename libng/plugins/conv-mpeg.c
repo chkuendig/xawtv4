@@ -38,6 +38,39 @@ struct mpeg_handle {
 /* ---------------------------------------------------------------------- */
 /* decompress                                                             */
 
+static void mpeg_open(struct mpeg_handle *h)
+{
+    h->dec  = mpeg2_init();
+    h->info = mpeg2_info(h->dec);
+    INIT_LIST_HEAD(&h->wip);
+    INIT_LIST_HEAD(&h->done);
+    INIT_LIST_HEAD(&h->free);
+}
+
+static void mpeg_close(struct mpeg_handle *h)
+{
+    struct mpeg_frame  *fr;
+
+    mpeg2_close(h->dec);
+    while (!list_empty(&h->wip)) {
+	fr = list_entry(h->wip.next, struct mpeg_frame, list);
+	list_del(&fr->list);
+	ng_release_video_buf(fr->buf);
+	free(fr);
+    }
+    while (!list_empty(&h->done)) {
+	fr = list_entry(h->done.next, struct mpeg_frame, list);
+	list_del(&fr->list);
+	ng_release_video_buf(fr->buf);
+	free(fr);
+    }
+    while (!list_empty(&h->free)) {
+	fr = list_entry(h->free.next, struct mpeg_frame, list);
+	list_del(&fr->list);
+	free(fr);
+    }
+}
+
 static void*
 mpeg_init(struct ng_video_fmt *fmt, void *priv)
 {
@@ -47,14 +80,9 @@ mpeg_init(struct ng_video_fmt *fmt, void *priv)
     if (NULL == h)
 	return NULL;
     memset(h,0,sizeof(*h));
-    h->dec  = mpeg2_init();
-    h->info = mpeg2_info(h->dec);
     h->fmt  = *fmt;
 
-    INIT_LIST_HEAD(&h->wip);
-    INIT_LIST_HEAD(&h->done);
-    INIT_LIST_HEAD(&h->free);
-    
+    mpeg_open(h);
     return h;
 }
 
@@ -94,6 +122,7 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 	[ STATE_SLICE ]             = "slice",
 	[ STATE_END ]               = "end",
 	[ STATE_INVALID ]           = "invalid",
+	[ STATE_INVALID_END ]       = "invalid end",
     };
 
     struct mpeg_handle  *h = handle;
@@ -160,10 +189,21 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 	case STATE_SEQUENCE:
 	case STATE_SEQUENCE_REPEATED:
 	    if (ng_debug > 2)
-		fprintf(stderr,"mpeg: state=%d [%s]\n",state,states[state]);
+		fprintf(stderr,"mpeg: state=%d [%s], ignoring\n",
+			state,states[state]);
+	    break;
+	case STATE_INVALID:
+	case STATE_INVALID_END:
+	    if (1 /* ng_debug */)
+		fprintf(stderr,"mpeg: state=%d [%s], restarting decoder\n",
+			state,states[state]);
+	    mpeg_close(h);
+	    mpeg_open(h);
 	    break;
 	default:
-	    fprintf(stderr,"mpeg: state=%d [%s]\n",state,states[state]);
+	    fprintf(stderr,"mpeg: state=%d [%s], don't know how to handle\n",
+		    state,states[state]);
+	    exit(1);
 	    break;
 	}
     } while (state != STATE_BUFFER);
@@ -201,26 +241,8 @@ static void
 mpeg_fini(void *handle)
 {
     struct mpeg_handle *h = handle;
-    struct mpeg_frame  *fr;
 
-    mpeg2_close(h->dec);
-    while (!list_empty(&h->wip)) {
-	fr = list_entry(h->wip.next, struct mpeg_frame, list);
-	list_del(&fr->list);
-	ng_release_video_buf(fr->buf);
-	free(fr);
-    }
-    while (!list_empty(&h->done)) {
-	fr = list_entry(h->done.next, struct mpeg_frame, list);
-	list_del(&fr->list);
-	ng_release_video_buf(fr->buf);
-	free(fr);
-    }
-    while (!list_empty(&h->free)) {
-	fr = list_entry(h->free.next, struct mpeg_frame, list);
-	list_del(&fr->list);
-	free(fr);
-    }
+    mpeg_close(h);
     free(h);
 }
 

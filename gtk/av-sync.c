@@ -290,6 +290,11 @@ void av_sync_video(struct media_stream *mm)
 	return;
     }
 
+    if (NULL == mm->abuf && 1 == mm->vbuf->info.play_seq) {
+	/* initial sync with real if not synced with audio */
+	mm->drift = mm->vbuf->info.ts;
+    }
+
     switch (mm->speed) {
     case 0:
 	/* as fast as possible */
