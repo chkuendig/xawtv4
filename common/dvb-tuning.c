@@ -1061,6 +1061,11 @@ static int parse_vdr_channels(char *domain, FILE *fp)
 		break;
 	    default:
 		name = params[fields[2][i] & 31];
+		if (NULL == name) {
+		    /* Oops.  probably wrong format ... */
+		    cfg_del_section(domain, fields[0]);
+		    return -1;
+		}
 		for (j = 0; i < 32 && isdigit(fields[2][i+j+1]); j++)
 		    value[j] = fields[2][i+j+1];
 		value[j] = 0;
@@ -1107,7 +1112,8 @@ static void __init vdr_init(void)
     fp = fopen("/etc/vdr/channels.conf","r");
     if (NULL == fp)
 	return;
-    parse_vdr_channels("vdr-channels",fp);
+    if (0 != parse_vdr_channels("vdr-channels",fp))
+	fprintf(stderr,"/etc/vdr/channels.conf: parse error\n");
     fclose(fp);
 
     fp = fopen("/etc/vdr/diseqc.conf","r");

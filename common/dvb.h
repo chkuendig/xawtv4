@@ -1,3 +1,31 @@
+
+/* -------------------------------------------------------- */
+/* dvb-monitor.c                                            */
+
+struct dvbmon;
+
+typedef void (*dvbmon_notify)(struct psi_info *info, int event,
+			      int tsid, int pnr, void *data);
+#define DVBMON_EVENT_SWITCH_TS    1
+#define DVBMON_EVENT_UPDATE_TS    2
+#define DVBMON_EVENT_UPDATE_PR    3
+#define DVBMON_EVENT_DESTROY     99
+
+struct dvbmon* dvbmon_init(struct dvb_state *dvb, int verbose,
+			   int others, int pmts);
+void dvbmon_fini(struct dvbmon* dm);
+void dvbmon_refresh(struct dvbmon* dm);
+void dvbmon_add_callback(struct dvbmon* dm, dvbmon_notify func, void *data);
+void dvbmon_del_callback(struct dvbmon* dm, dvbmon_notify func, void *data);
+
+void dvbwatch_logger(struct psi_info *info, int event,
+		     int tsid, int pnr, void *data);
+void dvbwatch_scanner(struct psi_info *info, int event,
+		      int tsid, int pnr, void *data);
+
+/* -------------------------------------------------------- */
+/* dvb-epg.c                                                */
+
 #define EPG_FLAG_AUDIO_MONO      (1<<0)
 #define EPG_FLAG_AUDIO_STEREO    (1<<1)
 #define EPG_FLAG_AUDIO_DUAL      (1<<2)
@@ -42,3 +70,7 @@ extern struct epgitem* eit_lookup(int tsid, int pnr, time_t when, int debug);
 static inline struct epgitem* eit_lookup(int tsid, int pnr, time_t when,
 					 int debug) { return NULL; }
 #endif
+
+/* -------------------------------------------------------- */
+/* dvb-lang.c                                               */
+
