@@ -124,6 +124,12 @@ XtResource args_desc[] = {
 	XtOffset(struct ARGS*,readconfig),
 	XtRString, "1"
     },{
+	"writeconfig",
+	XtCBoolean, XtRBoolean, sizeof(int),
+	XtOffset(struct ARGS*,writeconfig),
+	XtRString, "0"
+    },{
+
 	"fullscreen",
 	XtCBoolean, XtRBoolean, sizeof(int),
 	XtOffset(struct ARGS*,fullscreen),
@@ -143,6 +149,7 @@ XrmOptionDescRec opt_desc[] = {
 
     { "-n",          "readconfig",  XrmoptionNoArg,  "0" },
     { "-noconf",     "readconfig",  XrmoptionNoArg,  "0" },
+    { "-store",      "writeconfig", XrmoptionNoArg,  "1" },
     { "-f",          "fullscreen",  XrmoptionNoArg,  "1" },
     { "-fullscreen", "fullscreen",  XrmoptionNoArg,  "1" },
 };
@@ -1074,14 +1081,19 @@ hello_world(char *name)
 void
 handle_cmdline_args(int *argc, char **argv)
 {
-    cfg_parse_cmdline(argc,argv,cmd_opts_x11);
     XtGetApplicationResources(app_shell,&args,
 			      args_desc,args_count,
 			      NULL,0);
+    if (args.readconfig)
+	read_config();
     if (args.help) {
 	usage();
 	exit(0);
     }
+
+    cfg_parse_cmdline(argc,argv,cmd_opts_x11);
+    if (args.writeconfig)
+	write_config_file("options");
 
     debug    = args.debug;
     ng_debug = args.debug;
@@ -1296,8 +1308,8 @@ int xt_joystick_init(void)
     if (-1 != (xt_joystick = joystick_tv_init(devs.joydev)))
 	XtAppAddInput(app_context,xt_joystick,(XtPointer)XtInputReadMask,
 		      xt_joystick_data,NULL);
-    return 0;
 #endif
+    return 0;
 }
 
 /* ---------------------------------------------------------------------- */

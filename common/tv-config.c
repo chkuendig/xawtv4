@@ -45,6 +45,7 @@ struct ng_video_filter *cur_filter;
 
 struct cfg_cmdline cmd_opts_x11[] = {
     {
+	/* x11 extentions */
 	.cmdline = "randr",
 	.option  = { O_EXT_XRANDR },
 	.yesno   = 1,
@@ -64,6 +65,18 @@ struct cfg_cmdline cmd_opts_x11[] = {
 	.option  = { O_EXT_OPENGL },
 	.yesno   = 1,
 	.desc    = "enable/disable OpenGL (via GLX extention)",
+    },{
+
+	/* misc other */
+	.cmdline  = "bufcount",
+	.option   = { O_REC_BUFCOUNT },
+	.needsarg = 1,
+	.desc     = "number of capture buffers to request",
+    },{
+	.cmdline  = "parallel",
+	.option   = { O_REC_THREADS },
+	.needsarg = 1,
+	.desc     = "number of compression threads (for capture)",
     },{
 	/* end of list */
     }

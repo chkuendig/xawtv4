@@ -439,7 +439,7 @@ main(int argc, char **argv)
 	fprintf(stderr,"%s / video: %s / audio: %s\n",writer->name,
 		ng_vfmt_to_desc[video.fmtid],ng_afmt_to_desc[audio.fmtid]);
 
-    devlist_init(1);
+    devlist_init(1,0,0);
     device_init(devname);
 
     if (video.fmtid != VIDEO_NONE) {

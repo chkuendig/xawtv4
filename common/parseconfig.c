@@ -317,12 +317,12 @@ cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt)
 {
     int i,j,o,shift,len;
 
-    for (i = 1; i+1 < *argc;) {
+    for (i = 1; i < *argc;) {
 	if (argv[i][0] != '-') {
 	    i++;
 	    continue;
 	}
-
+	
 	for (shift = 0, o = 0;
 	     0 == shift && opt[o].cmdline != NULL;
 	     o++) {
@@ -347,7 +347,7 @@ cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt)
 
 	    } else if (opt[o].needsarg &&
 		       0 == strcmp(argv[i]+1,opt[o].cmdline) &&
-		       i+2 < *argc) {
+		       i+1 < *argc) {
 		/* arg: -foo bar */
 		cfg_set_str(opt[o].option.domain,
 			    opt[o].option.section,

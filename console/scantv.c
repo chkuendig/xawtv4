@@ -350,7 +350,7 @@ main(int argc, char **argv)
     ng_debug = debug;
 
     /* video */
-    devlist_init(1);
+    devlist_init(1,0,0);
     device_init(devname);
 
     if (NG_DEV_VIDEO != devs.video.type) {

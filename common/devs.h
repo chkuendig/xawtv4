@@ -39,7 +39,7 @@ int attr_write_dev_id(struct ng_devstate *dev, int id, int value);
 /* ---------------------------------------------------------------------------- */
 
 extern int devlist_probe(void);
-extern int devlist_init(int probe);
+extern int devlist_init(int readconf, int forceprobe, int writeconf);
 extern int device_init(char *name);
 extern int device_fini(void);
 

@@ -104,12 +104,13 @@ static void device_print(char *name, int add)
 {
     fprintf(stderr,"   device configuration \"%s\"%s:\n",
 	    name, add ? " (NEW)" : "");
+    device_print_line(name, "bus",     0);
     device_print_line(name, "video",   0);
 #ifdef HAVE_ZVBI
     device_print_line(name, "vbi",     0);
 #endif
 #ifdef HAVE_DVB
-    device_print_line(name, "dvb",  0);
+    device_print_line(name, "dvb",     0);
 #endif
     device_print_line(name, "sndrec",  1);
     device_print_line(name, "sndplay", 1);
@@ -140,9 +141,20 @@ static int device_probe_video(char *device)
 	} else {
 	    /* device seems to be gone */
 	    if (debug)
-		fprintf(stderr,"%s: %s: delete\n",__FUNCTION__,device);
+		fprintf(stderr,"%s: %s: delete: probably gone\n",__FUNCTION__,device);
 	    cfg_del_section("devs", name);
 	    return 0;
+	}
+    }
+    if (NULL != name && dev.v->busname) {
+	/* check bus address */
+	char *bus1 = cfg_get_str("devs", name, "bus");
+	char *bus2 = dev.v->busname(dev.handle);
+	if (NULL != bus1 && NULL != bus2 && 0 != strcmp(bus1,bus2)) {
+	    if (debug)
+		fprintf(stderr,"%s: %s: delete: bus mismatch\n",__FUNCTION__,device);
+	    cfg_del_section("devs", name);
+	    name = NULL;
 	}
     }
     if (NULL == name) {
@@ -154,13 +166,14 @@ static int device_probe_video(char *device)
 	while (NULL != cfg_search("devs",name,NULL,NULL)) {
 	    free(name);
 	    name = malloc(strlen(h) + 10);
-	    sprintf(name,"%s - #%d\n",h,i++);
+	    sprintf(name,"%s - #%d",h,i++);
 	}
 	cfg_set_str("devs", name, "video", device);
 	if (dev.v->busname) {
 	    char *vbi = device_find_vbi(dev.v->busname(dev.handle));
 	    if (vbi)
 		cfg_set_str("devs", name, "vbi", vbi);
+	    cfg_set_str("devs", name, "bus", dev.v->busname(dev.handle));
 	}
     }
     cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
@@ -275,19 +288,22 @@ static void devlist_filename(char *filename, int len)
 	     getenv("HOME"),hostname);
 }
 
-int devlist_init(int probe)
+int devlist_init(int readconf, int forceprobe, int writeconf)
 {
     char filename[128];
     
     /* read device config file */
     devlist_filename(filename, sizeof(filename));
-    cfg_parse_file("devs", filename);
+    if (readconf)
+	cfg_parse_file("devs", filename);
 
     /* probe devices */
-    if (probe || 0 == cfg_sections_count("devs")) {
+    if (forceprobe || 0 == cfg_sections_count("devs"))
 	devlist_probe();
+
+    /* write device config file */
+    if (writeconf)
 	cfg_write_file("devs",filename);
-    }
     return 0;
 }
 

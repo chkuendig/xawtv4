@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 #endif
 
     read_config();
-    devlist_init(1);
+    devlist_init(1,0,0);
     device_init(devname);
     apply_config();
 

@@ -300,8 +300,6 @@ fi
 AC_SUBST(QTLIBS)
 
 if test "$enable_xfree_ext" != "no"; then
-    AC_CHECK_LIB(Xxf86vm, XF86VidModeQueryExtension,,, 
-	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
     AC_CHECK_LIB(Xdpms, DPMSQueryExtension,,, 
 	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
     if test "$ac_cv_lib_Xdpms_DPMSQueryExtension" = "no"; then
@@ -311,8 +309,6 @@ if test "$enable_xfree_ext" != "no"; then
     AC_CHECK_LIB(Xinerama, XineramaQueryExtension,,,
 	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
     AC_CHECK_LIB(Xrender, XRenderQueryExtension,,,
-	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
-    AC_CHECK_LIB(Xrandr, XRRConfigCurrentConfiguration,,,
 	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
 else
     echo "*** XFree extensions disabled"

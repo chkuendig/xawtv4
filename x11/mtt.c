@@ -153,7 +153,7 @@ static void mtt_device_init(int findpid)
     char *dev;
 
     ng_init();
-    devlist_init(1);
+    devlist_init(1,0,0);
     
     if (NULL == args.device) {
 	dev = cfg_sections_first("devs");

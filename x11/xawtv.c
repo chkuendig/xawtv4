@@ -1,7 +1,7 @@
 /*
  * main.c for xawtv -- a TV application
  *
- *   (c) 1997-2002 Gerd Knorr <kraxel@bytesex.org>
+ *   (c) 1997-2004 Gerd Knorr <kraxel@bytesex.org>
  *
  */
 
@@ -1467,20 +1467,16 @@ main(int argc, char *argv[])
 				  NULL);
     dpy = XtDisplay(app_shell);
     init_atoms(dpy);
-
-    /* command line args */
     ng_init();
-    handle_cmdline_args(&argc,argv);
     hello_world("xawtv");
 
-    /* read config file + related settings */
-    if (args.readconfig)
-	read_config();
+    /* handle command line args, read config file */
+    handle_cmdline_args(&argc,argv);
 
     /* device scan */
     if (debug)
 	fprintf(stderr,"looking for available devices\n");
-    devlist_init(1);
+    devlist_init(args.readconfig,0,args.writeconfig);
     
     /* set hooks (command.c) */
     update_title        = new_title;

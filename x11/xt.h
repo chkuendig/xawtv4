@@ -36,6 +36,7 @@ struct ARGS {
     int  help;
     int  printver;
     int  readconfig;
+    int  writeconfig;
 
 #if 0
     /* TODO: list, rescan, ... */
