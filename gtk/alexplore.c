@@ -90,7 +90,7 @@ static void menu_cb_about(void)
 	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
 	"\n"
 	"Hints for getting started:\n"
-	"  - Tuning is implemented for DVB-T only right now. You can\n"
+	"  - Tuning is tested with for DVB-T only right now. You can\n"
 	"    use another tool for tuning while alexplore is running\n"
 	"    through.\n"
 	"  - The tool will notice any transport stream changes auto-\n"
@@ -98,7 +98,7 @@ static void menu_cb_about(void)
 	"    fishing for data.\n"
 	"  - Activate a row (double-click or enter key) to tune that\n"
 	"    transport stream.\n"
-	"  - The channel scan needs a starting point, i.e. you have to\n"
+	"  - The channel scan needs a starting point, thus you have to\n"
 	"    tune one channel manually before starting a scan.\n"
 	"\n";
 

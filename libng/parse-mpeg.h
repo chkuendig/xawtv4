@@ -27,13 +27,16 @@ struct psi_stream {
     char                 net[64];
 
     int                  frequency;
+    int                  symbol_rate;
     char                 *bandwidth;
     char                 *constellation;
     char                 *hierarchy;
     char                 *code_rate_hp;
     char                 *code_rate_lp;
+    char                 *fec_inner;
     char                 *guard;
     char                 *transmission;
+    char                 *polarization;
     
     /* status info */
     int                  updated;

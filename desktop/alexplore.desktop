@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=alexplore
+GenericName=DVB Channel Browser
+Exec=alexplore
+Terminal=no
+Categories=AudioVideo;TV

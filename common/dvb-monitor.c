@@ -401,7 +401,10 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	snprintf(section, sizeof(section), "%d", tsid);
 	if (stream->net[0] != '\0')
 	    cfg_set_str("dvb-ts", section, "name", stream->net);
-	cfg_set_int("dvb-ts", section, "frequency", stream->frequency);
+	if (stream->frequency)
+	    cfg_set_int("dvb-ts", section, "frequency", stream->frequency);
+	if (stream->symbol_rate)
+	    cfg_set_int("dvb-ts", section, "symbol_rate", stream->symbol_rate);
 	if (stream->bandwidth)
 	    cfg_set_str("dvb-ts", section, "bandwidth",
 			stream->bandwidth);
@@ -423,6 +426,9 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	if (stream->transmission)
 	    cfg_set_str("dvb-ts", section, "transmission",
 			stream->transmission);
+	if (stream->polarization)
+	    cfg_set_str("dvb-ts", section, "polarization",
+			stream->polarization);
 	break;
     case DVBMON_EVENT_UPDATE_PR:
 	pr = psi_program_get(info, tsid, pnr, 0);

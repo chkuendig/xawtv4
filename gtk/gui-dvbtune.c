@@ -67,6 +67,10 @@ static struct omenu m_tr[] = {
     { "8K",   "8", 0 },
     { "auto", "0", 1 },
 };
+static struct omenu m_po[] = {
+    { "horitontal", "H", 0 },
+    { "vertical",   "V", 0 },
+};
 static struct omenu m_gu[] = {
     { "1/32", "32", 0 },
     { "1/16", "16", 0 },
@@ -131,14 +135,40 @@ static GtkWidget *add_omenu(GtkBox *box, char *text,
 
 GtkWidget *dvbtune_dialog;
 static GtkWidget *frequency;
+static GtkWidget *symbol_rate;
 static GtkWidget *inversion;
 static GtkWidget *bandwidth;
 static GtkWidget *rate_high;
 static GtkWidget *rate_low;
 static GtkWidget *modulation;
 static GtkWidget *transmission;
+static GtkWidget *polarization;
 static GtkWidget *guard;
 static GtkWidget *hierarchy;
+
+static void add_frequency(GtkBox *box)
+{
+    GtkBox *hbox;
+
+    hbox = GTK_BOX(gtk_hbox_new(TRUE, 10));
+    gtk_box_pack_start(box, GTK_WIDGET(hbox), TRUE, TRUE, 0);
+
+    add_label(hbox,"frequency");
+    frequency = gtk_entry_new();
+    gtk_box_pack_start(hbox, frequency, TRUE, TRUE, 0);
+}
+
+static void add_symbol_rate(GtkBox *box)
+{
+    GtkBox *hbox;
+
+    hbox = GTK_BOX(gtk_hbox_new(TRUE, 10));
+    gtk_box_pack_start(box, GTK_WIDGET(hbox), TRUE, TRUE, 0);
+
+    add_label(hbox,"symbol rate");
+    symbol_rate = gtk_entry_new();
+    gtk_box_pack_start(hbox, symbol_rate, TRUE, TRUE, 0);
+}
 
 static void add_inversion(GtkBox *box, int caps)
 {
@@ -172,6 +202,11 @@ static void add_transmission(GtkBox *box, int caps)
 			     caps & FE_CAN_TRANSMISSION_MODE_AUTO);
 }
 
+static void add_polarization(GtkBox *box)
+{
+    transmission = add_omenu(box, "polarization", m_po, DIMOF(m_po), 0);
+}
+
 static void add_guard(GtkBox *box, int caps)
 {
     guard = add_omenu(box, "guard interval", m_gu, DIMOF(m_gu),
@@ -198,6 +233,10 @@ static void response(GtkDialog *dialog,
 	    val = (char*)gtk_entry_get_text(GTK_ENTRY(frequency));
 	    cfg_set_str(d, s, "frequency", val);
 	}
+	if (symbol_rate) {
+	    val = (char*)gtk_entry_get_text(GTK_ENTRY(symbol_rate));
+	    cfg_set_str(d, s, "sylbol_rate", val);
+	}
 	if (inversion) {
 	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(inversion));
 	    cfg_set_str(d, s, "inversion", m_inv[n].value);
@@ -220,6 +259,10 @@ static void response(GtkDialog *dialog,
 	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(transmission));
 	    cfg_set_str(d, s, "transmission", m_tr[n].value);
 	}
+	if (polarization) {
+	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(polarization));
+	    cfg_set_str(d, s, "polarization", m_po[n].value);
+	}
 	if (guard) {
 	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(guard));
 	    cfg_set_str(d, s, "guard_interval", m_gu[n].value);
@@ -241,7 +284,7 @@ static void response(GtkDialog *dialog,
 
 void create_dvbtune(GtkWindow *parent)
 {
-    GtkBox *box,*hbox;
+    GtkBox *box;
     int32_t caps;
 
     dvbtune_dialog =
@@ -253,15 +296,19 @@ void create_dvbtune(GtkWindow *parent)
     box = GTK_BOX(GTK_DIALOG(dvbtune_dialog)->vbox);
     gtk_box_set_spacing(box,10);
 
-    hbox = GTK_BOX(gtk_hbox_new(TRUE, 10));
-    gtk_box_pack_start(box, GTK_WIDGET(hbox), TRUE, TRUE, 0);
-
-    add_label(hbox,"frequency");
-    frequency = gtk_entry_new();
-    gtk_box_pack_start(hbox, frequency, TRUE, TRUE, 0);
-
+    add_frequency(box);
     caps = dvb_frontend_get_caps(devs.dvb);
     switch (dvb_frontend_get_type(devs.dvb)) {
+    case FE_QPSK: /* DVB-S */
+	add_symbol_rate(box);
+	add_inversion(box, caps);
+	add_polarization(box);
+	break;
+    case FE_QAM:  /* DVB-C */
+	add_symbol_rate(box);
+	add_inversion(box, caps);
+	add_modulation(box, caps);
+	break;
     case FE_OFDM: /* DVB-T */
 	add_inversion(box, caps);
 	add_bandwidth(box, caps);

@@ -554,6 +554,21 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
 /* ----------------------------------------------------------------------- */
 /* transport streams                                                       */
 
+static unsigned int unbcd(unsigned int bcd)
+{
+    unsigned int factor = 1;
+    unsigned int ret = 0;
+    unsigned int digit;
+
+    while (bcd) {
+	digit   = bcd & 0x0f;
+	ret    += digit * factor;
+	bcd    /= 16;
+	factor *= 10;
+    }
+    return ret;
+}
+
 static char parse_nit_desc(unsigned char *desc, int dlen,
 			   struct psi_stream *stream)
 {
@@ -562,10 +577,18 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
 	[ 1 ] = "7",
 	[ 2 ] = "6",
     };
-    static char *co[4] = {
+    static char *co_t[4] = {
 	[ 0 ] = "0",
 	[ 1 ] = "16",
 	[ 2 ] = "64",
+    };
+    static char *co_c[16] = {
+	[ 0 ] = "0",
+	[ 1 ] = "16",
+	[ 2 ] = "32",
+	[ 3 ] = "64",
+	[ 4 ] = "128",
+	[ 5 ] = "256",
     };
     static char *hi[4] = {
 	[ 0 ] = "0",
@@ -573,12 +596,19 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
 	[ 2 ] = "2",
 	[ 3 ] = "4",
     };
-    static char *ra[8] = {
+    static char *ra_t[8] = {
 	[ 0 ] = "12",
 	[ 1 ] = "23",
 	[ 2 ] = "34",
 	[ 3 ] = "56",
 	[ 4 ] = "78",
+    };
+    static char *ra_sc[8] = {
+	[ 1 ] = "12",
+	[ 2 ] = "23",
+	[ 3 ] = "34",
+	[ 4 ] = "56",
+	[ 5 ] = "78",
     };
     static char *gu[4] = {
 	[ 0 ] = "32",
@@ -590,27 +620,47 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
 	[ 0 ] = "2",
 	[ 1 ] = "8",
     };
+    static char *po[4] = {
+	[ 0 ] = "H",
+	[ 1 ] = "V",
+	[ 2 ] = "L",  // circular left
+	[ 3 ] = "R",  // circular right
+    };
+    unsigned int freq,rate,fec;
     int i,t,l;
 
     for (i = 0; i < dlen;) {
 	t = desc[i];
 	l = desc[i+1];
 	switch (t) {
-	case 0x43: /* nit */
-	    fprintf(stderr," not implemented yet: parse dvb-s");
+	case 0x43: /* nit dvb-s */
+	    freq = mpeg_getbits(desc+i+2,  0, 32);
+	    rate = mpeg_getbits(desc+i+2, 56, 28);
+	    fec  = mpeg_getbits(desc+i+2, 85,  3);
+	    stream->frequency     = unbcd(freq)    * 10;
+	    stream->symbol_rate   = unbcd(rate*16) * 10;
+	    stream->fec_inner     = ra_sc[fec];
+	    stream->polarization  = po[   mpeg_getbits(desc+i+2, 53, 2) ];
 	    break;
-	case 0x44: /* nit */
-	    fprintf(stderr," not implemented yet: parse dvb-c");
+	case 0x44: /* nit dvb-c */
+	    freq = mpeg_getbits(desc+i+2,  0, 32);
+	    rate = mpeg_getbits(desc+i+2, 56, 28);
+	    fec  = mpeg_getbits(desc+i+2, 85,  3);
+	    stream->frequency     = unbcd(freq)    * 100;
+	    stream->symbol_rate   = unbcd(rate*16) * 10;
+	    stream->fec_inner     = ra_sc[fec];
+	    stream->constellation = co_c[ mpeg_getbits(desc+i+2, 52, 4) ];
 	    break;
-	case 0x5a: /* nit */
+	case 0x5a: /* nit dvb-t */
+	    unbcd(0x12345678);
 	    stream->frequency     = mpeg_getbits(desc+i+2,  0, 32) * 10;
-	    stream->bandwidth     = bw[ mpeg_getbits(desc+i+2, 33,  2) ];
-	    stream->constellation = co[ mpeg_getbits(desc+i+2, 40,  2) ];
-	    stream->hierarchy     = hi[ mpeg_getbits(desc+i+2, 43,  2) ];
-	    stream->code_rate_hp  = ra[ mpeg_getbits(desc+i+2, 45,  3) ];
-	    stream->code_rate_lp  = ra[ mpeg_getbits(desc+i+2, 48,  3) ];
-	    stream->guard         = gu[ mpeg_getbits(desc+i+2, 51,  2) ];
-	    stream->transmission  = tr[ mpeg_getbits(desc+i+2, 54,  1) ];
+	    stream->bandwidth     = bw[   mpeg_getbits(desc+i+2, 33, 2) ];
+	    stream->constellation = co_t[ mpeg_getbits(desc+i+2, 40, 2) ];
+	    stream->hierarchy     = hi[   mpeg_getbits(desc+i+2, 43, 2) ];
+	    stream->code_rate_hp  = ra_t[ mpeg_getbits(desc+i+2, 45, 3) ];
+	    stream->code_rate_lp  = ra_t[ mpeg_getbits(desc+i+2, 48, 3) ];
+	    stream->guard         = gu[   mpeg_getbits(desc+i+2, 51, 2) ];
+	    stream->transmission  = tr[   mpeg_getbits(desc+i+2, 54, 1) ];
 	    break;
 	}
 	i += 2+l;
