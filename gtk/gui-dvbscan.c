@@ -930,6 +930,7 @@ static void find_pr(GtkTreeIter *iter, int tsid, int pnr)
 	    return;
     }
 
+    gtk_tree_store_set(store, &parent, ST_STATE_MATCHES, TRUE, -1);
     gtk_tree_store_append(store, iter, &parent);
     gtk_tree_store_set(store, iter,
 		       ST_COL_TSID,      tsid,

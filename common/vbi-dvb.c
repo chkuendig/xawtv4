@@ -120,7 +120,8 @@ static int dvb_wait(int fd, struct timeval *timeout)
 	perror("dvb-vbi: select");
 	return -1;
     case 0:
-	fprintf(stderr,"dvb-vbi: timeout\n");
+	if (dvb->debug)
+	    fprintf(stderr,"dvb-vbi: timeout\n");
 	return -1;
     default:
 	return 0;
