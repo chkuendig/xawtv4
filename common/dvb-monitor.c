@@ -548,6 +548,8 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	    cfg_set_str("dvb-pr", section, "audio_details", pr->audio);
 	if (pr->t_pid)
 	    cfg_set_int("dvb-pr", section, "teletext", pr->t_pid);
+	if (pr->ca)
+	    cfg_set_int("dvb-pr", section, "ca", pr->ca);
 	break;
     case DVBMON_EVENT_DESTROY:
 	break;

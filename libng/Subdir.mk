@@ -3,6 +3,7 @@ OBJS-libng := \
 	libng/devices.o \
 	libng/writefile.o \
 	libng/parse-mpeg.o \
+	libng/parse-dvb.o \
 	libng/color_common.o \
 	libng/color_packed.o \
 	libng/color_lut.o \

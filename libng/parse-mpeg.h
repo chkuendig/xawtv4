@@ -50,6 +50,8 @@ struct psi_program {
     int                  tsid;
     int                  pnr;
     int                  version;
+    int                  running;
+    int                  ca;
 
     /* program data */
     int                  type;
@@ -170,6 +172,7 @@ struct psi_program* psi_program_get(struct psi_info *info, int tsid,
 
 /* misc */
 void hexdump(char *prefix, unsigned char *data, size_t size);
+void mpeg_dump_desc(unsigned char *desc, int dlen);
 
 /* common */
 unsigned int mpeg_getbits(unsigned char *buf, int start, int count);
@@ -190,8 +193,10 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos);
 /* transport stream */
 int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose);
+int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose);
+int mpeg_find_ts_packet(struct mpeg_handle *h, int wanted, off_t *pos);
+
+/* DVB stuff */
 int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_eit(void *fixme, unsigned char *data, int verbose);
-int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose);
-int mpeg_find_ts_packet(struct mpeg_handle *h, int wanted, off_t *pos);
