@@ -46,7 +46,7 @@
 #include "parseconfig.h"
 #include "tv-config.h"
 #include "commands.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 #include "xt-dvb.h"
 #include "motif-gettext.h"
 
@@ -147,9 +147,10 @@ static XtActionsRec actionTable[] = {
 static void mtt_device_init(int findpid)
 {
 #ifdef HAVE_DVB
-    struct psi_info info;
-    struct dvb_state *h;
-    int i;
+    struct psi_info    *info;
+    struct psi_program *program;
+    struct list_head   *item;
+    struct dvb_state   *h;
 #endif
     char *dev;
 
@@ -188,22 +189,22 @@ static void mtt_device_init(int findpid)
 		fprintf(stderr,"can't init dvb\n");
 		exit(1);
 	    }
-	    memset(&info,0,sizeof(info));
-	    dvb_get_transponder_info(h, &info, 0, args.debug ? 2 : 0);
+	    info = psi_info_alloc();
+	    dvb_get_transponder_info(h, info, 0, args.debug ? 2 : 0);
 	    if (args.debug)
-		dvb_print_transponder_info(&info);
-	    for (i = 0; i < PSI_PROGS; i++) {
-		if (0 == info.progs[i].p_pid)
+		dvb_print_transponder_info(info);
+	    list_for_each(item,&info->programs) {
+		program = list_entry(item, struct psi_program, next);
+		if (0 == program->t_pid)
 		    continue;
-		if (0 == info.progs[i].t_pid)
-		    continue;
-		args.pid = info.progs[i].t_pid;
+		args.pid = program->t_pid;
 	    }
 	    if (0 == args.pid) {
 		fprintf(stderr,"no teletext data stream found, sorry\n");
 		exit(1);
 	    }
 	    dvb_fini(h);
+	    psi_info_free(info);
 	}
 #else
 	fprintf(stderr,"compiled without dvb support, sorry\n");

@@ -17,7 +17,7 @@
 #include "grab-ng.h"
 #include "parseconfig.h"
 #include "devs.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 
 /* ------------------------------------------------------------------------------ */
 

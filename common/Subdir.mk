@@ -1,6 +1,6 @@
 ifeq ($(FOUND_DVB),yes)
 OBJS-dvb := \
-	common/dvb.o \
+	common/dvb-tuning.o \
 	structs/struct-dvb.o \
 	structs/struct-dump.o
 endif

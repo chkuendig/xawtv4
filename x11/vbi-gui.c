@@ -42,7 +42,7 @@
 #include "list.h"
 #include "parseconfig.h"
 #include "grab-ng.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 #include "xt-dvb.h"
 #include "vbi-data.h"
 #include "vbi-x11.h"

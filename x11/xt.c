@@ -59,7 +59,7 @@
 #include "tuning.h"
 #include "event.h"
 #include "av-sync.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 
 /* jwz */
 #include "remote.h"

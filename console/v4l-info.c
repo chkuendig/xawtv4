@@ -282,6 +282,7 @@ static int dump_dvb(int fd, int tab)
 	printf("    FE_GET_INFO\n");
 	print_struct(stdout,desc_frontend_info,&info,"",tab);
 	printf("\n");
+	return 0;
 }
 #endif
 

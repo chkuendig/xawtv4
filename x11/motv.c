@@ -70,7 +70,7 @@
 #include "vbi-x11.h"
 #include "blit.h"
 #include "av-sync.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 
 /*----------------------------------------------------------------------*/
 

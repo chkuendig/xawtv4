@@ -418,18 +418,18 @@ static void* mpeg_ts_open(char *moviename)
 	mpeg_parse_psi(&info,h,1);
 	
 	/* program map */
-	if (!info.progs[0].id) {
+	if (!info.pr.pnr) {
 	    fprintf(stderr,"mpeg: no pids given and no ts pat found\n");
 	    goto fail;
 	}
 	pos = 0;
-	if (-1 == mpeg_find_ts_packet(h, info.progs[0].p_pid, &pos)) {
+	if (-1 == mpeg_find_ts_packet(h, info.pr.p_pid, &pos)) {
 	    fprintf(stderr,"mpeg: no ts pmt found for pid=%d]\n",h->p_pid);
 	    goto fail;
 	}
 	mpeg_parse_psi(&info,h,1);
-	h->a_pid = info.progs[0].a_pid;
-	h->v_pid = info.progs[0].v_pid;
+	h->a_pid = info.pr.a_pid;
+	h->v_pid = info.pr.v_pid;
     } else {
 	/* pids given ...  */
 	h->a_pid = ng_mpeg_apid;

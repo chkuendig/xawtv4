@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "grab-ng.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 
 /* ----------------------------------------------------------------------- */
 

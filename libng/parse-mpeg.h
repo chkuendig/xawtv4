@@ -18,8 +18,24 @@ extern const char *mpeg_frame_s[];
 #define PSI_PROGS  16
 #define PSI_NEW    42  // initial version, valid range is 0 ... 32
 
+struct psi_stream {
+    struct list_head     next;
+    int                  tsid;
+
+    /* network */
+    int                  netid;
+    char                 net[64];
+
+    /* TODO: tuning info */
+    
+    /* status info */
+    int                  updated;
+};
+
 struct psi_program {
-    int                  id;
+    struct list_head     next;
+    int                  tsid;
+    int                  pnr;
     int                  version;
 
     /* program data */
@@ -32,24 +48,27 @@ struct psi_program {
     char                 name[64];
 
     /* status info */
-    int                  modified;
+    int                  updated;
     int                  seen;
-    int                  pmt_fd;
+
+    /* hmm ... */
+    int                  fd;
 };
 
 struct psi_info {
-    int                  id;
-    int                  pat_version;
-    int                  sdt_version;
+    int                  tsid;
 
-    /* program map */
-    int                  n_pid;             // network
-    struct psi_program   progs[PSI_PROGS];  // programs
+    struct list_head     streams;
+    struct list_head     programs;
 
     /* status info */
-    int                  modified;
-    int                  pat_fd;
-    int                  sdt_fd;
+    int                  pat_updated;
+
+    /* hmm ... */
+    struct psi_program   pr;
+    int                  pat_version;
+    int                  sdt_version;
+    int                  nit_version;
 };
 
 /* ----------------------------------------------------------------------- */
@@ -128,6 +147,13 @@ struct mpeg_handle {
 
 /* ----------------------------------------------------------------------- */
 
+/* handle psi_* */
+struct psi_info* psi_info_alloc(void);
+void psi_info_free(struct psi_info *info);
+struct psi_stream* psi_stream_get(struct psi_info *info, int tsid, int alloc);
+struct psi_program* psi_program_get(struct psi_info *info, int tsid,
+				    int pnr, int alloc);
+
 /* misc */
 void hexdump(char *prefix, unsigned char *data, size_t size);
 
@@ -150,5 +176,6 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos);
 int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose);
 int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose);
+int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose);
 int mpeg_find_ts_packet(struct mpeg_handle *h, int wanted, off_t *pos);

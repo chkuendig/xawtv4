@@ -112,6 +112,83 @@ static const char *stream_type_s[] = {
 };
 
 /* ----------------------------------------------------------------------- */
+/* handle psi_ structs                                                     */
+
+struct psi_info* psi_info_alloc(void)
+{
+    struct psi_info *info;
+
+    info = malloc(sizeof(*info));
+    memset(info,0,sizeof(*info));
+    INIT_LIST_HEAD(&info->streams);
+    INIT_LIST_HEAD(&info->programs);
+    return info;
+}
+
+void psi_info_free(struct psi_info *info)
+{
+    struct psi_program *program;
+    struct psi_stream  *stream;
+    struct list_head   *item,*safe;
+
+    list_for_each_safe(item,safe,&info->streams) {
+	stream = list_entry(item, struct psi_stream, next);
+	list_del(&stream->next);
+	free(stream);
+    }
+    list_for_each_safe(item,safe,&info->programs) {
+	program = list_entry(item, struct psi_program, next);
+	list_del(&program->next);
+	free(program);
+    }
+    free(info);
+}
+
+struct psi_stream* psi_stream_get(struct psi_info *info, int tsid, int alloc)
+{
+    struct psi_stream *stream;
+    struct list_head  *item;
+
+    list_for_each(item,&info->streams) {
+        stream = list_entry(item, struct psi_stream, next);
+	if (stream->tsid == tsid)
+	    return stream;
+    }
+    if (!alloc)
+	return NULL;
+    stream = malloc(sizeof(*stream));
+    memset(stream,0,sizeof(*stream));
+    stream->tsid    = tsid;
+    stream->updated = 1;
+    list_add_tail(&stream->next,&info->streams);
+    return stream;
+}
+
+struct psi_program* psi_program_get(struct psi_info *info, int tsid,
+				    int pnr, int alloc)
+{
+    struct psi_program *program;
+    struct list_head   *item;
+
+    list_for_each(item,&info->programs) {
+        program = list_entry(item, struct psi_program, next);
+	if (program->tsid == tsid &&
+	    program->pnr  == pnr)
+	    return program;
+    }
+    if (!alloc)
+	return NULL;
+    program = malloc(sizeof(*program));
+    memset(program,0,sizeof(*program));
+    program->tsid    = tsid;
+    program->pnr     = pnr;
+    program->version = PSI_NEW;
+    program->updated = 1;
+    list_add_tail(&program->next,&info->programs);
+    return program;
+}
+
+/* ----------------------------------------------------------------------- */
 /* bit fiddeling                                                           */
 
 unsigned int mpeg_getbits(unsigned char *buf, int start, int count)
@@ -485,18 +562,32 @@ static void dump_desc(unsigned char *desc, int dlen)
 	t = desc[i];
 	l = desc[i+1];
 	switch (t) {
-	case 0x0a:
+	case 0x0a: /* pmt */
 	    fprintf(stderr," lang=%3.3s",desc+2);
 	    break;
-	case 0x56:
+	case 0x56: /* pmt */
 	    fprintf(stderr," teletext");
 	    break;
-	case 0x59:
+	case 0x59: /* pmt */
 	    fprintf(stderr," subtitles");
 	    break;
-	case 0x6a:
+	case 0x6a: /* pmt */
 	    fprintf(stderr," ac3");
 	    break;
+
+	case 0x40: /* nit */
+	    fprintf(stderr," name=%.*s",l,desc+2);
+	    break;
+	case 0x43: /* nit */
+	    fprintf(stderr," dvb-s");
+	    break;
+	case 0x44: /* nit */
+	    fprintf(stderr," dvb-c");
+	    break;
+	case 0x5a: /* nit */
+	    fprintf(stderr," dvb-t");
+	    break;
+
 	default:
 	    fprintf(stderr," %02x[",desc[i]);
 	    for (j = 0; j < l; j++) {
@@ -514,65 +605,52 @@ static void dump_desc(unsigned char *desc, int dlen)
 
 int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose)
 {
+    struct list_head   *item;
     struct psi_program *pr;
-    int id,version,current;
-    int j,len,nr,pid,i;
+    int tsid,pnr,version,current;
+    int j,len,pid;
 
     len     = mpeg_getbits(data,12,12) + 3 - 4;
-    id      = mpeg_getbits(data,24,16);
+    tsid    = mpeg_getbits(data,24,16);
     version = mpeg_getbits(data,42,5);
     current = mpeg_getbits(data,47,1);
     if (!current)
 	return len+4;
-    if (info->id == id && info->pat_version == version)
+    if (info->tsid == tsid && info->pat_version == version)
 	return len+4;
-    info->id           = id;
-    info->modified     = 1;
+    info->tsid         = tsid;
     info->pat_version  = version;
+    info->pat_updated  = 1;
     
     if (verbose)
-	fprintf(stderr, "ts [pat]: id %3d ver %2d [%d/%d]\n",
-		id, version,
+	fprintf(stderr, "ts [pat]: tsid %d ver %2d [%d/%d]\n",
+		tsid, version,
 		mpeg_getbits(data,48, 8),
 		mpeg_getbits(data,56, 8));
     for (j = 64; j < len*8; j += 32) {
-	nr     = mpeg_getbits(data,j+0,16);
+	pnr    = mpeg_getbits(data,j+0,16);
 	pid    = mpeg_getbits(data,j+19,13);
-	if (0 == nr) {
+	if (0 == pnr) {
 	    /* network */
-	    info->n_pid = pid;
 	    if (verbose > 1)
-		fprintf(stderr,"   PID 0x%04x => id %2d [network]\n",
-			pid, nr);
+		fprintf(stderr,"   pid 0x%04x [network]\n",
+			pid);
 	} else {
 	    /* program */
-	    pr = NULL;
-	    for (i = 0; NULL == pr && i < PSI_PROGS; i++) {
-		if (info->progs[i].id == nr)
-		    pr = info->progs+i;
-	    }
-	    for (i = 0; NULL == pr && i < PSI_PROGS; i++) {
-		if (info->progs[i].id == 0) {
-		    pr = info->progs+i;
-		    pr->version = PSI_NEW;
-		}
-	    }
-	    if (pr) {
-		pr->id    = nr;
-		pr->p_pid = pid;
-		pr->seen  = 1;
-	    }
+	    pr = psi_program_get(info, tsid, pnr, 1);
+	    pr->p_pid   = pid;
+	    pr->updated = 1;
+	    pr->seen    = 1;
 	}
     }
     if (verbose > 1) {
-	for (i = 0; i < PSI_PROGS; i++) {
-	    pr = info->progs+i;
-	    if (0 == pr->p_pid)
+	list_for_each(item,&info->programs) {
+	    pr = list_entry(item, struct psi_program, next);
+	    if (pr->tsid != tsid)
 		continue;
-	    fprintf(stderr,"   PID 0x%04x => id %2d [program map%s%s]\n",
-		    pr->p_pid, pr->id,
-		    pr->seen && 42 == pr->version ? ",new" : "",
-		    !pr->seen ? ",gone" : "");
+	    fprintf(stderr,"   pid 0x%04x => pnr %2d [program map%s]\n",
+		    pr->p_pid, pr->pnr,
+		    pr->seen ? ",seen" : "");
 	}
 	fprintf(stderr,"\n");
     }
@@ -596,26 +674,25 @@ static void psi_2_checkdesc(struct psi_program *program, int pid,
 
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose)
 {
-    int id,version,current;
+    int pnr,version,current;
     int j,len,dlen,type,pid;
 
     len     = mpeg_getbits(data,12,12) + 3 - 4;
-    id      = mpeg_getbits(data,24,16);
+    pnr     = mpeg_getbits(data,24,16);
     version = mpeg_getbits(data,42,5);
     current = mpeg_getbits(data,47,1);
     if (!current)
 	return len+4;
-    if (program->id == id && program->version == version)
+    if (program->pnr == pnr && program->version == version)
 	return len+4;
-    program->id       = id;
-    program->version  = version;
-    program->modified = 1;
+    program->version = version;
+    program->updated = 1;
 
     if (verbose)
 	fprintf(stderr,
-		"ts [pmt]: id %3d ver %2d [%d/%d]  pcr 0x%04x  "
+		"ts [pmt]: pnr %d ver %2d [%d/%d]  pcr 0x%04x  "
 		"pid 0x%04x  type %2d\n",
-		id, version,
+		pnr, version,
 		mpeg_getbits(data,48, 8),
 		mpeg_getbits(data,56, 8),
 		mpeg_getbits(data,69,13),
@@ -646,7 +723,7 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
 	    break;
 	}
 	if (verbose > 1) {
-	    fprintf(stderr, "   PID 0x%04x => %-32s",
+	    fprintf(stderr, "   pid 0x%04x => %-32s",
 		    pid, stream_type_s[type]);
 	    dump_desc(data + (j+40)/8, dlen);
 	    fprintf(stderr,"\n");
@@ -660,9 +737,58 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
 
 int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose)
 {
-    int id,version,current;
-    int i,j,len,dlen,type;
+    struct psi_program *pr;
+    int tsid,pnr,version,current;
+    int j,len,dlen,type;
     char *net,*name;
+
+    len     = mpeg_getbits(data,12,12) + 3 - 4;
+    tsid    = mpeg_getbits(data,24,16);
+    version = mpeg_getbits(data,42,5);
+    current = mpeg_getbits(data,47,1);
+    if (!current)
+	return len+4;
+    if (info->tsid == tsid && info->sdt_version == version)
+	return len+4;
+    info->sdt_version = version;
+
+    if (verbose)
+	fprintf(stderr,
+		"ts [sdt]: tsid %d ver %2d [%d/%d]\n",
+		tsid, version,
+		mpeg_getbits(data,48, 8),
+		mpeg_getbits(data,56, 8));
+    j = 88;
+    while (j < len*8) {
+	pnr  = mpeg_getbits(data,j,16);
+	dlen = mpeg_getbits(data,j+28,12);
+	type = data[j/8 + 7];
+	net  = data + j/8 + 8;
+	name = net + net[0] + 1;
+	if (verbose > 1)
+	    fprintf(stderr,"   pnr %3d  type %2d  net [%*.*s]  name [%*.*s]\n",
+		    pnr, type, 
+		    net[0],  net[0],  net+1,
+		    name[0], name[0], name+1);
+	pr = psi_program_get(info, tsid, pnr, 1);
+	pr->type = type;
+	pr->updated = 1;
+	strncpy(pr->net,  net+1,  net[0]);
+	strncpy(pr->name, name+1, name[0]);
+	j += 40 + dlen*8;
+    }
+    if (verbose > 1)
+	fprintf(stderr,"\n");
+    return len+4;
+}
+
+int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
+{
+    struct psi_stream *stream;
+    char *name = NULL;
+    int nlen;
+    int id,version,current,len;
+    int j,dlen,tsid;
 
     len     = mpeg_getbits(data,12,12) + 3 - 4;
     id      = mpeg_getbits(data,24,16);
@@ -670,39 +796,46 @@ int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose)
     current = mpeg_getbits(data,47,1);
     if (!current)
 	return len+4;
-    if (info->id == id && info->sdt_version == version)
+    if (0 /* info->id == id */ && info->nit_version == version)
 	return len+4;
-    info->sdt_version = version;
+    info->nit_version = version;
 
     if (verbose)
 	fprintf(stderr,
-		"ts [sdt]: id %3d ver %2d [%d/%d]\n",
+		"ts [nit]: id %3d ver %2d [%d/%d]\n",
 		id, version,
 		mpeg_getbits(data,48, 8),
 		mpeg_getbits(data,56, 8));
-    j = 88;
-    while (j < len*8) {
-	id   = mpeg_getbits(data,j,16);
-	dlen = mpeg_getbits(data,j+28,12);
-	type = data[j/8 + 7];
-	net  = data + j/8 + 8;
-	name = net + net[0] + 1;
-	if (verbose > 1)
-	    fprintf(stderr,"   id %3d  type %2d  net [%*.*s]  name [%*.*s]\n",
-		    id, type, 
-		    net[0],  net[0],  net+1,
-		    name[0], name[0], name+1);
-	for (i = 0; i < PSI_PROGS; i++) {
-	    if (info->progs[i].id == id) {
-		info->progs[i].type = type;
-		info->progs[i].modified = 1;
-		strncpy(info->progs[i].net,  net+1,  net[0]);
-		strncpy(info->progs[i].name, name+1, name[0]);
-		break;
-	    }
-	}
-	j += 40 + dlen*8;
+
+    j = 80;
+    dlen = mpeg_getbits(data,68,12);
+    if (data[j/8] == 0x40) {
+	nlen = data[j/8+1];
+	name = data+j/8+2;
     }
+    if (verbose > 1) {
+	fprintf(stderr,"   network     :");
+	dump_desc(data + j/8, dlen);
+	fprintf(stderr,"\n");
+    }
+    j += 16 + 8*dlen;
+
+    while (j < len*8) {
+	tsid = mpeg_getbits(data,j,16);
+        dlen = mpeg_getbits(data,j+36,12);
+	j += 48;
+	stream = psi_stream_get(info, tsid, 1);
+	stream->updated = 1;
+	if (name)
+	    strncpy(stream->net, name, nlen);
+	if (verbose > 1) {
+	    fprintf(stderr,"      tsid %3d :", tsid);
+	    dump_desc(data + j/8, dlen);
+	    fprintf(stderr,"\n");
+	}
+	j += 8*dlen;
+    }
+    
     if (verbose > 1)
 	fprintf(stderr,"\n");
     return len+4;
@@ -723,7 +856,7 @@ int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose)
 		fprintf(stderr, "ts: conditional access\n");
 		return 0;
 	    case 2:
-		i += mpeg_parse_psi_pmt(&info->progs[0], h->ts.data+i, verbose);
+		i += mpeg_parse_psi_pmt(&info->pr, h->ts.data+i, verbose);
 		break;
 	    case 3:
 		fprintf(stderr, "ts: description\n");

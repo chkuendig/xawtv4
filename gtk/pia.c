@@ -31,7 +31,7 @@
 #include "grab-ng.h"
 #include "blit.h"
 #include "devs.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 #include "parseconfig.h"
 #include "commands.h"
 #include "av-sync.h"

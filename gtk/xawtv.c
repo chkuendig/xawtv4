@@ -36,13 +36,14 @@
 #include "grab-ng.h"
 #include "blit.h"
 #include "devs.h"
-#include "dvb.h"
 #include "parseconfig.h"
 #include "tv-config.h"
 #include "tuning.h"
 #include "commands.h"
 #include "av-sync.h"
 #include "atoms.h"
+#include "dvb-tuning.h"
+#include "dvb-monitor.h"
 #include "gui.h"
 
 /* ------------------------------------------------------------------------ */
@@ -206,6 +207,37 @@ static void siginit(void)
 
 /* ------------------------------------------------------------------------ */
 
+static struct dvbmon *dvbmon;
+
+static void dvbwatch(struct psi_info *info, int event, int tsid, int pnr, void *data)
+{
+    struct psi_stream  *stream;
+    struct psi_program *pr;
+    
+    switch (event) {
+    case DVBMON_EVENT_SWITCH_TS:
+	fprintf(stderr,"%s: switch ts 0x%04x\n",__FUNCTION__,tsid);
+	break;
+    case DVBMON_EVENT_UPDATE_TS:
+	stream = psi_stream_get(info, tsid, 0);
+	if (stream)
+	    fprintf(stderr,"%s: update ts 0x%04x \"%s\"\n",
+		    __FUNCTION__, tsid, stream->net);
+	break;
+    case DVBMON_EVENT_UPDATE_PR:
+	pr = psi_program_get(info, tsid, pnr, 0);
+	if (pr)
+	    fprintf(stderr,"%s: update pr 0x%04x/0x%04x  "
+		    "v 0x%04x  a 0x%04x  t 0x%04x  \"%s\", \"%s\"\n",
+		    __FUNCTION__, tsid, pnr,
+		    pr->v_pid, pr->a_pid, pr->t_pid, pr->net, pr->name);
+	break;
+    default:
+	fprintf(stderr,"%s: unknown event %d\n",__FUNCTION__,event);
+	break;
+    }
+}
+
 static void
 grabber_init(char *dev)
 {
@@ -230,6 +262,8 @@ grabber_init(char *dev)
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
 	display_mode = DISPLAY_DVB;
+	dvbmon = dvbmon_init(devs.dvbadapter,0);
+	dvbmon_add_callback(dvbmon,dvbwatch,NULL);
 
     } else {
 	display_mode = DISPLAY_NONE;
@@ -244,6 +278,8 @@ grabber_init(char *dev)
 static void
 grabber_fini(void)
 {
+    if (NULL != devs.dvb)
+	dvbmon_fini(dvbmon);
     audio_off();
     device_fini();
 }

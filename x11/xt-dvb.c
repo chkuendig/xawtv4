@@ -15,11 +15,18 @@
 #include <X11/CoreP.h>
 
 #include "grab-ng.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 #include "xt-dvb.h"
 
 /* ----------------------------------------------------------------------------- */
 /* structs & prototypes                                                          */
+
+struct table {
+    struct list_head    next;
+    int                 pid;
+    int                 fd;
+    XtInputId           id;
+};
 
 typedef struct _dvbClassPart {
     /* nothing */
@@ -40,8 +47,10 @@ typedef struct _dvbPart
 
     /* private stuff */
     struct dvb_state    *dvb;
-    struct psi_info     info;
-    XtInputId           ids[PSI_PROGS];
+    struct psi_info     *info;
+    struct list_head    tables;
+    int                 sdt_fd;
+    int                 pat_fd;
 } DvbPart;
 
 typedef struct _dvbRec
@@ -107,18 +116,22 @@ WidgetClass dvbWidgetClass = (WidgetClass)&dvbClassRec;
 /* ----------------------------------------------------------------------------- */
 /* internal functions                                                            */
 
+static int  table_open(DvbWidget dw, int pid);
+static void table_close(DvbWidget dw, int pid);
+
 static void dvb_data(XtPointer data, int *fd, XtInputId *iproc)
 {
     DvbWidget dw = data;
-    struct psi_info *info = &dw->dvb.info;
+    struct psi_info *info = dw->dvb.info;
     struct psi_program *pr;
+    struct list_head *item,*safe;
     char buf[4096];
     int handled = 0;
-    int i;
+    //int i;
 
     /* get data */
-    if (*fd == info->pat_fd) {
-	if (dvb_demux_get_section(&info->pat_fd, buf, sizeof(buf), 0) < 0) {
+    if (*fd == dw->dvb.pat_fd) {
+	if (dvb_demux_get_section(&dw->dvb.pat_fd, buf, sizeof(buf), 0) < 0) {
 	    fprintf(stderr,"dvbmon: read pat oops (fd %d)\n",*fd);
 	} else {
 	    mpeg_parse_psi_pat(info, buf, dw->dvb.verbose);
@@ -126,8 +139,8 @@ static void dvb_data(XtPointer data, int *fd, XtInputId *iproc)
 	handled = 1;
     }
 
-    if (*fd == info->sdt_fd) {
-	if (dvb_demux_get_section(&info->sdt_fd, buf, sizeof(buf), 0) < 0) {
+    if (*fd == dw->dvb.sdt_fd) {
+	if (dvb_demux_get_section(&dw->dvb.sdt_fd, buf, sizeof(buf), 0) < 0) {
 	    fprintf(stderr,"dvbmon: read sdt oops (fd %d)\n",*fd);
 	} else {
 	    mpeg_parse_psi_sdt(info, buf, dw->dvb.verbose);
@@ -135,12 +148,10 @@ static void dvb_data(XtPointer data, int *fd, XtInputId *iproc)
 	handled = 1;
     }
 
-    for (i = 0; i < PSI_PROGS; i++) {
-	pr = info->progs+i;
-	if (0 == pr->p_pid)
-	    continue;
-	if (*fd == pr->pmt_fd) {
-	    if (dvb_demux_get_section(&pr->pmt_fd, buf, sizeof(buf), 0) < 0) {
+    list_for_each(item,&info->programs) {
+        pr = list_entry(item, struct psi_program, next);
+	if (*fd == pr->fd) {
+	    if (dvb_demux_get_section(&pr->fd, buf, sizeof(buf), 0) < 0) {
 		fprintf(stderr,"dvbmon: read pmd oops (fd %d)\n",*fd);
 	    } else {
 		mpeg_parse_psi_pmt(pr, buf, dw->dvb.verbose);
@@ -155,49 +166,31 @@ static void dvb_data(XtPointer data, int *fd, XtInputId *iproc)
     }
 
     /* check for changes */
-    if (info->modified) {
-	info->modified = 0;
+    if (info->pat_updated) {
+	info->pat_updated = 0;
 	if (dw->dvb.verbose)
 	    fprintf(stderr,"dvbmon: updated: pat\n");
-	dw->dvb.info.sdt_version = PSI_NEW;
-	for (i = 0; i < PSI_PROGS; i++) {
-	    pr = info->progs+i;
-	    if (0 == pr->p_pid)
-		continue;
+	list_for_each_safe(item,safe,&info->programs) {
+	    pr = list_entry(item, struct psi_program, next);
 	    if (!pr->seen) {
-		if (dw->dvb.verbose)
-		    fprintf(stderr,"dvbmon: gone: pid %d fd %d\n",
-			    pr->p_pid, pr->pmt_fd);
 		XtCallCallbacks((Widget)dw,"delete_channel",pr);
-		close(pr->pmt_fd);
-		XtRemoveInput(dw->dvb.ids[i]);
-		memset(pr,0,sizeof(*pr));
+		table_close(dw, pr->p_pid);
+		list_del(&pr->next);
+		free(pr);
 	    }
 	}
-	for (i = 0; i < PSI_PROGS; i++) {
-	    pr = info->progs+i;
-	    if (0 == pr->p_pid)
-		continue;
+	list_for_each(item,&info->programs) {
+	    pr = list_entry(item, struct psi_program, next);
 	    pr->seen = 0;
-	    if (42 == pr->version) {
-		pr->pmt_fd = dvb_demux_req_section(dw->dvb.dvb, pr->p_pid,
-						   2, 0);
-		dw->dvb.ids[i] = XtAppAddInput
-		    (XtWidgetToApplicationContext((Widget)dw), pr->pmt_fd,
-		     (XtPointer) XtInputReadMask, dvb_data, dw);
-		if (dw->dvb.verbose)
-		    fprintf(stderr,"dvbmon: new: pid %d fd %d\n",
-			    pr->p_pid, pr->pmt_fd);
-	    }
+	    if (PSI_NEW == pr->version)
+		pr->fd = table_open(dw, pr->p_pid);
 	}
     }
-    for (i = 0; i < PSI_PROGS; i++) {
-	pr = info->progs+i;
-	if (0 == pr->p_pid)
+    list_for_each(item,&info->programs) {
+	pr = list_entry(item, struct psi_program, next);
+	if (!pr->updated)
 	    continue;
-	if (!pr->modified)
-	    continue;
-	pr->modified = 0;
+	pr->updated = 0;
 	XtCallCallbacks((Widget)dw,"update_channel",pr);
     }
     return;
@@ -208,6 +201,51 @@ static void dvb_data(XtPointer data, int *fd, XtInputId *iproc)
     return;
 }
 
+static int table_open(DvbWidget dw, int pid)
+{
+    struct table *tab; 
+
+    tab = malloc(sizeof(*tab));
+    memset(tab,0,sizeof(*tab));
+    tab->pid  = pid;
+    tab->fd   = dvb_demux_req_section(dw->dvb.dvb, pid, 0x02, 0);
+    if (-1 == tab->fd) {
+	free(tab);
+	return -1;
+    }
+    tab->id = XtAppAddInput(XtWidgetToApplicationContext((Widget)dw),
+			    tab->fd, (XtPointer) XtInputReadMask, dvb_data, dw);
+    list_add_tail(&tab->next,&dw->dvb.tables);
+    if (dw->dvb.verbose)
+	fprintf(stderr,"dvbmon: new:  fd=%d pid=%d\n",
+		tab->fd,  tab->pid);
+    return tab->fd;
+}
+
+static void table_close(DvbWidget dw, int pid)
+{
+    struct table      *tab;
+    struct list_head  *item;
+
+    list_for_each(item,&dw->dvb.tables) {
+	tab = list_entry(item, struct table, next);
+	if (tab->pid == pid)
+	    break;
+	tab = NULL;
+    }
+    if (NULL == tab) {
+	fprintf(stderr,"dvbmon: oops: closing unknown pid %d\n",pid);
+	return;
+    }
+    if (dw->dvb.verbose)
+	fprintf(stderr,"dvbmon: gone: fd=%d pid=%d\n",
+		tab->fd, tab->pid);
+    XtRemoveInput(tab->id);
+    close(tab->fd);
+    list_del(&tab->next);
+    free(tab);
+}
+
 /* ----------------------------------------------------------------------------- */
 /* widget class calls                                                            */
 
@@ -215,23 +253,23 @@ static void
 dvbInitialize(Widget request, Widget w, ArgList args, Cardinal *num_args)
 {
     DvbWidget dw = (DvbWidget)w;
-    struct psi_info *info = &dw->dvb.info;
 
     if (dw->dvb.verbose)
 	fprintf(stderr,"dvbmon: init\n");
     dw->core.width  = 1;
     dw->core.height = 1;
 
-    //dw->dvb.verbose = 1;
-    dw->dvb.dvb = dvb_init(dw->dvb.adapter);
+    INIT_LIST_HEAD(&dw->dvb.tables);
+    dw->dvb.dvb  = dvb_init(dw->dvb.adapter);
+    dw->dvb.info = psi_info_alloc();
     if (dw->dvb.dvb) {
 	if (dw->dvb.verbose)
 	    fprintf(stderr,"dvbmon: hwinit ok\n");
-	info->sdt_fd = dvb_demux_req_section(dw->dvb.dvb, 0x11, 0x42, 0);
-	info->pat_fd = dvb_demux_req_section(dw->dvb.dvb, 0x00, 0x00, 0);
-	XtAppAddInput(XtWidgetToApplicationContext((Widget)dw), info->sdt_fd,
+	dw->dvb.sdt_fd = dvb_demux_req_section(dw->dvb.dvb, 0x11, 0x42, 0);
+	dw->dvb.pat_fd = dvb_demux_req_section(dw->dvb.dvb, 0x00, 0x00, 0);
+	XtAppAddInput(XtWidgetToApplicationContext((Widget)dw), dw->dvb.sdt_fd,
 		      (XtPointer) XtInputReadMask, dvb_data, dw);
-	XtAppAddInput(XtWidgetToApplicationContext((Widget)dw), info->pat_fd,
+	XtAppAddInput(XtWidgetToApplicationContext((Widget)dw), dw->dvb.pat_fd,
 		      (XtPointer) XtInputReadMask, dvb_data, dw);
     } else {
 	fprintf(stderr,"dvbmon: hwinit FAILED\n");
@@ -243,6 +281,6 @@ void dvb_refresh(Widget w)
     DvbWidget dw = (DvbWidget)w;
 
     // force re-read
-    dw->dvb.info.pat_version = PSI_NEW;
-    dw->dvb.info.sdt_version = PSI_NEW;
+    dw->dvb.info->pat_version = PSI_NEW;
+    dw->dvb.info->sdt_version = PSI_NEW;
 }

@@ -19,7 +19,7 @@
 #include "parseconfig.h"
 #include "struct-dump.h"
 #include "struct-dvb.h"
-#include "dvb.h"
+#include "dvb-tuning.h"
 
 int dvb_debug = 0;
 
@@ -294,7 +294,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	 */
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val;
-	while (h->p.frequency < 1000000)
+	while (h->p.frequency && h->p.frequency < 1000000)
 	    h->p.frequency *= 1000;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
@@ -318,7 +318,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	/* DVB-T  --  same as DVB-C */
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val * 1000;
-	while (h->p.frequency < 1000000)
+	while (h->p.frequency && h->p.frequency < 1000000)
 	    h->p.frequency *= 1000;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
@@ -521,7 +521,7 @@ int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot)
     filter.pid              = pid;
     filter.filter.filter[0] = sec;
     filter.filter.mask[0]   = 0xff;
-    filter.timeout          = 10 * 1000;
+    filter.timeout          = 60 * 1000;
     filter.flags            = DMX_IMMEDIATE_START;
     if (oneshot)
 	filter.flags       |= DMX_ONESHOT;
@@ -669,38 +669,34 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
 			     int names, int verbose)
 {
     unsigned char buf[4096];
+    struct list_head   *item;
     struct psi_program *pr;
-    int i;
+    int sdt, pat;
 
-    memset(info, 0, sizeof(*info));
     if (names)
-	info->sdt_fd = dvb_demux_req_section(dvb, 0x11, 0x42, 1);
-    info->pat_fd = dvb_demux_req_section(dvb, 0x00, 0x00, 1);
+	sdt = dvb_demux_req_section(dvb, 0x11, 0x42, 1);
+    pat = dvb_demux_req_section(dvb, 0x00, 0x00, 1);
 
     /* program association table */
-    if (dvb_demux_get_section(&info->pat_fd, buf, sizeof(buf), 1) < 0)
+    if (dvb_demux_get_section(&pat, buf, sizeof(buf), 1) < 0)
 	goto oops;
     mpeg_parse_psi_pat(info, buf, verbose);
     
     /* program maps */
-    for (i = 0; i < PSI_PROGS; i++) {
-	pr = info->progs+i;
-	if (0 == pr->p_pid)
-	    continue;
-	pr->pmt_fd = dvb_demux_req_section(dvb, pr->p_pid, 2, 1);
+    list_for_each(item,&info->programs) {
+        pr = list_entry(item, struct psi_program, next);
+	pr->fd = dvb_demux_req_section(dvb, pr->p_pid, 2, 1);
     }
-    for (i = 0; i < PSI_PROGS; i++) {
-	pr = info->progs+i;
-	if (0 == pr->p_pid)
-	    continue;
-	if (dvb_demux_get_section(&pr->pmt_fd, buf, sizeof(buf), 1) < 0)
+    list_for_each(item,&info->programs) {
+        pr = list_entry(item, struct psi_program, next);
+	if (dvb_demux_get_section(&pr->fd, buf, sizeof(buf), 1) < 0)
 	    goto oops;
 	mpeg_parse_psi_pmt(pr, buf, verbose);
     }
 
     /* service descriptor */
     if (names) {
-	if (dvb_demux_get_section(&info->sdt_fd, buf, sizeof(buf), 1) < 0)
+	if (dvb_demux_get_section(&sdt, buf, sizeof(buf), 1) < 0)
 	    goto oops;
 	mpeg_parse_psi_sdt(info, buf, verbose);
     }
@@ -729,13 +725,11 @@ void dvb_print_program_info(char *prefix, struct psi_program *pr)
 
 void dvb_print_transponder_info(struct psi_info *info)
 {
+    struct list_head   *item;
     struct psi_program *pr;
-    int i;
     
-    for (i = 0; i < PSI_PROGS; i++) {
-	pr = info->progs+i;
-	if (0 == pr->p_pid)
-	    continue;
+    list_for_each(item,&info->programs) {
+        pr = list_entry(item, struct psi_program, next);
 	dvb_print_program_info(NULL, pr);
     }
 }

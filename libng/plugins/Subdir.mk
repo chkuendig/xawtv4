@@ -8,7 +8,8 @@ TARGETS-plugins := \
 	libng/plugins/conv-audio.so \
 	libng/plugins/read-avi.so \
 	libng/plugins/read-mpeg.so \
-	libng/plugins/write-avi.so
+	libng/plugins/write-avi.so \
+	libng/plugins/write-mpeg.so
 
 ifeq ($(FOUND_LQT),yes)
 TARGETS-plugins += \
@@ -91,6 +92,7 @@ libng/plugins/snd0-arts.so:  libng/plugins/snd0-arts.o
 libng/plugins/snd1-alsa.so:  libng/plugins/snd1-alsa.o
 libng/plugins/snd1-oss.so:   libng/plugins/snd1-oss.o
 libng/plugins/write-avi.so:  libng/plugins/write-avi.o
+libng/plugins/write-mpeg.so: libng/plugins/write-mpeg.o
 libng/plugins/write-dv.so:   libng/plugins/write-dv.o
 libng/plugins/write-qt.so:   libng/plugins/write-qt.o
 
