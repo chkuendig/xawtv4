@@ -38,10 +38,10 @@ struct ARGS {
     int  readconfig;
     int  writeconfig;
 
-#if 0
-    /* TODO: list, rescan, ... */
-    int  hwscan;
-#endif
+    /* hardware management */
+    int  hwls;
+    int  hwconfig;
+    int  hwstore;
 
     int  fullscreen;
 };

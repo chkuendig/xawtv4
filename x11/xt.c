@@ -130,6 +130,22 @@ XtResource args_desc[] = {
 	XtRString, "0"
     },{
 
+	"hwls",
+	XtCBoolean, XtRBoolean, sizeof(int),
+	XtOffset(struct ARGS*,hwls),
+	XtRString, "0"
+    },{
+	"hwconfig",
+	XtCBoolean, XtRBoolean, sizeof(int),
+	XtOffset(struct ARGS*,hwconfig),
+	XtRString, "0"
+    },{
+	"hwstore",
+	XtCBoolean, XtRBoolean, sizeof(int),
+	XtOffset(struct ARGS*,hwstore),
+	XtRString, "0"
+    },{
+
 	"fullscreen",
 	XtCBoolean, XtRBoolean, sizeof(int),
 	XtOffset(struct ARGS*,fullscreen),
@@ -150,6 +166,11 @@ XrmOptionDescRec opt_desc[] = {
     { "-n",          "readconfig",  XrmoptionNoArg,  "0" },
     { "-noconf",     "readconfig",  XrmoptionNoArg,  "0" },
     { "-store",      "writeconfig", XrmoptionNoArg,  "1" },
+
+    { "-hwls",       "hwls",        XrmoptionNoArg,  "1" },
+    { "-hwconfig",   "hwconfig",    XrmoptionNoArg,  "1" },
+    { "-hwstore",    "hwstore",     XrmoptionNoArg,  "1" },
+
     { "-f",          "fullscreen",  XrmoptionNoArg,  "1" },
     { "-fullscreen", "fullscreen",  XrmoptionNoArg,  "1" },
 };
@@ -1045,19 +1066,24 @@ usage(void)
 	    "  -v  -debug n        debug level n, n = [0..2]\n"
 	    "      -remote         assume remote display\n"
 	    "  -n  -noconf         don't read the config file\n"
-	    "  -f  -fullscreen     startup in fullscreen mode\n");
+	    "      -store          write cmd line args to config file\n"
+	    "  -f  -fullscreen     startup in fullscreen mode\n"
+	    "\n"
+	    "      -hwls           list all devices found\n"
+	    "      -hwconfig       show hardware configurations\n"
+	    "      -hwstore        write hardware configuration to config file\n"
+	    "\n");
 
-    fprintf(stderr,"\n");
     cfg_help_cmdline(cmd_opts_devices,6,16,40);
-
     fprintf(stderr,"\n");
+
     cfg_help_cmdline(cmd_opts_x11,6,16,40);
-
     fprintf(stderr,"\n");
+
     cfg_help_cmdline(cmd_opts_record,6,16,40);
+    fprintf(stderr,"\n");
     
     fprintf(stderr,
-	    "\n"
 #if 0
 	    "station:\n"
 	    "  this is one of the stations listed in $HOME/.xawtv\n"
@@ -1089,6 +1115,7 @@ hello_world(char *name)
 void
 handle_cmdline_args(int *argc, char **argv)
 {
+    /* parse, read + write configs */
     XtGetApplicationResources(app_shell,&args,
 			      args_desc,args_count,
 			      NULL,0);
@@ -1097,19 +1124,35 @@ handle_cmdline_args(int *argc, char **argv)
     cfg_parse_cmdline(argc,argv,cmd_opts_x11);
     cfg_parse_cmdline(argc,argv,cmd_opts_record);
     cfg_parse_cmdline(argc,argv,cmd_opts_devices);
+    if (args.writeconfig)
+	write_config_file("options");
 
+    /* set debug variables */
     if (args.help) {
 	usage();
 	exit(0);
     }
-    if (args.writeconfig)
-	write_config_file("options");
-
     debug    = args.debug;
     ng_debug = args.debug;
     ng_log_bad_stream = args.debug;
     ng_log_resync = args.debug;
     dvb_debug = args.debug;
+
+    if (args.hwls) {
+	fprintf(stderr,"\n");
+	device_ls_devs(0);
+	exit(0);
+    }
+
+    /* handle devices */
+    if (debug)
+	fprintf(stderr,"looking for available devices\n");
+    devlist_init(args.readconfig,0,args.hwstore);
+    if (args.hwconfig) {
+	fprintf(stderr,"\n");
+	devlist_print();
+	exit(0);
+    }
 }
 
 int

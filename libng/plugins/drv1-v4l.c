@@ -1,7 +1,7 @@
 /*
  * interface to the v4l driver
  *
- *   (c) 1997-2001 Gerd Knorr <kraxel@bytesex.org>
+ *   (c) 1997-2004 Gerd Knorr <kraxel@bytesex.org>
  *
  */
 #include "config.h"

@@ -102,10 +102,9 @@ static void device_print_line(char *name, char *entry, int def)
     }
 }
 
-static void device_print(char *name, int add)
+static void device_print(char *name)
 {
-    fprintf(stderr,"device configuration \"%s\"%s:\n",
-	    name, add ? " (NEW)" : "");
+    fprintf(stderr,"device configuration \"%s\":\n",name);
     device_print_line(name, "bus",     0);
     device_print_line(name, "video",   0);
 #ifdef HAVE_ZVBI
@@ -177,9 +176,10 @@ static int device_probe_video(char *device)
 		cfg_set_str("devs", name, "vbi", vbi);
 	    cfg_set_str("devs", name, "bus", dev.v->busname(dev.handle));
 	}
+	if (debug)
+	    fprintf(stderr,"%s: %s: add\n",__FUNCTION__,device);
     }
     cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
-    device_print(name,add);
     return 0;
 }
 
@@ -224,10 +224,11 @@ static int device_probe_dvb(char *device)
 	    sprintf(name,"%s - #%d",h,i++);
 	}
 	cfg_set_str("devs", name, "dvb", device);
+	if (debug)
+	    fprintf(stderr,"%s: %s: add\n",__FUNCTION__,device);
     }
     dvb_fini(dvb);
     cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
-    device_print(name,add);
     return 0;
 }
 
@@ -239,12 +240,9 @@ int devlist_probe(void)
     char *list,*dev;
     int i;
 
-    fprintf(stderr,"==> probing devices ...\n");
     if (debug)
 	fprintf(stderr,"%s: checking existing entries ...\n",__FUNCTION__);
-    for (list  = cfg_sections_first("devs");
-	 list != NULL;
-	 list  = cfg_sections_next("devs", list)) {
+    cfg_sections_for_each("devs",list) {
 #ifdef HAVE_DVB
 	dev = cfg_get_str("devs", list, "dvb");
 	if (dev)
@@ -272,7 +270,19 @@ int devlist_probe(void)
 	    device_probe_video(info[i].device);
     }
 
-    fprintf(stderr,"<== probing done.\n");
+    if (debug)
+	fprintf(stderr,"%s: probing done\n",__FUNCTION__);
+    return 0;
+}
+
+int devlist_print(void)
+{
+    char *list;
+
+    cfg_sections_for_each("devs",list) {
+	device_print(list);
+	fprintf(stderr,"\n");
+    }
     return 0;
 }
 
@@ -503,9 +513,11 @@ int device_init(char *name)
 	cfg_sections_for_each("devs",list)
 	    if (NULL != strcasestr(list,name))
 		name = list;
-    
-    fprintf(stderr,"using: ");
-    device_print(name,0);
+
+    if (debug) {
+	fprintf(stderr,"using: ");
+	device_print(name);
+    }
 
     /* video4linux */
     device = cfg_get_str("devs", name, "video");
@@ -543,3 +555,145 @@ int device_init(char *name)
 }
 
 /* ------------------------------------------------------------------------------ */
+
+static void print_driver(const char *name)
+{
+    // fprintf(stderr,"  [%s]\n",name);
+}
+
+static void print_devinfo(const char *driver, struct ng_devinfo *info)
+{
+    int spaces1 = 24 - strlen(driver) - strlen(info->device);
+    int spaces2 = 48 - strlen(info->name) - strlen(info->bus);
+
+    if (spaces1 < 0) spaces1 = 0;
+    if (spaces2 < 0) spaces2 = 0;
+    fprintf(stderr," [%s] %s%*s %s%*s %s\n",
+	    driver, info->device,
+	    spaces1, "", info->name,
+	    spaces2, "", info->bus);
+}
+
+static int
+print_dvb(void)
+{
+#ifdef HAVE_DVB
+    struct ng_devinfo *info;
+    int i;
+
+    print_driver("dvb");
+    info = dvb_probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	print_devinfo("dvb",info+i);
+#endif
+    return 0;
+}
+
+static int
+print_vbi(void)
+{
+    struct ng_devinfo *info;
+    int i;
+
+    print_driver("vbi");
+    info = vbi_probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	print_devinfo("vbi",info+i);
+    return 0;
+}
+
+static int
+print_video(struct ng_vid_driver *vid)
+{
+    struct ng_devinfo    *info;
+    int i;
+
+    print_driver(vid->name);
+    info = vid->probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	print_devinfo(vid->name,info+i);
+    return 0;
+}
+
+static int
+print_dsp(struct ng_dsp_driver *dsp, int record)
+{
+    struct ng_devinfo    *info;
+    int i;
+
+    print_driver(dsp->name);
+    info = dsp->probe(record,debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	print_devinfo(dsp->name,info+i);
+    return 0;
+}
+
+static int
+print_mix(struct ng_mix_driver *mix, int verbose)
+{
+    struct ng_devinfo    *info;
+    struct ng_devinfo    *elem;
+    int i,j;
+
+    print_driver(mix->name);
+    info = mix->probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++) {
+	print_devinfo(mix->name,info+i);
+	if (verbose) {
+	    elem = mix->channels(info[i].device);
+	    for (j = 0; elem && 0 != strlen(elem[j].name); j++)
+		fprintf(stderr,"      %-14s - %s\n",
+			elem[j].device, elem[j].name);
+	}
+    }
+    return 0;
+}
+
+void device_ls_devs(int verbose)
+{
+    struct list_head *item;
+    struct ng_mix_driver *mix;
+    struct ng_dsp_driver *dsp;
+    struct ng_vid_driver *vid;
+
+    /* dvb devices */
+    fprintf(stderr,"probing dvb devices ...\n");
+    print_dvb();
+    fprintf(stderr,"\n");
+
+    /* vbi devices */
+    fprintf(stderr,"probing vbi devices ...\n");
+    print_vbi();
+    fprintf(stderr,"\n");
+
+    /* video devices */
+    fprintf(stderr,"probing video devices ...\n");
+    list_for_each(item,&ng_vid_drivers) {
+        vid = list_entry(item, struct ng_vid_driver, list);
+	print_video(vid);
+    }
+    fprintf(stderr,"\n");
+
+    /* dsp devices */
+    fprintf(stderr,"probing dsp devices (playback) ...\n");
+    list_for_each(item,&ng_dsp_drivers) {
+        dsp = list_entry(item, struct ng_dsp_driver, list);
+	print_dsp(dsp,0);
+    }
+    fprintf(stderr,"\n");
+
+    fprintf(stderr,"probing dsp devices (record) ...\n");
+    list_for_each(item,&ng_dsp_drivers) {
+        dsp = list_entry(item, struct ng_dsp_driver, list);
+	print_dsp(dsp,1);
+    }
+    fprintf(stderr,"\n");
+
+    /* mixer devices */
+    fprintf(stderr,"probing mixers ...\n");
+    list_for_each(item,&ng_mix_drivers) {
+        mix = list_entry(item, struct ng_mix_driver, list);
+	print_mix(mix, verbose);
+    }
+    fprintf(stderr,"\n");
+}

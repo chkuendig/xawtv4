@@ -362,7 +362,7 @@ struct ng_vid_driver {
     int   (*setformat)(void *handle, struct ng_video_fmt *fmt);
     int   (*startvideo)(void *handle, int fps, unsigned int buffers);
     void  (*stopvideo)(void *handle);
-    struct ng_video_buf* (*nextframe)(void *handle); /* video frame */
+    struct ng_video_buf* (*nextframe)(void *handle); /* video frame  */
     struct ng_video_buf* (*getimage)(void *handle);  /* single image */
 
     /* tuner */

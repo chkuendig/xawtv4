@@ -286,9 +286,11 @@ main(int argc, char **argv)
 {
     struct ng_attribute *attr_input;
     struct ng_attribute *attr_tvnorm;
-    int c, i, t, f, scan=1, fullscan=0;
-    struct STRTAB *freqtabs;
+    int devcount, d, c, i, t, f, scan=1, fullscan=0;
+    struct STRTAB *freqtabs, *devices;
     char *tab;
+    char *list;
+    char *devname = NULL;
 
     /* parse options */
     ng_init();
@@ -327,11 +329,44 @@ main(int argc, char **argv)
     input  = cfg_get_str(O_INPUT);
     tvnorm = cfg_get_str(O_TVNORM);
     table  = cfg_get_str(O_FREQTAB);
-    
-    /* video */
-    devlist_init(1,0,0);
-    device_init(optind < argc ? argv[optind] : NULL);
 
+    /* probe devices */
+    devlist_init(1,0,0);
+    devcount = 0;
+    cfg_sections_for_each("devs",list) {
+	if (NULL == cfg_get_str("devs",list,"video"))
+	    continue;
+	devcount++;
+    }
+
+    if (0 == devcount) {
+	/* huh? */
+	fprintf(stderr,"No analog tv hardware found, sorry.\n");
+	exit(1);
+    }
+    if (1 == devcount) {
+	/* exactly one device */
+	cfg_sections_for_each("devs",list) {
+	    if (NULL == cfg_get_str("devs",list,"video"))
+		continue;
+	    devname = list;
+	}
+    }
+    devices = malloc(sizeof(*freqtabs) * (devcount+1));
+    memset(devices,0,sizeof(*freqtabs) * (devcount+1));
+    d = 0;
+    cfg_sections_for_each("devs",list) {
+	if (NULL == cfg_get_str("devs",list,"video"))
+	    continue;
+	devices[d].nr  = d;
+	devices[d].str = list;
+	d++;
+    }
+    d = menu("device",devices,devname);
+    devname = devices[d].str;
+    device_init(devname);
+
+    /* init video */
     if (NG_DEV_VIDEO != devs.video.type) {
 	fprintf(stderr,"can't open video device\n");
 	exit(1);

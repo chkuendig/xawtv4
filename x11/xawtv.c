@@ -1480,11 +1480,6 @@ main(int argc, char *argv[])
     /* handle command line args, read config file */
     handle_cmdline_args(&argc,argv);
 
-    /* device scan */
-    if (debug)
-	fprintf(stderr,"looking for available devices\n");
-    devlist_init(args.readconfig,0,args.writeconfig);
-    
     /* set hooks (command.c) */
     update_title        = new_title;
     display_message     = new_message;

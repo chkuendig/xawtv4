@@ -1,7 +1,6 @@
 
 # variables
 TARGETS-debug := \
-	debug/probe \
 	debug/sysfs
 
 ifeq ($(FOUND_X11),yes)
@@ -17,15 +16,6 @@ TARGETS-debug += \
 	debug/alsamixer
 endif
 
-debug/probe: \
-	debug/probe.o \
-	x11/xv.o \
-	x11/atoms.o \
-	$(OBJS-dvb) \
-	common/devs.o \
-	common/parseconfig.o \
-	libng/libng.a
-
 debug/dvb-signal: \
 	debug/dvb-signal.o \
 	common/parseconfig.o \
@@ -34,11 +24,9 @@ debug/dvb-signal: \
 
 debug/xvideo: debug/xvideo.o
 
-debug/probe      : LDLIBS  += $(ATHENA_LIBS) -ljpeg -lm
 debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
 debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)
 
-debug/probe      : LDFLAGS += $(DLFLAGS)
 debug/dvb-signal : LDFLAGS += $(DLFLAGS)
 
 # poor mans malloc debugging
