@@ -143,6 +143,8 @@ static void menu_cb_scan(void)
 
 /* ------------------------------------------------------------------------ */
 
+#ifdef HAVE_ZVBI
+
 static GIOChannel        *vbi_ch;
 static guint             vbi_id;
 
@@ -181,6 +183,8 @@ static void vbi_dec_data(struct vbi_event *ev, void *user)
 	break;
     }
 }
+
+#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -299,6 +303,7 @@ static GtkItemFactory *item_factory;
 static void destroy(GtkWidget *widget,
 		    gpointer   data)
 {
+#ifdef HAVE_ZVBI
     if (devs.vbi) {
 	g_source_remove(vbi_id);
 	g_io_channel_unref(vbi_ch);
@@ -306,6 +311,7 @@ static void destroy(GtkWidget *widget,
 	vbi_close(devs.vbi);
 	devs.vbi = NULL;
     }
+#endif
     if (scan_id) {
 	g_source_destroy(g_main_context_find_source_by_id
 			 (g_main_context_default(), scan_id));
@@ -429,6 +435,7 @@ void analog_create_window(void)
     gtk_box_pack_end(GTK_BOX(hbox), scroll, FALSE, TRUE, 0);
     gtk_box_pack_end(GTK_BOX(vbox), status, FALSE, TRUE, 0);
 
+#ifdef HAVE_ZVBI
     /* setup vbi */
     if (devs.vbidev) {
 	devs.vbi = vbi_open(devs.vbidev,debug,0);
@@ -437,6 +444,7 @@ void analog_create_window(void)
 	vbi_hasdata(devs.vbi);
 	vbi_event_handler_register(devs.vbi->dec,~0,vbi_dec_data,NULL);
     }
+#endif
     
     return;
 }

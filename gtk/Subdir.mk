@@ -2,8 +2,7 @@
 # targets to build
 TARGETS-gtk := \
 	gtk/pia \
-	gtk/xawtv \
-	gtk/mtt
+	gtk/xawtv
 
 ifeq ($(FOUND_DVB),yes)
 TARGETS-gtk += \
@@ -12,6 +11,11 @@ TARGETS-gtk += \
 OBJS-gtk-dvb := \
 	gtk/gui-dvbscan.o \
 	gtk/gui-dvbtune.o
+endif
+
+ifeq ($(FOUND_ZVBI),yes)
+TARGETS-gtk += \
+	gtk/mtt
 endif
 
 gtk/pia: \
@@ -34,9 +38,8 @@ gtk/xawtv: \
 	gtk/xscreensaver.o \
 	x11/xv.o \
 	x11/atoms.o \
-	common/vbi-data.o \
-	common/vbi-dvb.o \
 	common/parseconfig.o \
+	$(OBJS-common-vbi) \
 	$(OBJS-common-capture) \
 	$(OBJS-glib-dvb)
 
