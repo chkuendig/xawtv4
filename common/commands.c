@@ -583,7 +583,7 @@ static int volume_handler(char *name, int argc, char **argv)
 static int attr_handler(char *name, int argc, char **argv)
 {
     struct ng_attribute *attr;
-    int val,arg=0;
+    int val,newval,arg=0;
 
     if (0 == strcasecmp(name,"setnorm")) {
 	attr = find_attr_by_id(ATTR_ID_NORM);
@@ -598,7 +598,7 @@ static int attr_handler(char *name, int argc, char **argv)
     } else {
 	attr = find_attr_by_name(name);
     }
-
+    
     if (NULL == attr) {
 #if 0
 	fprintf(stderr,"cmd: %s: attribute not found\nvalid choices are:",
@@ -641,11 +641,12 @@ static int attr_handler(char *name, int argc, char **argv)
     case ATTR_TYPE_BOOL:
 	val = attr_read(attr);
 	if (argc > arg) {
-	    val = str_to_int(argv[arg],booltab);
-	    if (-1 == val) {
+	    newval = str_to_int(argv[arg],booltab);
+	    if (-1 == newval) {
 		if (0 == strcasecmp(argv[arg],"toggle"))
-		    val = !val;
+		    newval = !val;
 	    }
+	    val = newval;
 	    attr_write(attr,val,1);
 	}
 	set_msg_bool(attr->name,val);

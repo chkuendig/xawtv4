@@ -353,7 +353,7 @@ static void next_cb(void)
 static GtkItemFactoryEntry menu_items[] = {
     { "/_Next",       "space", next_cb,       0, "<Item>"       },
     { "/_Fullscreen", "F",     fullscreen_cb, 0, "<Item>"       },
-    { "/qsep",        NULL,    NULL,          0, "<Separator>"  },
+    { "/sep",         NULL,    NULL,          0, "<Separator>"  },
     { "/_Quit",       "Q",     gtk_quit_cb,   0, "<StockItem>", GTK_STOCK_QUIT },
 };
 static gint nmenu_items = sizeof (menu_items)/sizeof (menu_items[0]);
