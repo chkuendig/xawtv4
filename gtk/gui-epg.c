@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <sys/times.h>
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
@@ -24,22 +25,6 @@ static GtkWidget* epg_status;
 static EpgStore *epg_store;
 
 /* ------------------------------------------------------------------------ */
-
-#if 0
-enum epg_filter {
-    EPG_FILTER_NOFILTER,
-    EPG_FILTER_NOW,
-    EPG_FILTER_NEXT,
-    EPG_FILTER_STATION,
-    EPG_FILTER_TEXT,
-};
-
-static enum epg_filter cur_filter = EPG_FILTER_NOFILTER;
-
-/* EPG_FILTER_STATION */
-static int epg_filter_tsid = -1;
-static int epg_filter_pnr = -1;
-#endif
 
 /* callbacks */
 static void do_refresh(void);
@@ -98,6 +83,14 @@ static void create_tags(GtkWidget* textview)
 
     gtk_text_buffer_create_tag(buffer, "bold", "weight", PANGO_WEIGHT_BOLD, NULL);
     gtk_text_buffer_create_tag(buffer, "word_wrap", "wrap_mode", GTK_WRAP_WORD, NULL);
+}
+
+static guint timer_id;
+static gboolean keep_up_to_date(gpointer data)
+{
+    if (GTK_WIDGET_VISIBLE(epg_win))
+	epg_store_refresh(epg_store);
+    return TRUE;
 }
 
 static void menu_cb_close(void)
@@ -176,9 +169,13 @@ static GtkTreeViewColumn* add_text_col(char *title, enum epg_cols c,
     GtkCellRenderer *renderer;
 
     renderer = gtk_cell_renderer_text_new ();
+    g_object_set(renderer,
+		 "weight", PANGO_WEIGHT_BOLD,
+		 NULL);
     col = gtk_tree_view_column_new_with_attributes
 	(title, renderer,
-	 "text", c,
+	 "text",       c,
+	 "weight-set", EPG_COL_PLAYING,
 	 NULL);
     gtk_tree_view_column_set_resizable(col, resizable);
     gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
@@ -272,13 +269,14 @@ void create_epgwin(GtkWindow* parent)
     frame = gtk_frame_new(NULL);
     gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
     gtk_container_add(GTK_CONTAINER(frame), scroll);
-    gtk_widget_set_size_request (frame, -1, 60);
-    gtk_paned_pack2(GTK_PANED(paned), frame, TRUE, FALSE);
+    gtk_widget_set_size_request (frame, -1, 120);
+    gtk_paned_pack2(GTK_PANED(paned), frame, FALSE, FALSE);
     
     /* setup store */
     epg_store = epg_store_new();
     gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview),
 			    GTK_TREE_MODEL(epg_store));
+    gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(epg_treeview), True);
 
     g_signal_connect(epg_treeview, "row-activated",
 		     G_CALLBACK(epg_row_activated), epg_win);
@@ -305,6 +303,9 @@ void create_epgwin(GtkWindow* parent)
     sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(epg_treeview));
     g_signal_connect(sel, "changed",
 		     G_CALLBACK(selection_changed), epg_textview);
+
+    /* update view */
+    timer_id = g_timeout_add(5000, keep_up_to_date, NULL);
 }
 
 #define TBBOLD(x) \
@@ -407,20 +408,15 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
 
 void epgwin_show(struct epgitem* epg)
 {
-#if 0
-    GtkTreeIter iter;
-
     if (epg) {
+	epg_store_set_station(epg_store, epg->tsid, epg->pnr);
+#if 0
 	if (0 == epgwin_find_item(&iter, epg->tsid, epg->pnr, epg->id))
 	    epgwin_textview_show_entry(GTK_TEXT_VIEW(epg_textview),
 				       GTK_TREE_MODEL(epg_store),
 				       &iter);
-	
-	epg_filter_tsid = epg->tsid;
-	epg_filter_pnr  = epg->pnr;
-	do_filter_all();
-    }
 #endif
+    }
 
     if (!GTK_WIDGET_VISIBLE(epg_win))
 	gtk_widget_show_all(epg_win);
@@ -434,26 +430,39 @@ static void do_refresh(void)
     int n;
 
     epg_store_refresh(epg_store);
-    epg_store_sort(epg_store);
     n = gtk_tree_model_iter_n_children(GTK_TREE_MODEL(epg_store), NULL);
     snprintf(buf,sizeof(buf),"%d entries",n);
     gtk_label_set_label(GTK_LABEL(epg_status),buf);
 }
 
+static void do_filter(enum epg_filter type)
+{
+    /* temporary disconnect store from view for fast large-scale update */
+    g_object_ref(epg_store);
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), NULL);
+    epg_store_set_filter(epg_store, type);
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), GTK_TREE_MODEL(epg_store));
+    g_object_unref(epg_store);
+}
+
 static void do_filter_nofilter(void)
 {
+    do_filter(EPG_FILTER_NOFILTER);
 }
 
 static void do_filter_station(void)
 {
+    do_filter(EPG_FILTER_STATION);
 }
 
 static void do_filter_now(void)
 {
+    do_filter(EPG_FILTER_NOW);
 }
 
 static void do_filter_next(void)
 {
+    do_filter(EPG_FILTER_NEXT);
 }
 
 // vim: sw=4

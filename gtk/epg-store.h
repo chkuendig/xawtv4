@@ -15,18 +15,20 @@
 typedef struct _EpgStore       EpgStore;
 typedef struct _EpgStoreClass  EpgStoreClass;
 
-struct _EpgStore {
-    GObject         parent;      /* this MUST be the first member */
-    guint           num_rows;    /* number of rows that we have   */
-    struct epgitem  **rows;
-};
-
 struct _EpgStoreClass {
     GObjectClass parent_class;
 };
 GType     epg_store_get_type (void);
 
 /* here is our stuff ... */
+
+enum epg_filter {
+    EPG_FILTER_NOFILTER,
+    EPG_FILTER_NOW,
+    EPG_FILTER_NEXT,
+    EPG_FILTER_STATION,
+    EPG_FILTER_TEXT,
+};
 
 enum epg_cols {
     /* strings */
@@ -41,13 +43,28 @@ enum epg_cols {
     EPG_COL_TSID,
     EPG_COL_PNR,
 
+    /* bool */
+    EPG_COL_PLAYING,
+
     /* ptr */
     EPG_COL_EPGITEM,
     EPG_N_COLUMNS,
 };
 
+struct _EpgStore {
+    GObject         parent;      /* this MUST be the first member */
+    guint           num_rows;    /* number of rows that we have   */
+    struct epgitem  **rows;
+
+    enum epg_filter filter_type;
+    int filter_tsid;
+    int filter_pnr;
+};
+
 EpgStore  *epg_store_new(void);
 void epg_store_refresh(EpgStore *st);
 void epg_store_sort(EpgStore *st);
+void epg_store_set_filter(EpgStore *st, enum epg_filter type);
+void epg_store_set_station(EpgStore *st, int tsid, int pnr);
 
 #endif /* _epg_store_h_included_ */

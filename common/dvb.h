@@ -61,6 +61,7 @@ struct epgitem {
 
     /* for the epg store */
     int                 row;
+    int                 playing;
 };
 
 extern struct list_head epg_list;

@@ -111,12 +111,18 @@ static void
 epg_store_init(EpgStore *st)
 {
     /* alloc / init stuff */
+    st->filter_type = EPG_FILTER_NOFILTER;
+    st->filter_tsid = -1;
+    st->filter_pnr  = -1;
 }
 
 static void
 epg_store_finalize(GObject *object)
 {
-    /* free() stuff */
+    EpgStore *st = EPG_STORE(object);
+
+    if (st->rows)
+	free(st->rows);
     (*parent_class->finalize)(object);
 }
 
@@ -144,6 +150,8 @@ epg_store_get_column_type (GtkTreeModel *tree_model,
     enum epg_cols column = index;
 
     switch(column) {
+    case EPG_COL_PLAYING:
+	return G_TYPE_BOOLEAN;
     case EPG_COL_EPGITEM:
 	return G_TYPE_POINTER;
     case EPG_COL_TSID:
@@ -255,6 +263,11 @@ epg_store_get_value (GtkTreeModel *tree_model,
 	g_value_set_pointer(value, epg);
 	break;
 		
+    case EPG_COL_PLAYING:
+	g_value_init(value, G_TYPE_BOOLEAN);
+	g_value_set_boolean(value, epg->playing);
+	break;
+
     case EPG_N_COLUMNS:
 	break;
     }
@@ -343,45 +356,129 @@ epg_store_new(void)
     return g_object_new(EPG_STORE_TYPE, NULL);
 }
 
+static void epg_row_append(EpgStore *st, struct epgitem *epg)
+{
+    GtkTreeIter  iter;
+    GtkTreePath  *path;
+
+    if (0 == (st->num_rows % 16)) {
+	int size = (st->num_rows+16) * sizeof(st->rows[0]);
+	st->rows = realloc(st->rows, size);
+    }
+    epg->row = st->num_rows;
+    st->rows[st->num_rows++] = epg;
+
+    path = gtk_tree_path_new();
+    gtk_tree_path_append_index(path, epg->row);
+    epg_store_get_iter(GTK_TREE_MODEL(st), &iter, path);
+    gtk_tree_model_row_inserted(GTK_TREE_MODEL(st), path, &iter);
+    gtk_tree_path_free(path);
+    epg->updated = 0;
+}
+
+static void epg_row_changed(EpgStore *st, struct epgitem *epg)
+{
+    GtkTreeIter  iter;
+    GtkTreePath  *path;
+
+    path = gtk_tree_path_new();
+    gtk_tree_path_append_index(path, epg->row);
+    epg_store_get_iter(GTK_TREE_MODEL(st), &iter, path);
+    gtk_tree_model_row_changed(GTK_TREE_MODEL(st), path, &iter);
+    gtk_tree_path_free(path);
+    epg->updated = 0;
+}
+
+static void epg_row_delete(EpgStore *st, struct epgitem *epg)
+{
+    GtkTreePath  *path;
+    int row;
+
+    path = gtk_tree_path_new();
+    gtk_tree_path_append_index(path, epg->row);
+
+    row = epg->row;
+    memmove(st->rows + epg->row, st->rows + epg->row + 1,
+	    (st->num_rows - epg->row - 1) * sizeof(st->rows[0]));
+    st->num_rows--;
+    epg->row = -1;
+    for (; row < st->num_rows; row++)
+	st->rows[row]->row = row;
+
+    gtk_tree_model_row_deleted(GTK_TREE_MODEL(st), path);
+    gtk_tree_path_free(path);
+}
+
+static gboolean is_visible(EpgStore *st, struct epgitem *epg, time_t now)
+{
+    gboolean matches = FALSE;
+    gboolean playing = FALSE;
+
+    if (epg->start <= now && epg->stop > now)
+	playing = TRUE;
+    if (epg->playing != playing) {
+	epg->playing = playing;
+	epg->updated++;
+    }
+
+    switch (st->filter_type) {
+    case EPG_FILTER_NOFILTER:
+	matches = TRUE;
+	break;
+    case EPG_FILTER_NOW:
+	matches = playing;
+	break;
+    case EPG_FILTER_STATION:
+	if (epg->tsid == st->filter_tsid && epg->pnr == st->filter_pnr)
+	    matches = TRUE;
+	break;
+    case EPG_FILTER_NEXT:
+    case EPG_FILTER_TEXT:
+	/* TODO */
+	break;
+    }
+    return matches;
+}
+
 void
 epg_store_refresh(EpgStore *st)
 {
     struct epgitem   *epg;
     struct list_head *item;
-    GtkTreeIter  iter;
-    GtkTreePath  *path;
-    int inserted;
+    time_t now = time(NULL);
 
     list_for_each(item,&epg_list) {
 	epg = list_entry(item, struct epgitem, next);
-	if (!epg->updated)
-	    continue;
-
-	if (-1 == epg->row) {
-	    /* new */
-	    if (0 == (st->num_rows % 16)) {
-		int size = (st->num_rows+16) * sizeof(st->rows[0]);
-		st->rows = realloc(st->rows, size);
-	    }
-	    epg->row = st->num_rows;
-	    st->rows[st->num_rows++] = epg;
-	    inserted = 1;
+	if (is_visible(st,epg,now)) {
+	    if (-1 == epg->row)
+		epg_row_append(st,epg);
+	    else if (epg->updated)
+		epg_row_changed(st,epg);
 	} else {
-	    /* updated */
-	    inserted = 0;
+	    if (-1 != epg->row)
+		epg_row_delete(st,epg);
 	}
-
-	epg->updated = 0;
-	path = gtk_tree_path_new();
-	gtk_tree_path_append_index(path, epg->row);
-	epg_store_get_iter(GTK_TREE_MODEL(st), &iter, path);
-	if (inserted)
-	    gtk_tree_model_row_inserted(GTK_TREE_MODEL(st), path, &iter);
-	else
-	    gtk_tree_model_row_changed(GTK_TREE_MODEL(st), path, &iter);
-	gtk_tree_path_free(path);
     }
+    epg_store_sort(st);
 }
+
+void
+epg_store_set_filter(EpgStore *st, enum epg_filter type)
+{
+    st->filter_type = type;
+    epg_store_refresh(st);
+}
+
+void
+epg_store_set_station(EpgStore *st, int tsid, int pnr)
+{
+    st->filter_tsid = tsid;
+    st->filter_pnr  = pnr;
+    if (st->filter_type == EPG_FILTER_STATION)
+	epg_store_refresh(st);
+}
+
+/* ------------------------------------------------------------------------- */
 
 static int cmp_start(const void *aa, const void *bb)
 {
@@ -394,7 +491,6 @@ static int cmp_start(const void *aa, const void *bb)
 	return 1;
     return 0;
 }
-    
 
 void
 epg_store_sort(EpgStore *st)
@@ -415,39 +511,3 @@ epg_store_sort(EpgStore *st)
     gtk_tree_path_free(path);
     free(new_order);
 }
-
-#if 0
-static gboolean is_visible(GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
-{
-    gboolean matches = FALSE;
-    gint start, stop, tsid, pnr, now;
-
-    switch (cur_filter) {
-    case EPG_FILTER_NOFILTER:
-	matches = TRUE;
-	break;
-    case EPG_FILTER_NOW:
-	gtk_tree_model_get(model, iter,
-			   EPG_COL_START, &start,
-			   EPG_COL_STOP,  &stop,
-			   -1);
-	now = time(NULL);
-	if (start <= now && stop > now)
-	    matches = TRUE;
-	break;
-    case EPG_FILTER_STATION:
-	gtk_tree_model_get(model, iter,
-			   EPG_COL_TSID, &tsid,
-			   EPG_COL_PNR,  &pnr,
-			   -1);
-	if (tsid == epg_filter_tsid && pnr == epg_filter_pnr)
-	    matches = TRUE;
-	break;
-    case EPG_FILTER_NEXT:
-    case EPG_FILTER_TEXT:
-	g_warning("filter not implemented yet");
-	break;
-    }
-    return matches;
-}
-#endif
