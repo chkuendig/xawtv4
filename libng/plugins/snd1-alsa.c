@@ -318,7 +318,8 @@ ng_alsa_write(void *handle, struct ng_audio_buf *buf)
     }
 
     if (0 == rc) {
-	fprintf(stderr,"alsa: write: Huh? no data written?\n");
+	if (ng_debug)
+	    fprintf(stderr,"alsa: write: Huh? no data written?\n");
 	ng_free_audio_buf(buf);
 	buf = NULL;
     } else if (rc < 0) {

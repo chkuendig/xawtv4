@@ -104,7 +104,7 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 
     if (ng_debug > 2)
 	mpeg_pr_buf(in, "input");
-    if (in->info.broken) {
+    if (in->info.broken || NG_FRAME_UNKNOWN == in->info.frame) {
 	if (ng_log_bad_stream)
 	    mpeg_pr_buf(in, "drop");
     } else {

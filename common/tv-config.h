@@ -54,6 +54,7 @@ const char* int_to_str(int n, struct STRTAB *tab);
 #define O_EXT_XVIDMODE		O_OPTIONS, "use-xext-vidmode"
 #define O_EXT_XVIDEO		O_OPTIONS, "use-xext-xvideo"
 #define O_EXT_OPENGL		O_OPTIONS, "use-xext-opengl"
+#define O_X11_STDERR_REDIR      O_OPTIONS, "stderr-redirect"
 
 #define GET_KEYPAD_PARTIAL()	cfg_get_bool(O_KEYPAD_PARTIAL,	1)
 #define GET_KEYPAD_NTSC()	cfg_get_bool(O_KEYPAD_NTSC,	0)
@@ -64,6 +65,7 @@ const char* int_to_str(int n, struct STRTAB *tab);
 #define GET_EXT_XVIDMODE()	cfg_get_bool(O_EXT_XVIDMODE,	1)
 #define GET_EXT_XVIDEO()	cfg_get_bool(O_EXT_XVIDEO,   	1)
 #define GET_EXT_OPENGL()       	cfg_get_bool(O_EXT_OPENGL,     	1)
+#define GET_X11_STDERR_REDIR()  cfg_get_bool(O_X11_STDERR_REDIR,1)
 
 /* option ints */
 #define O_RATIO_X		O_OPTIONS, "ratio-x"

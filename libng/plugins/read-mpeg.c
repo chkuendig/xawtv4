@@ -116,7 +116,8 @@ static int put_video(struct mpeg_handle *h,
 		case 2:  h->psc.frame = NG_FRAME_P_FRAME; break;
 		case 3:  h->psc.frame = NG_FRAME_B_FRAME; break;
 		default:
-		    OOPS("mpeg: unknown frame type (%d)",mpeg_getbits(p2,42,3));
+		    if (ng_log_bad_stream)
+			OOPS("mpeg: unknown frame type (%d)",mpeg_getbits(p2,42,3));
 		    h->psc.frame = NG_FRAME_UNKNOWN;
 		    break;
 		}

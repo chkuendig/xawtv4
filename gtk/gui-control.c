@@ -1068,7 +1068,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.extra_data  = GTK_STOCK_GO_FORWARD,
     },{
 	.path        = "/Commands/Previous Station",
-	// .accelerator = "Page_Down",
+	.accelerator = "BackSpace", // Page_Down
 	.callback    = menu_cb_station_prev,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_BACK,

@@ -66,6 +66,11 @@ struct cfg_cmdline cmd_opts_x11[] = {
 	.yesno   = 1,
 	.desc    = "enable/disable OpenGL (GLX extention)",
     },{
+	.cmdline = "stderr-redirect",
+	.option  = { O_X11_STDERR_REDIR },
+	.yesno   = 1,
+	.desc    = "redirect stderr to a dialog box",
+    },{
 	/* end of list */
     }
 };

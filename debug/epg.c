@@ -20,6 +20,7 @@
 /* ----------------------------------------------------------------------- */
 
 static int exit_application;
+static time_t last_new_eit_record;
 
 static void termsig(int signal)
 {
@@ -355,6 +356,7 @@ static int mpeg_parse_psi_eit(unsigned char *data, int verbose)
     if (seen)
 	return len+4;
 
+    last_new_eit_record = time(NULL);
     if (verbose)
 	fprintf(stderr,
 		"ts [eit]: tab 0x%x pnr %3d ver %2d tsid %d nid %d [%d/%d]\n",
@@ -490,6 +492,7 @@ static int export_xmltv(char *filename)
     }
 
     xmlSaveFormatFileEnc(filename, doc, "UTF-8", 1);
+    fprintf(stderr,"wrote xmltv file \"%s\"\n",filename);
     xmlFreeDoc(doc);
     xmlCleanupParser();
     return 0;
@@ -499,10 +502,22 @@ static int export_xmltv(char *filename)
 
 int debug   = 0;
 int verbose = 1;
+int current = 0;
+
+static void dvbwatch_tsid(struct psi_info *info, int event,
+			  int tsid, int pnr, void *data)
+{
+    switch (event) {
+    case DVBMON_EVENT_SWITCH_TS:
+	current = tsid;
+	break;
+    }
+}
 
 int main(int argc, char *argv[])
 {
     GMainContext *context;
+    char filename[32];
 
     siginit();
     ng_init();
@@ -515,17 +530,19 @@ int main(int argc, char *argv[])
     }
     devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
+    dvbmon_add_callback(devs.dvbmon,dvbwatch_tsid,NULL);
     // eit_add_watch(devs.dvb,0x4e,0xff,verbose);
     eit_add_watch(devs.dvb,0x50,0xf0,verbose);
+    last_new_eit_record = time(NULL);
 
     context = g_main_context_default();
-    while (!exit_application)
+    while (!exit_application && time(NULL) - last_new_eit_record < 5)
 	g_main_context_iteration(context,TRUE);
 
     dvbmon_fini(devs.dvbmon);
     device_fini();
     
-    // export_xmltv("-");
-    export_xmltv("epg.xml");
+    sprintf(filename,"%d.xml",current);
+    export_xmltv(filename);
     return 0;
 }

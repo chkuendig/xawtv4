@@ -1017,7 +1017,7 @@ main(int argc, char *argv[])
 	gtk_window_set_default_size(GTK_WINDOW(main_win), 320, 240);
     gtk_widget_show(main_win);
     gtk_unclutter(video);
-    if (!debug)
+    if (!debug && GET_X11_STDERR_REDIR())
 	gtk_redirect_stderr_to_gui(GTK_WINDOW(main_win));
 
     gc = gdk_gc_new(video->window);
