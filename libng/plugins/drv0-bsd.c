@@ -23,8 +23,9 @@
 
 #if defined(HAVE_DEV_IC_BT8XX_H)
 # include <dev/ic/bt8xx.h>
-#elsif defined(HAVE_DEV_BKTR_IOCTL_BT848_H)
+#elif defined(HAVE_DEV_BKTR_IOCTL_BT848_H)
 # include <dev/bktr/ioctl_bt848.h>
+# include <dev/bktr/ioctl_meteor.h>
 #else
 # include <machine/ioctl_bt848.h>
 # include <machine/ioctl_meteor.h>
@@ -77,7 +78,7 @@ static int     bsd_open(void *handle);
 static int     bsd_close(void *handle);
 static int     bsd_fini(void *handle);
 static char*   bsd_devname(void *handle);
-static struct ng_devinfo* bsd_probe(int verbose);
+static struct ng_devinfo* bsd_probe(void);
 
 /* attributes */
 static int     bsd_flags(void *handle);
@@ -122,7 +123,7 @@ struct ng_vid_driver bsd_driver = {
 #if 0
     .setupfb       = bsd_setupfb,
     .overlay       = bsd_overlay,
-#endiif
+#endif
 
     .setformat     = bsd_setformat,
     .startvideo    = bsd_startvideo,
@@ -718,7 +719,7 @@ static int bsd_tuned(void *handle)
 /* ---------------------------------------------------------------------- */
 /* overlay                                                                */
 
-#if 0
+
 static void
 set_overlay(struct bsd_handle *h, int state)
 {
@@ -739,6 +740,7 @@ set_overlay(struct bsd_handle *h, int state)
     }
 }
 
+#if 0
 static int bsd_setupfb(void *handle, struct ng_video_fmt *fmt, void *base)
 {
     struct bsd_handle *h = handle;

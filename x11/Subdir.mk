@@ -105,7 +105,7 @@ x11/motv         : LDLIBS  += \
 x11/pia          : LDLIBS  += \
 	$(THREAD_LIBS) $(ATHENA_LIBS) $(GL_LIBS) -ljpeg -lm
 x11/mtt          : LDLIBS  += $(THREAD_LIBS) $(MOTIF_LIBS) $(VBI_LIBS) -ljpeg
-x11/v4lctl       : LDLIBS  += $(THREAD_LIBS) $(ATHENA_LIBS) -ljpeg -lm
+x11/v4lctl       : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) $(ATHENA_LIBS) -ljpeg -lm
 x11/rootv        : LDLIBS  += $(ATHENA_LIBS)
 x11/xawtv-remote : LDLIBS  += $(ATHENA_LIBS)
 x11/propwatch    : LDLIBS  += $(ATHENA_LIBS)
