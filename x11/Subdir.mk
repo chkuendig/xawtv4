@@ -64,14 +64,12 @@ x11/mtt: \
 	x11/atoms.o \
 	x11/vbi-x11.o \
 	x11/vbi-gui.o \
+	x11/xt-dvb.o \
 	console/vbi-tty.o \
+	console/fbtools.o \
 	common/RegEdit.o \
 	$(OBJS-common-vbi) \
 	$(OBJS-common-capture)
-
-ifeq ($(FOUND_DVB),yes)
-x11/mtt: x11/xt-dvb.o
-endif
 
 x11/v4lctl: \
 	x11/v4lctl.o \

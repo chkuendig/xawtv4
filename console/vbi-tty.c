@@ -19,8 +19,11 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 
+#include <linux/fb.h>
+
 #include "vbi-data.h"
 #include "vbi-tty.h"
+#include "fbtools.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -59,6 +62,17 @@ static void tty_clear(void)
 static void tty_goto(int x, int y)
 {
     fprintf(stderr,"\033[%d;%dH",y,x);
+}
+
+/* --------------------------------------------------------------------- */
+
+static int have_fb = 0;
+static int fb_fmt  = VBI_PIXFMT_RGBA32_LE;
+static int switch_last;
+
+static void fb_clear(void)
+{
+    fb_memset(fb_mem+fb_mem_offset,0,fb_fix.smem_len);
 }
 
 /* --------------------------------------------------------------------- */
@@ -119,12 +133,22 @@ vbi_render_page(struct vbi_tty *tty)
     vbi_fetch_vt_page(tty->vbi->dec,&tty->pg,tty->pgno,tty->subno,
 		      VBI_WST_LEVEL_1p5,25,1);
     vbi_fix_head(tty,tty->pg.text);
-    len = vbi_export_txt(data,nl_langinfo(CODESET),25*41*8,
-			 &tty->pg,&vbi_fullrect,VBI_ANSICOLOR);
-    tty_goto(0,0);
-    fwrite(data,len,1,stderr);
-    tty_goto(42,0);
-    free(data);
+    if (have_fb) {
+	vbi_draw_vt_page_region(&tty->pg, fb_fmt,
+				fb_mem + fb_mem_offset,
+				fb_fix.line_length,
+				0,0,
+				tty->pg.columns, tty->pg.rows,
+				0,1);
+	
+    } else {
+	len = vbi_export_txt(data,nl_langinfo(CODESET),25*41*8,
+			     &tty->pg,&vbi_fullrect,VBI_ANSICOLOR);
+	tty_goto(0,0);
+	fwrite(data,len,1,stderr);
+	tty_goto(42,0);
+	free(data);
+    }
 }
 
 static void
@@ -142,12 +166,22 @@ vbi_render_head(struct vbi_tty *tty, int pgno, int subno)
     vbi_fetch_vt_page(tty->vbi->dec,&pg,pgno,subno,
 		      VBI_WST_LEVEL_1p5,1,1);
     vbi_fix_head(tty,pg.text);
-    len = vbi_export_txt(data,nl_langinfo(CODESET),41*8,
-			 &pg,&head,VBI_ANSICOLOR);
-    tty_goto(0,0);
-    fwrite(data,len,1,stderr);
-    tty_goto(42,0);
-    free(data);
+    if (have_fb) {
+	vbi_draw_vt_page_region(&pg, fb_fmt,
+				fb_mem + fb_mem_offset,
+				fb_fix.line_length,
+				0,0,
+				pg.columns, 1,
+				0,1);
+	
+    } else {
+	len = vbi_export_txt(data,nl_langinfo(CODESET),41*8,
+			     &pg,&head,VBI_ANSICOLOR);
+	tty_goto(0,0);
+	fwrite(data,len,1,stderr);
+	tty_goto(42,0);
+	free(data);
+    }
 }
 
 static void
@@ -201,13 +235,21 @@ void vbi_tty(char *device, int debug, int sim, int pid)
     if (pid)
 	vbi_set_pid(vbi, pid);
 
-    if (-1 != ioctl(0,TIOCGWINSZ,&win) && win.ws_row < 26) {
-	fprintf(stderr,"Terminal too small (need 26 rows, have %d)\n",
-		win.ws_row);
-	exit(1);
+    if (0 /* 0 == fb_probe() */ ) {
+	have_fb = 1;
+	fb_init(NULL,NULL,0);
+	fb_catch_exit_signals();
+	fb_switch_init();
+	switch_last = fb_switch_state;
+    } else {
+	if (-1 != ioctl(0,TIOCGWINSZ,&win) && win.ws_row < 26) {
+	    fprintf(stderr,"Terminal too small (need 26 rows, have %d)\n",
+		    win.ws_row);
+	    exit(1);
+	}
     }
     tty_raw();
-    tty_clear();
+    have_fb ? fb_clear() : tty_clear();
 
     tty = malloc(sizeof(*tty));
     memset(tty,0,sizeof(*tty));
@@ -224,10 +266,14 @@ void vbi_tty(char *device, int debug, int sim, int pid)
 	rc = select(vbi->fd+1,&set,NULL,NULL,&tv);
 	if (-1 == rc) {
 	    tty_restore();
+	    if (have_fb)
+		fb_cleanup();
 	    perror("select");
 	    exit(1);
 	}
 	if (0 == rc) {
+	    if (have_fb)
+		fb_cleanup();
 	    tty_restore();
 	    fprintf(stderr,"oops: timeout\n");
 	    exit(1);
@@ -245,7 +291,7 @@ void vbi_tty(char *device, int debug, int sim, int pid)
 		    break;
 		case 'L' & 0x1f:
 		    /* refresh */
-		    tty_clear();
+		    have_fb ? fb_clear() : tty_clear();
 		    vbi_render_page(tty);
 		    break;
 		case 'i':
@@ -295,6 +341,8 @@ void vbi_tty(char *device, int debug, int sim, int pid)
 	    vbi_hasdata(vbi);
 	}
     }
+    if (have_fb)
+	fb_cleanup();
     tty_goto(0,0);
     tty_restore();
 }

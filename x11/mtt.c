@@ -154,13 +154,12 @@ static XtActionsRec actionTable[] = {
 
 static void mtt_dvb_init(int findpid)
 {
+    struct psi_info info;
+    struct dvb_state *h;
+    int i;
 
     if (args.dvb) {
-#ifdef HAVE_DVB
-	struct psi_info info;
-	struct dvb_state *h;
-	int i;
-	
+	/* dvb */
 	if (NULL == args.device) {
 	    args.device = malloc(42);
 	    sprintf(args.device,"/dev/dvb/adapter%d/demux0",args.adapter);
@@ -189,10 +188,6 @@ static void mtt_dvb_init(int findpid)
 	    }
 	    dvb_fini(h);
 	}
-#else
-	fprintf(stderr,"compiled without dvb support, sorry\n");
-	exit(1);
-#endif
     } else {
 	/* analog */
 	if (NULL == args.device)
@@ -326,13 +321,11 @@ main(int argc, char **argv)
     read_config();
     apply_config();
     mtt_dvb_init(0);
-#ifdef HAVE_DVB
     if (args.dvb)
 	dvbmon = XtVaCreateWidget("dvb", dvbWidgetClass, app_shell,
 				  "adapter", args.adapter,
 				  "verbose", args.debug,
 				  NULL);
-#endif
 
     vbi = vbi_open(args.device,args.debug,args.sim);
     if (NULL == vbi)

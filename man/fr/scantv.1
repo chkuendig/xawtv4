@@ -1,0 +1,64 @@
+.TH scantv 1 "(c) 2000 Gerd Knorr"
+.SH NOM
+scantv - recherche des émetteurs TV sur un périphérique v4l.
+.SH SYNOPSIS
+.B scantv [ options ]
+.SH DESCRIPTION
+.B scantv
+recherche des émetteurs TV sur un périphérique v4l et écrit un
+fichier de configuration pour xawtv/fbtv.
+.SH OPTIONS
+.TP
+.B -n norm
+définit une \fBn\fPorme TV. scantv va la demander interactivement
+si aucune n'est donnée.
+.TP
+.B -f table
+définit une table de fréquences. scantv va la demander
+interactivement si aucune n'est donnée.
+.TP
+.B -o outfile
+spécifie un fichier de sortie. Si aucun n'est spécifié, scantv
+écrit vers stdout.
+.TP
+.B -c périphérique
+spécifie le fichier de périphérique vidéo. C'est par 
+défaut /dev/video0.
+.TP
+.B -C périphérique
+spécifie le fichier de périphérique vbi. C'est par 
+défaut /dev/vbi.
+.TP
+.B -s
+ne recherche pas les chaînes, écrit seulement la norme et
+la table de fréquences dans le fichier de configuration.
+.TP
+.B -a
+fait une recherche complète (c.a.d. toutes les fréquences, pas seulement
+celles de la table des fréquences).
+.SH VOIR AUSSI
+xawtv(1), fbtv(1)
+.SH AUTEUR
+Gerd Knorr <kraxel@bytesex.org>
+.SH TRADUCTEUR
+José Jorge <jjorge at free.fr>
+.SH COPYRIGHT
+Copyright (C) 2000 Gerd Knorr <kraxel@bytesex.org>
+.P
+Ce programme est un logiciel libre\ ; vous pouvez le redistribuer et/ou
+le modifier sous les termes de la licence GNU GPL telle que publiée
+par la Free Software Foundation; soit la version 2, soit (à votre convenance)
+toute version ultérieure.
+.P
+Ce programme est distribué dans l'espoir qu'il soit utile, mais
+SANS AUCUNE GARANTIE\ ; même sans la garantie implicite de UTILISABILITE
+ou d'ADAPTATION A UN USAGE PRECIS. Lisez la licence GNU GPL pour plus
+de détails.
+.P
+Vous devriez avoir reçu une copie de la licence GNU GPL avec ce programme\ ;
+si ce n'est pas le cas, écrivez à Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+
+

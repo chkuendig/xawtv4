@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <mcheck.h>
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -321,6 +322,7 @@ static void play_file(char *filename)
     struct media_stream mm;
     struct ng_audio_fmt *afmt;
     struct ng_video_fmt *vfmt;
+    struct dvb_state *dvb = NULL;
 
     memset(&mm,0,sizeof(mm));
     
@@ -329,10 +331,7 @@ static void play_file(char *filename)
 
     /* open file */
     if (args.dvb) {
-#ifdef HAVE_DVB
 	/* dvb hack */
-	struct dvb_state *dvb = NULL;
-
 	mm.reader = ng_find_reader_name("mpeg-ts");
 	if (NULL == mm.reader) {
 	    fprintf(stderr,"can't handle dvb\n");
@@ -346,9 +345,6 @@ static void play_file(char *filename)
 	    }
 	}
 	filename = "/dev/dvb/adapter0/dvr0";
-#else
-	fprintf(stderr,"built without dvb support, sorry\n");
-#endif
     } else {
 	/* file playback */
 	mm.reader = ng_find_reader_magic(filename);

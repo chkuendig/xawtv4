@@ -990,10 +990,6 @@ static void vbi_analog_station_menu(Widget menu, struct vbi_state *vbi)
 	free(sub);
 }
 
-/* --------------------------------------------------------------------- */
-
-#ifdef HAVE_DVB
-
 static void vbi_dvb_pid_cb(Widget widget, XtPointer client, XtPointer call)
 {
     struct vbi_state *vbi = client;
@@ -1065,6 +1061,35 @@ static void vbi_dvb_delete_cb(Widget widget, XtPointer client, XtPointer call)
 	XtVaSetValues(vw->st_btn, XtNsensitive, False, NULL);
 }
 
+#if 0
+static void vbi_dvb_station_menu(Widget menubar, struct vbi_state *vbi)
+{
+    struct psi_info *info = vbi->info;
+    Widget menu,push;
+    XmString label;
+    char pid[16];
+    int i;
+
+    menu = XmCreatePulldownMenu(menubar,"stationM",NULL,0);
+    XtVaCreateManagedWidget("station",xmCascadeButtonWidgetClass,menubar,
+			    XmNsubMenuId,menu,NULL);
+
+    for (i = 0; i < PSI_PROGS; i++) {
+	if (0 == info->progs[i].p_pid)
+	    break;
+	if (0 == info->progs[i].t_pid)
+	    continue;
+	sprintf(pid,"%d",info->progs[i].t_pid);
+	label = XmStringGenerate(info->progs[i].name,
+				 NULL, XmMULTIBYTE_TEXT, NULL);
+	push = XtVaCreateManagedWidget(pid,
+				       xmPushButtonWidgetClass,menu,
+				       XmNlabelString,label,
+				       NULL);
+	XtAddCallback(push,XmNactivateCallback,vbi_dvb_pid_cb,vbi);
+	XmStringFree(label);
+    }
+}
 #endif
 
 /* --------------------------------------------------------------------- */
@@ -1196,11 +1221,9 @@ Widget vbi_create_widgets(Display *dpy, struct vbi_state *vbi)
 					  XtNsensitive, False,
 					  NULL);
     if (dvbmon) {
-#ifdef HAVE_DVB
 	XtAddCallback(dvbmon,"update_channel",vbi_dvb_update_cb,vw);
 	XtAddCallback(dvbmon,"delete_channel",vbi_dvb_delete_cb,vw);
 	dvb_refresh(dvbmon);
-#endif
     } else {
 	if (0 != cfg_sections_count("stations")) {
 	    vbi_analog_station_menu(vw->st_menu,vbi);

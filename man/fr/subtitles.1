@@ -1,0 +1,24 @@
+.TH subtitles 1 "(c) 2000 Gerd Knorr"
+.SH NOM
+subtitles - affiche le sous-titrage dans xawtv.
+.SH SYNOPSIS
+.B subtitles [ -help | -tty ] <page>
+.SH DESCRIPTION
+.B subtitles
+reçoit la page télétexte donnée avec l'utilitaire alevt-cap
+et l'affiche en utilisant xawtv-remote dans une boucle infinie.
+C'est surtout utile pour le pages qui contient le sous-titrage de
+l'émission en cours. C'est la page 150 en Alemagne. NDT\ : et la 888
+en France.
+.SH OPTIONS
+.TP
+.B -help
+affiche un court texte d'aide.
+.TP
+.B -tty
+envoie une copie de la page télétexte vers la console.
+.SH VOIR AUSSI
+xawtv(1), xawtv-remote(1), alevt-cap(1)
+.SH TRADUCTEUR
+José Jorge <jjorge at free.fr>
+

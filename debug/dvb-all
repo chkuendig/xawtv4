@@ -1,0 +1,16 @@
+#!/bin/sh
+
+args="$*"
+freqs="$(cat /etc/vdr/channels.conf | cut -d: -f2,3 | sort | uniq)"
+stations="$(for freq in $freqs; do
+	grep $freq /etc/vdr/channels.conf | cut -d: -f1 \
+		| grep -v " " | head -n 1; done)"
+
+#####################################################################
+
+echo "###" $stations "###"
+for station in $stations; do
+	echo "--"
+	echo "### $station ###"
+	./dvb-signal $args "$station"
+done

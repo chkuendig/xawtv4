@@ -1,0 +1,154 @@
+--- bilinear.c.orig	2003-07-07 11:37:53.000000000 +0200
++++ bilinear.c	2003-09-23 15:26:19.000000000 +0200
+@@ -68,7 +68,7 @@
+ /* ------------------------------------------------------------------- */
+ 
+ static struct ng_filter filter = {
+-  name:"bilinear deinterlace",
++  .name= "bilinear deinterlace",
+   fmts:
+     (1 << VIDEO_GRAY)   |
+     (1 << VIDEO_RGB15_NATIVE) |
+@@ -79,9 +79,9 @@
+     (1 << VIDEO_RGB32)  |
+     (1 << VIDEO_YUYV)   |
+     (1 << VIDEO_UYVY),
+-  init:init,
+-  frame:frame,
+-  fini:fini,
++  .init= init,
++  .frame= frame,
++  .fini= fini,
+ };
+ 
+ static void __init plugin_init(void)
+--- cubic.c.orig	2003-07-07 11:37:53.000000000 +0200
++++ cubic.c	2003-09-23 15:26:19.000000000 +0200
+@@ -103,7 +103,7 @@
+ /* ------------------------------------------------------------------- */
+ 
+ static struct ng_filter filter = {
+-  name:"cubic interpolation",
++  .name= "cubic interpolation",
+   fmts:
+     (1 << VIDEO_GRAY)			|
+     (1 << VIDEO_RGB15_NATIVE)		|
+@@ -114,9 +114,9 @@
+     (1 << VIDEO_RGB32)			|
+     (1 << VIDEO_YUYV)			|
+     (1 << VIDEO_UYVY),
+-  init:		init,
+-  frame:	frame,
+-  fini:		fini,
++  .init		= init,
++  .frame	= frame,
++  .fini		= fini,
+ };
+ 
+ static void __init plugin_init(void)
+--- flt-smooth.c.orig	2003-09-23 15:26:06.000000000 +0200
++++ flt-smooth.c	2003-09-23 15:26:19.000000000 +0200
+@@ -553,19 +553,19 @@
+ 
+ static struct ng_attribute attrs[] = {
+     {
+-	id:       0,
+-	name:     "smooth over time",
+-	type:     ATTR_TYPE_BOOL,
+-	defval:   1,
+-	read:     read_attr,
+-	write:    write_attr,
++	.id       = 0,
++	.name     = "smooth over time",
++	.type     = ATTR_TYPE_BOOL,
++	.defval   = 1,
++	.read     = read_attr,
++	.write    = write_attr,
+     },{
+-	id:       1,
+-	name:     "smooth horizontally",
+-	type:     ATTR_TYPE_BOOL,
+-	defval:   1,
+-	read:     read_attr,
+-	write:    write_attr,
++	.id       = 1,
++	.name     = "smooth horizontally",
++	.type     = ATTR_TYPE_BOOL,
++	.defval   = 1,
++	.read     = read_attr,
++	.write    = write_attr,
+     },{
+ 	/* end of list */
+     }
+@@ -573,8 +573,8 @@
+ 
+ 
+ static struct ng_filter filter = {
+-    name:    "smooth",
+-    attrs:   attrs,
++    .name    = "smooth",
++    .attrs   = attrs,
+     fmts:
+     (1 << VIDEO_GRAY)         |
+     (1 << VIDEO_RGB15_NATIVE) |
+@@ -585,9 +585,9 @@
+     (1 << VIDEO_RGB32)        |
+     (1 << VIDEO_YUYV)         |
+     (1 << VIDEO_UYVY),
+-    init:    init,
+-    frame:   frame,
+-    fini:    fini,
++    .init    = init,
++    .frame   = frame,
++    .fini    = fini,
+ };
+ 
+ static void __init plugin_init(void)
+--- linear-blend.c.orig	2003-07-07 11:37:53.000000000 +0200
++++ linear-blend.c	2003-09-23 15:26:19.000000000 +0200
+@@ -144,7 +144,7 @@
+ /* ------------------------------------------------------------------- */
+ 
+ static struct ng_filter filter = {
+-  name:"linear blend",
++  .name= "linear blend",
+   fmts:
+     (1 << VIDEO_GRAY) |
+     (1 << VIDEO_RGB15_NATIVE) |
+@@ -155,9 +155,9 @@
+     (1 << VIDEO_RGB32) |
+     (1 << VIDEO_YUYV)  |
+     (1 << VIDEO_UYVY),
+-  init:init,
+-  frame:frame,
+-  fini:fini,
++  .init= init,
++  .frame= frame,
++  .fini= fini,
+ };
+ 
+ static void __init plugin_init(void)
+--- linedoubler.c.orig	2003-07-07 11:37:53.000000000 +0200
++++ linedoubler.c	2003-09-23 15:26:19.000000000 +0200
+@@ -62,7 +62,7 @@
+ /* ------------------------------------------------------------------- */
+ 
+ static struct ng_filter filter = {
+-    name:    "line doubler deinterlace",
++    .name    = "line doubler deinterlace",
+     fmts:
+     (1 << VIDEO_GRAY)         |
+     (1 << VIDEO_RGB15_NATIVE) |
+@@ -73,9 +73,9 @@
+     (1 << VIDEO_RGB32)        |
+     (1 << VIDEO_YUYV)         |
+     (1 << VIDEO_UYVY),
+-    init:    init,
+-    frame:   frame,
+-    fini:    fini,
++    .init    = init,
++    .frame   = frame,
++    .fini    = fini,
+ };
+ 
+ static void __init plugin_init(void)

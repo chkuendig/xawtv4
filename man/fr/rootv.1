@@ -1,0 +1,74 @@
+.TH rootv 1 "(c) 2000-2002 Gerd Knorr"
+.SH NOM
+rootv - affiche la TV en utilisant l'extension Xvideo
+.SH SYNOPSIS
+.B rootv [ options ]
+.SH DESCRIPTION
+.B rootv
+affiche une video dans une fenêtre. Par défaut il crée sa propre
+fenêtre, mais vous pouvez aussi lui demander d'utiliser le fond d'écran
+(root window, d'où le nom) ou tout autre fenêtre.
+.B rootv
+a besoin de l'extension Xvideo.
+.P
+.B rootv
+lui-même ne fournit aucun moyen de contrôler la vidéo, l'audio ou le
+syntoniseur. vous pouvez utiliser v4lctl pour cela.
+.SH OPTIONS
+.B rootv
+connaît un certain nombre d'options en ligne de commande qui modifient
+son comportement.
+.TP
+.B -help
+Affiche une courte description de toutes les options de la ligne de commande.
+.TP
+.B -verbose
+Être bavard. Ceci va envoyer quelques informations de débogage vers stderr.
+.TP
+.B -root
+Met la video en fond d'écran plutôt que de créer une nouvelle fenêtre.
+.TP
+.B -id <win>
+Met la video dans la fenêtre <win> plutôt que de créer une nouvelle fenêtre.
+.TP
+.B -station <st>
+Syntonise l'émetteur <st>. Ceci ne fait qu'appeler v4lconf, qui de son côté
+va chercher l'émetteur dans votre fichier de configuration ~/.xawtv.
+.TP
+.B -no-mute
+Ne coupe pas la carte. Par défaut rootv va déclencher la carte TV quand
+il démarre et la couper quand il s'arrête. Il fait ceci en utilisant
+l'attribut XV_MUTE (s'il est disponible).
+.TP
+.B -port <n>
+Utilise le port Xvideo <n>. Essayez l'option -verbose si vous voulez savoir
+lesquels sont disponibles.
+.TP
+.B -bg
+Bascule en arrière-plan.
+.TP
+.B -wm
+Affiche un menu WindowMaker (définit les stations en utilisant v4lctl).
+.SH VOIR AUSSI
+xawtv(1), fbtv(1), v4lctl(1)
+.SH AUTEUR
+Gerd Knorr <kraxel@bytesex.org>
+.SH TRADUCTEUR
+José Jorge <jjorge at free.fr>
+.SH COPYRIGHT
+Copyright (C) 2000-2002 Gerd Knorr <kraxel@bytesex.org>
+.P
+Ce programme est un logiciel libre; vous pouvez le redistribuer et/ou
+le modifier sous les termes de la licence GNU GPL telle que publiée
+par la Free Software Foundation; soit la version 2, soit (à votre convenance)
+toute version ultérieure.
+.P
+Ce programme est distribué dans l'espoir qu'il soit utile, mais
+SANS AUCUNE GARANTIE; même sans la garantie implicite de UTILISABILITÉ
+ou d'ADAPTATION À UN USAGE PRÉCIS. Lisez la licence GNU GPL pour plus
+de détails.
+.P
+Vous devriez avoir reçu une copie de la licence GNU GPL avec ce programme;
+si ce n'est pas le cas, écrivez à Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+

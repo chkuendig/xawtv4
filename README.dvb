@@ -1,0 +1,60 @@
+
+some dvb support notes
+======================
+
+It starts working these days, don't expect to much yet ...
+
+compile time dependencies:
+	mpeg audio  -  mad (http://www.underbit.com/products/mad/).
+	mpeg video  -  libmpeg2 (http://libmpeg2.sf.net/).
+	teletext    -  libzvbi (http://zapping.sf.net).
+
+
+watch tv
+--------
+
+Right now only the movie player utility "pia" can handle dvb.  It does
+software MPEG-2 playback, i.e. supports budget cards.  No hardware
+decoder support (yet?).  No fancy GUI yet, no integration into
+xawtv/motv yet.
+
+pia expects a /etc/vdr/channels.conf file with all the tuning
+information in there.  If you already have one -- fine.  Otherwise use
+the scan utility from the dvb package to create one.
+
+Then start "pia -dvb <station>", where <station> is the name in the
+first column of the channels.conf file.  That should "just work" in
+theory.
+
+
+watch teletext
+--------------
+
+The mtt browser supports dvb fine, just pass the '-dvb' option to
+switch it into dvb mode.  It will check what is available in the
+transport stream, pick some teletext stream and build (x11 mode only)
+a menu with all available teletext streams on the fly.  You can also
+explicitly specify the initial stream with the -pid option.
+
+alevtd can handle teletext from dvb too, just specify demux0 as
+device and pass the pid you want as command line argument.
+
+Both utilities don't touch the frontend device (i.e. don't tune some
+frequency), you have to do this with some other utility.  They just
+passively fish for data on the current incoming transport stream.
+
+
+other
+-----
+
+There is the dvb-signal tool (in debug) which I use to dump
+informations from the transport stream and watch signal quality. You
+might find that useful too ...
+
+
+Good luck and have alot of fun,
+
+  Gerd
+
+--
+Gerd Knorr <kraxel@bytesex.org> [SuSE Labs]

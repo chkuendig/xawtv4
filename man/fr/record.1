@@ -1,0 +1,82 @@
+.TH record 1 "(c) Gerd Knorr"
+.SH NOM
+record - enregistre des fichiers *.wav
+.SH SYNOPSIS
+.B record [ options ]
+.SH DESCRIPTION
+.B record
+enregistre des fichiers *.wav de qualité CD (cad. 44100 Hz, 16bit,
+stereo). Il a un moniteur de niveau en entrée, qui peut s'avérer
+utile en cas de problèmes de son (vérifier si les réglages du mixage
+son sont corrects pour enregistrer depuis la carte TV etc.)
+.SH OPTIONS
+.TP
+.B -h
+affiche un texte d'aide
+.TP
+.B -o fichier
+nom de base pour le(s) fichier(s) de sortie, un numéro et l'extension
+.wav sont ajoutés par record. C'est "record" par défaut.
+.TP
+.B -i entrée
+entrée de mixage à contrôler. Ceci devrait être celle qui permet de
+régler le niveau sonore de la source audio. C'est "line" par défaut.
+"mic" et "igain" sont de bons choix aussi. La meilleure manière de
+choisir est de lancer votre programme de mixage favori et de voir
+lequel fonctionne...
+.TP
+.B -m périphérique
+le périphérique de mixage. C'est "/dev/mixer" par défaut.
+.TP
+.B -d dev
+choisit le périphérique audio. C'est "/dev/dsp" par défaut.
+.TP
+.B -r échantillonage
+choisit le taux d'échantillonage. 44100 par défaut.
+.TP
+.B -p sec
+durée d'écrêtage en secondes (nombre de secondes qui doivent être
+lues pour le volume maximum). Ceci affecte à la fois l'affichage du
+niveau et l'enregistrement auto-déclenché (voir ci-dessous). Vaut
+1,5 secondes par défaut.
+.P
+record peut aussi être utilisé de manière non interactive\ :
+.TP
+.B -c
+active le mode console (non interactif).
+.TP
+.B -v
+être bavard (mode console seulement).
+.TP
+.B -t mm:ss
+Limite la durée de l'enregistrement (mode console seulement). Par
+défaut record enregistre jusqu'à ce qu'un signal l'interrompe (en
+saisissant Ctrl\ +\ C par exemple).
+.TP
+.B -s taille
+limiter la taille des fichiers (mode console seulement). record va
+continuer sur un nouveau fichier quand la limite est atteinte.
+.TP
+.B -l
+active l'enregistrement auto-déclenché (mode console seulement) avec
+le niveau de déclenchement par défaut (1\ 000).
+.TP
+.B -L niveau
+active l'enregistrement auto-déclenché avec le niveau de
+déclenchement spécifié.
+.P
+Si l'enregistrement auto-déclenché est actif, record va démarrer et
+arrêter l'enregistrement suivant le niveau du signal en entrée.
+L'enregistrement démarre si le niveau en entrée est supérieur au
+niveau de déclenchement (1000/32768 -> environ 3%). L'enregistrement
+est arrêté si le niveau en entrée est inférieur au niveau de
+déclenchement pendant un certain temps (1,5 secondes par défaut, le
+commutateur -p permet de le changer).
+.SH AUTEUR
+Gerd Knorr <kraxel@bytesex.org>
+.SH TRADUCTEUR
+José Jorge <jjorge at free.fr>
+
+
+
+

@@ -1,0 +1,49 @@
+.TH streamer 1
+.SH NOM
+streamer - enregistreur audio et/ou vidéo
+.SH SYNOPSIS
+.B streamer [ options ]
+.SH DESCRIPTION
+.B streamer
+lit des données audio et/ou video depuis /dev/video0 et /dev/dsp
+et les écrit sur le disque. Plusieurs formats de sortie sont
+supportés. Démarrez streamer avec '-h' pour une liste des options
+et des formats de sortie supportés.
+.P
+streamer va utiliser l'extension de fichier du nom du fichier de
+sortie pour deviner quel format il doit utiliser. Vous n'avez besoin
+des options -f/-F que si l'extension permet plus d'un format.
+.P
+Vous pouvez arrêter l'enregistrement en toute sécurité à tout moment
+avec Ctrl+c. streamer va recevoir le signal arrêter l'enregistrement
+correctement (ex. en écrivant les en-têtes du fichier vidéo) avant
+de quitter.
+.SH EXEMPLES
+.TP
+.B streamer -o foobar.jpeg
+écrit un seul fichier jpeg.
+.TP
+.B streamer -o quicktime.mov -f yuv2 -F stereo -r 12 -t 120
+enregistre une courte animation quicktime (120 images / 12
+ips => 10 secondes).
+.SH VOIR AUSSI
+xawtv(1), v4lctl(1)
+.SH AUTEUR
+Gerd Knorr <kraxel@bytesex.org>
+.SH TRADUCTEUR
+José Jorge <jjorge at free.fr>
+.SH COPYRIGHT
+Ce programme est un logiciel libre; vous pouvez le redistribuer et/ou
+le modifier sous les termes de la licence GNU GPL telle que publiée
+par la Free Software Foundation; soit la version 2, soit (à votre convenance)
+toute version ultérieure.
+.P
+Ce programme est distribué dans l'espoir qu'il soit utile, mais
+SANS AUCUNE GARANTIE; même sans la garantie implicite de UTILISABILITÉ
+ou d'ADAPTATION À UN USAGE PRÉCIS. Lisez la licence GNU GPL pour plus
+de détails.
+.P
+Vous devriez avoir reçu une copie de la licence GNU GPL avec ce programme;
+si ce n'est pas le cas, écrivez à Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+

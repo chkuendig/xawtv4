@@ -1,15 +1,11 @@
 
 # variables
 TARGETS-debug := \
+	debug/dvb-signal \
 	debug/probe
-
 ifeq ($(FOUND_X11),yes)
 TARGETS-debug += \
 	debug/xvideo
-endif
-ifeq ($(FOUND_DVB),yes)
-TARGETS-debug += \
-	debug/dvb-signal
 endif
 
 debug/probe: \

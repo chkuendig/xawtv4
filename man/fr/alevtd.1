@@ -1,0 +1,103 @@
+.TH alevtd 1 "(c) 2000 Gerd Knorr"
+.SH NOM
+alevtd - serveur web de pages télétexte
+.SH SYNOPSIS
+.B alevtd [ options ]
+.SH DESCRIPTION
+.B alevtd
+est un démon http qui fournit des pages vidéotexte sous forme HTML.
+Syntonisez un émetteur avec un utilitaire tel v4lctl ou une
+application de TV. Puis démarrez alevtd et indiquez à votre
+navigateur l'adresse http://localhost:5654/
+.P
+Les pages peuvent être obtenues soit au format HTML
+(http://localhost:5654/<page>/ ou
+http://localhost:5654/<page>/<subpage>.html) ou au format texte ASCII
+(http://localhost:5654/<page>/<subpage>.txt).  La sous-page "00"
+peut être utilisée pour les pages ne comportant pas de sous-pages.
+.SH OPTIONS
+.TP
+.B -h
+affiche un court texte d'aide ainsi que les valeurs par défaut pour
+toutes les options.
+.TP
+.B -v dev
+définit le périphérique \fBv\fPbi(par défaut: /dev/vbi).
+.TP
+.B -d
+active les informations de \fBd\fPébogage.
+.TP
+.B -s
+Écrit un message pour le démarrage, l'arrêt et les erreurs
+importantes dans le journal \fBs\fPystème. Spécifiez cette option
+deux fois pour obtenir un journal complet (avec des événements
+supplémentaires tels que les rejets de connexions).
+.TP
+.B -t sec
+définit le \fBt\fPemps de réponse du réseau à >sec< secondes.
+.TP
+.B -c n
+définit à >n< le nombre de \fBc\fPonnexions simultanées autorisées.
+Ceci est une limite par processus(thread).
+.TP
+.B -p port
+accepte les connexions sur le \fBp\fPort >port<. Par défaut 5654.
+.TP
+.B -n hostname
+définit le nom d'hôte que le serveur doit utiliser (requis pour
+les redirections).
+.TP
+.B -i ip
+connecter à l'adresse \fBI\fPP >ip<.
+.TP
+.B -l journal
+Journalise toutes les requêtes vers le fichier journal >log<
+(format standard de journal). L'utilisation de "-" comme nom
+de fichier entraîne l'écriture de celui-ci vers stdout, ce qui
+n'est utile qu'en combinaison avec l'option -F (voir ci-dessous).
+.TP
+.B -L journal
+comme ci-dessus, mais vide le tampon à chaque ligne. Utile si vous
+voulez surveiller le journal avec tail -f.
+.TP
+.B -u utilisateur
+définit l'\fBu\fPid à >utilisateur< (après avoir pris le port tcp).
+Cette option n'est autorisée qu'à root.
+.TP
+.B -g groupe
+définit l'\fBg\fPid à >groupe< (après avoir pris le port tcp).
+Cette option n'est autorisée qu'à root.
+.TP
+.B -F
+ne se lance pas comme un démon. alevtd ne va pas basculer en
+arrière-plan, ni se détacher du terminal et rapporter les erreurs
+vers stderr.
+.TP
+.B -r
+surveille la fréquence tv, vide le cache des pages télétexte si
+un changement de fréquence a été détecté.
+.SH VOIR AUSSI
+alevt(1), xawtv(1), v4lctl(1)
+.SH AUTEUR
+Gerd Knorr <kraxel@goldbach.in-berlin.de>
+.SH TRADUCTEUR
+José Jorge <jjorge at free.fr>
+.SH COPYRIGHT
+Copyright (C) 2000 Gerd Knorr <kraxel@goldbach.in-berlin.de>
+.P
+Ce programme est un logiciel libre\ ; vous pouvez le redistribuer et/ou
+le modifier sous les termes de la licence GNU GPL telle que publiée
+par la Free Software Foundation\ ; soit la version 2, soit (à votre convenance)
+toute version ultérieure.
+.P
+Ce programme est distribué dans l'espoir qu'il soit utile, mais
+SANS AUCUNE GARANTIE\ ; même sans la garantie implicite d'UTILISABILITÉ
+ou d'ADAPTATION À UN USAGE PRÉCIS. Lisez la licence GNU GPL pour plus
+de détails.
+.P
+Vous devriez avoir reçu une copie de la licence GNU GPL avec ce programme;
+si ce n'est pas le cas, écrivez à Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+

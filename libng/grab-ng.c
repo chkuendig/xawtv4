@@ -19,6 +19,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <fcntl.h>
+#include <execinfo.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>

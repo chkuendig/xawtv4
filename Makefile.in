@@ -62,7 +62,6 @@ FOUND_AALIB	:= @FOUND_AALIB@
 FOUND_ALSA	:= @FOUND_ALSA@
 FOUND_ARTS	:= @FOUND_ARTS@
 FOUND_DV	:= @FOUND_DV@
-FOUND_DVB	:= @FOUND_DVB@
 FOUND_GL	:= @FOUND_GL@
 FOUND_LQT	:= @FOUND_LQT@
 FOUND_MAD	:= @FOUND_MAD@
@@ -98,7 +97,6 @@ CXXFLAGS := $(CFLAGS)
 
 # libraries
 LDLIBS  := @LDLIBS@
-LDFLAGS := @LDFLAGS@
 
 
 #########################################################
@@ -110,7 +108,7 @@ Makefile: $(srcdir)/Makefile.in $(srcdir)/configure
 	$(srcdir)/configure
 
 $(srcdir)/configure: $(srcdir)/configure.ac
-	(cd $(srcdir); ./autogen.sh)
+	(cd $(srcdir); autoconf && autoheader && rm -rf autom4te.cache)
 
 install:: all
 	$(INSTALL_DIR) $(bindir)
