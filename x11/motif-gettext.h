@@ -1,4 +1,6 @@
-#define _(string) string
+#include <libintl.h>
+
+#define _(string) gettext(string)
 
 /* -------------------------------------------------------------------------- */
 

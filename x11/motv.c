@@ -44,9 +44,6 @@
 #include <Xm/DragIcon.h>
 #include <Xm/Container.h>
 #include <Xm/IconG.h>
-#if 0
-#include <Xm/TabStack.h>
-#endif
 #include <X11/extensions/XShm.h>
 
 #include "grab-ng.h"
@@ -2820,8 +2817,11 @@ int
 main(int argc, char *argv[])
 {
     Pixel background;
-    
+
     XtSetLanguageProc(NULL,NULL,NULL);
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    textdomain(PACKAGE);
+
     app_shell = XtVaAppInitialize(&app_context, "MoTV4",
 				  opt_desc, opt_count,
 				  &argc, argv,

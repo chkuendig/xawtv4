@@ -48,6 +48,7 @@
 #include "commands.h"
 #include "dvb.h"
 #include "xt-dvb.h"
+#include "motif-gettext.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -298,6 +299,9 @@ main(int argc, char **argv)
     memcpy(av,argv,sizeof(char*)*(argc+1));
 
     XtSetLanguageProc(NULL,NULL,NULL);
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    textdomain(PACKAGE);
+
     XtToolkitInitialize();
     app_context = XtCreateApplicationContext();
     XtAppSetFallbackResources(app_context,fallback_ressources);

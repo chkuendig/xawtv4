@@ -12,6 +12,7 @@ bindir		:= $(DESTDIR)@bindir@
 mandir		:= $(DESTDIR)@mandir@
 libdir		:= $(DESTDIR)@libdir@/xawtv4
 datadir		:= $(DESTDIR)@datadir@/xawtv
+localedir	:= $(DESTDIR)@datadir@/locale
 resdir		:= $(DESTDIR)@resdir@
 config		:= @x11conf@/xawtvrc
 
@@ -83,8 +84,10 @@ CFLAGS   += $(LFS_FLAGS)
 CFLAGS   += $(X11_FLAGS)
 CFLAGS   += $(LIB_FLAGS)
 CFLAGS   += -DCONFIGFILE='"$(config)"'
-CFLAGS   += -DDATADIR='"$(datadir)"'
 CFLAGS   += -DLIBDIR='"$(libdir)"'
+CFLAGS   += -DDATADIR='"$(datadir)"'
+CFLAGS   += -DLOCALEDIR='"$(localedir)"'
+CFLAGS   += -DPACKAGE='"$(PACKAGE)"'
 CFLAGS   += -DVERSION='"$(VERSION)"'
 CXXFLAGS := $(CFLAGS)
 
@@ -186,6 +189,12 @@ po/xawtv.pot: $(I18N_SRCS)
 merge: $(patsubst %,po/%.pox,$(LANGUAGES))
 
 all:: $(patsubst %,po/%.mo,$(LANGUAGES))
+
+install:: $(patsubst %,install-mo-%,$(LANGUAGES))
+
+install-mo-%: po/%.mo
+	$(INSTALL_DIR) $(localedir)/$*/LC_MESSAGES
+	$(INSTALL_DATA) $< $(localedir)/$*/LC_MESSAGES/$(PACKAGE).mo
 
 clean::
 	rm -f po/xawtv.pot
