@@ -93,7 +93,7 @@ case "`uname -s`" in
 		# *BSD has important stuff (from ports)
 		# in /usr/local ...
 		CFLAGS="$CFLAGS -I/usr/local/include -L/usr/local/lib"
-		LDLIBS="$LDLIBS -L/usr/local/lib"
+		LDFLAGS="$LDFLAGS -L/usr/local/lib"
 		FOUND_OS="bsd"
 		;;
 	*)
@@ -187,6 +187,7 @@ AC_SUBST(FSLIB)
 AC_SUBST(SUBS)
 AC_SUBST(TOOLS)
 AC_SUBST(LDLIBS)
+AC_SUBST(LDFLAGS)
 AC_SUBST(XFT_FLAGS)
 AC_SUBST(XFT_LIBS)
 
@@ -256,7 +257,7 @@ AC_SUBST(LIBZVBI)
 LIBZVBI=""
 if test "$enable_zvbi" != "no"; then
     AC_CHECK_LIB(zvbi, vbi_capture_fd,
-        AC_DEFINE(HAVE_ZVBI,1,"have zvbi") FOUND_ZVBI="yes"; LIBZVBI="-lzvbi -lpthread -lm -lpng -lz",,)
+        AC_DEFINE(HAVE_ZVBI,1,"have zvbi") FOUND_ZVBI="yes"; LIBZVBI="-lzvbi -lm -lpng -lz",,)
 else
     echo "*** zvbi disabled"
 fi
@@ -342,9 +343,6 @@ if test "$enable_gl" != "no"; then
 else
     echo "*** OpenGL disabled"
 fi
-
-VERSION="`(cd $srcdir; pwd) | sed -e 's/.*-//'`"
-AC_SUBST(VERSION)
 
 dnl ---------------------------------------------------------------------
 AC_MSG_CHECKING(for X11 config directory)

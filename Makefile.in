@@ -1,9 +1,9 @@
 srcdir		:= @srcdir@
 VPATH		:= $(srcdir)
 
-# for package builds (buildroot install + no root privs needed)
-DESTDIR=
-SUID_ROOT=-m4755 -o root
+# for override by package builds (buildroot install + no root privs needed)
+DESTDIR		:=
+SUID_ROOT	:= -m4755 -o root
 
 # install paths
 prefix		:= @prefix@
@@ -24,7 +24,10 @@ INSTALL_DATA	:= @INSTALL_DATA@
 INSTALL_DIR	:= @INSTALL@ -d -m 755
 
 # misc
-VERSION		:= @VERSION@
+VERSION		:= 4.0-pre
+ifneq ($(wildcard .snapshot),)
+  SNAPSHOT	+= SNAPSHOT $(shell cat .snapshot)
+endif
 
 # for CFLAGS
 WARN_FLAGS	:= -Wall -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith
@@ -62,6 +65,7 @@ FOUND_AALIB	:= @FOUND_AALIB@
 FOUND_ALSA	:= @FOUND_ALSA@
 FOUND_ARTS	:= @FOUND_ARTS@
 FOUND_DV	:= @FOUND_DV@
+FOUND_DVB	:= @FOUND_DVB@
 FOUND_GL	:= @FOUND_GL@
 FOUND_LQT	:= @FOUND_LQT@
 FOUND_MAD	:= @FOUND_MAD@
@@ -81,11 +85,7 @@ CFLAGS   += $(LIB_FLAGS)
 CFLAGS   += -DCONFIGFILE='"$(config)"'
 CFLAGS   += -DDATADIR='"$(datadir)"'
 CFLAGS   += -DLIBDIR='"$(libdir)"'
-ifeq ($(wildcard .snapshot),)
-  CFLAGS += -DVERSION='"$(VERSION)"'
-else
-  CFLAGS += -DVERSION='"$(VERSION) [SNAPSHOT $(shell cat .snapshot)]"'
-endif
+CFLAGS   += -DVERSION='"$(VERSION)"'
 CXXFLAGS := $(CFLAGS)
 
 # for gcc3
@@ -97,6 +97,7 @@ CXXFLAGS := $(CFLAGS)
 
 # libraries
 LDLIBS  := @LDLIBS@
+LDFLAGS := @LDFLAGS@
 
 
 #########################################################

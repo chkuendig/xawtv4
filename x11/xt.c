@@ -1621,7 +1621,7 @@ hello_world(char *name)
     }
     
     uname(&uts);
-    fprintf(stderr,"This is %s-%s, running on %s/%s (%s)\n",
+    fprintf(stderr,"This is %s %s, running on %s/%s (%s)\n",
 	    name,VERSION,uts.sysname,uts.machine,uts.release);
     if (args.printver)
 	exit(0);
