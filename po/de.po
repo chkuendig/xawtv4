@@ -1,0 +1,379 @@
+# German translations for PACKAGE package
+# German messages for PACKAGE.
+# Copyright (C) 2004 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Gerd Knorr <kraxel@bytesex.org>, 2004.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2004-04-16 13:10+0200\n"
+"PO-Revision-Date: 2004-04-16 12:16+0200\n"
+"Last-Translator: Gerd Knorr <kraxel@bytesex.org>\n"
+"Language-Team: German <de@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: x11/motv.c:1512
+msgid "&About ..."
+msgstr "&Über ..."
+
+#: x11/motv.c:1349
+msgid "&Add station ..."
+msgstr "Sender &hinzufügen ..."
+
+#: x11/vbi-gui.c:1164
+msgid "&Close"
+msgstr "&Schließen"
+
+#: x11/motv.c:1358 x11/vbi-gui.c:1169
+msgid "&Copy"
+msgstr "&Kopieren"
+
+#: x11/motv.c:1353
+msgid "&Delete station"
+msgstr "Sender &löschen"
+
+#: x11/motv.c:1366
+msgid "&Details"
+msgstr "&Details"
+
+#: x11/motv.c:1491
+msgid "&Devices"
+msgstr "&Geräte"
+
+#: x11/motv.c:1348 x11/vbi-gui.c:1168
+msgid "&Edit"
+msgstr "&Bearbeiten"
+
+#: x11/motv.c:1351
+msgid "&Edit station ..."
+msgstr "&Sender bearbeiten ..."
+
+#: x11/motv.c:1340 x11/vbi-gui.c:1158
+msgid "&File"
+msgstr "&Datei"
+
+#: x11/motv.c:1395
+msgid "&Fullscreen"
+msgstr "&Vollbild"
+
+#: x11/vbi-gui.c:1173
+msgid "&Go to"
+msgstr "&Gehe zu"
+
+#: x11/motv.c:1508
+msgid "&Help"
+msgstr "&Hilfe"
+
+#: x11/vbi-gui.c:1174
+msgid "&Index"
+msgstr "&Index"
+
+#: x11/motv.c:1433
+msgid "&JPEG, max size"
+msgstr "&JPEG, volle Größe"
+
+#: x11/motv.c:1363
+msgid "&Large icons"
+msgstr "Große &Symbole"
+
+#: x11/vbi-gui.c:1159
+msgid "&New window"
+msgstr "&Neues Fenster"
+
+#: x11/vbi-gui.c:1178
+msgid "&Next page"
+msgstr "&Nächste Seite"
+
+#: x11/motv.c:1403
+msgid "&Next station"
+msgstr "&Nächster Sender"
+
+#: x11/motv.c:1389
+msgid "&Preferences ..."
+msgstr "&Einstellungen ..."
+
+#: x11/vbi-gui.c:1176
+msgid "&Previous page"
+msgstr "&Vorherige Seite"
+
+#: x11/motv.c:1406
+msgid "&Previous station"
+msgstr "&vorheriger Sender"
+
+#: x11/motv.c:1344
+msgid "&Quit"
+msgstr "&Beenden"
+
+#: x11/motv.c:1341
+msgid "&Record movie ..."
+msgstr "&Film aufzeichnen ..."
+
+#: x11/vbi-gui.c:1161
+msgid "&Save as ..."
+msgstr "&Speichern unter ..."
+
+#: x11/motv.c:1391
+msgid "&Save options"
+msgstr "&Einstellungen speichern"
+
+#: x11/motv.c:1504
+msgid "&Stations"
+msgstr "&Sender"
+
+#: x11/vbi-gui.c:1183
+msgid "&Subpage"
+msgstr "&Unterseite"
+
+#: x11/motv.c:1371
+msgid "&Tools"
+msgstr "&Tools"
+
+#: x11/motv.c:1362
+msgid "&View"
+msgstr "&Ansicht"
+
+#: x11/motv.c:1453
+msgid "&disable"
+msgstr "&ausschalten"
+
+#: x11/motv.c:1442
+msgid "&none"
+msgstr "&kein"
+
+#: x11/motv.c:993
+msgid "Add station"
+msgstr "Sender hinzufügen"
+
+#: x11/motv.c:2152
+msgid "Apply"
+msgstr "Anwenden"
+
+#: x11/motv.c:1441
+msgid "Aspect ratio"
+msgstr "Seitenverhältnis"
+
+#: x11/motv.c:1646
+msgid "Audio options"
+msgstr "Toneinstellungen"
+
+#: x11/motv.c:1673
+msgid "Audio:"
+msgstr "Ton:"
+
+#: x11/motv.c:1668 x11/motv.c:1679
+msgid "Browse ..."
+msgstr "Auswählen ..."
+
+#: x11/motv.c:1146 x11/motv.c:1584 x11/motv.c:2152
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: x11/motv.c:1165
+msgid "Channel"
+msgstr "Kanal"
+
+#: x11/motv.c:1415
+msgid "Channel &down"
+msgstr "&vorheriger Kanal"
+
+#: x11/motv.c:1412
+msgid "Channel &up"
+msgstr "&nächster Kanal"
+
+#: x11/vbi-gui.c:598
+msgid "Character set:"
+msgstr "Zeichensatz: "
+
+#: x11/motv.c:1693
+msgid "Close"
+msgstr "Schließen"
+
+#: x11/man.c:57
+msgid "Close window"
+msgstr "Fenster schließen"
+
+#: x11/motv.c:1175
+msgid "DVB name"
+msgstr "DVB name"
+
+#: x11/motv.c:1500
+msgid "Device &Settings ..."
+msgstr "&Geräteeinstellungen ..."
+
+#: x11/motv.c:684
+msgid "Device settings"
+msgstr "Geräteeinstellungen"
+
+#: x11/motv.c:1632
+msgid "Driver:"
+msgstr "Treiber:"
+
+#: x11/motv.c:1033
+msgid "Edit station"
+msgstr "Sender bearbeiten"
+
+#: x11/motv.c:1099
+msgid "Error"
+msgstr "Fehler"
+
+#: x11/motv.c:2804
+msgid "Error messages"
+msgstr "Fehlermeldungen"
+
+#: x11/vbi-gui.c:1202
+msgid "F&onts"
+msgstr "&Schrift"
+
+#: x11/motv.c:1656
+msgid "Filenames"
+msgstr "Dateinamen"
+
+#: x11/motv.c:1473
+msgid "Filter"
+msgstr "Filter"
+
+#: x11/motv.c:1650
+msgid "Format:"
+msgstr "Format:"
+
+#: x11/motv.c:1378
+msgid "Frequency table"
+msgstr "Frequenztabelle"
+
+#: x11/motv.c:1426
+msgid "Grab image"
+msgstr "Bild speichern"
+
+#: x11/motv.c:1161
+msgid "Group"
+msgstr "Gruppe"
+
+#: x11/motv.c:1156
+msgid "Hotkey"
+msgstr "Hotkey"
+
+#: x11/motv.c:2174
+msgid "JPEG Quality"
+msgstr "JPEG Qualität"
+
+#: x11/motv.c:1436
+msgid "JPEG, window size"
+msgstr "JPEG, Fenstergröße"
+
+#: x11/motv.c:1448
+msgid "Launch"
+msgstr "Starten"
+
+#: x11/motv.c:1146 x11/motv.c:1584 x11/motv.c:2152
+msgid "OK"
+msgstr "OK"
+
+#: x11/motv.c:2161
+msgid "Options"
+msgstr "Einstellungen"
+
+#: x11/motv.c:1427
+msgid "PPM, max size"
+msgstr "PPM, volle Größe"
+
+#: x11/motv.c:1430
+msgid "PPM, window size"
+msgstr "PPM, Fenstergröße"
+
+#: x11/motv.c:1691
+msgid "Playback"
+msgstr "Wiedergabe"
+
+#: x11/motv.c:2151
+msgid "Preferences"
+msgstr "Einstellungen"
+
+#: x11/motv.c:1651
+msgid "Rate:"
+msgstr "Rate:"
+
+#: x11/motv.c:1687
+msgid "Record"
+msgstr "Aufnahme"
+
+#: x11/motv.c:1619
+#, fuzzy
+msgid "Record a movie"
+msgstr "&Film aufzeichnen ..."
+
+#: x11/vbi-gui.c:1187
+msgid "S&tations"
+msgstr "&Sender"
+
+#: x11/vbi-gui.c:591
+msgid "Save File"
+msgstr "Datei speichern"
+
+#: x11/motv.c:1355
+msgid "Save stations"
+msgstr "Sender speichern"
+
+#: x11/motv.c:1152
+msgid "Station name"
+msgstr "Name des Senders"
+
+#: x11/motv.c:1689
+msgid "Stop"
+msgstr "Beenden"
+
+#: x11/motv.c:1452
+msgid "Subtitles"
+msgstr "Untertitel"
+
+#: x11/motv.c:1411
+msgid "Tuner"
+msgstr "Tuner"
+
+#: x11/motv.c:1636
+msgid "Video options"
+msgstr "Bildeinstellungen"
+
+#: x11/motv.c:1662
+msgid "Video:"
+msgstr "Bild:"
+
+#: x11/motv.c:1100
+msgid "You have to specify a name for the TV Station"
+msgstr "Sie müssen einen Name für den Sender vergeben"
+
+#: x11/motv.c:2729
+msgid "enable"
+msgstr "einschalten"
+
+#: x11/motv.c:1641
+msgid "fps:"
+msgstr "fps:"
+
+#: x11/motv.c:1455
+msgid "page &150"
+msgstr "Seite &150"
+
+#: x11/motv.c:1457
+msgid "page &333"
+msgstr "Seite &333"
+
+#: x11/motv.c:1459
+msgid "page &777"
+msgstr "Seite &777"
+
+#: x11/motv.c:1463
+msgid "page &888"
+msgstr "Seite &888"
+
+#: x11/motv.c:1461
+msgid "page 8&01"
+msgstr "Seite 8&01"
+
+#: x11/man.c:63
+msgid "please wait ..."
+msgstr "bitte warten ..."

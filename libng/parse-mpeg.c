@@ -10,10 +10,10 @@
 
 #define FILE_BUF_MIN       (512*1024)
 #define FILE_BUF_MAX    (8*1024*1024)
-#define READ_TIMEOUT                1   /* second */
 
-int  ng_mpeg_vpid  = 0;
-int  ng_mpeg_apid  = 0;
+int  ng_mpeg_vpid    = 0;
+int  ng_mpeg_apid    = 0;
+int  ng_read_timeout = 3; /* seconds */
 
 /* ----------------------------------------------------------------------- */
 /* static data                                                             */
@@ -264,7 +264,7 @@ unsigned char* mpeg_get_data(struct mpeg_handle *h, off_t pos, size_t size)
 		}
 		FD_ZERO(&set);
 		FD_SET(h->fd,&set);
-		tv.tv_sec  = READ_TIMEOUT;
+		tv.tv_sec  = ng_read_timeout;
 		tv.tv_usec = 0;
 		switch (select(h->fd+1,&set,NULL,NULL,&tv)) {
 		case -1:
@@ -273,7 +273,7 @@ unsigned char* mpeg_get_data(struct mpeg_handle *h, off_t pos, size_t size)
 		    break;
 		case 0:
 		    fprintf(stderr,"mpeg: select: timeout (%d sec)\n",
-			    READ_TIMEOUT);
+			    ng_read_timeout);
 		    h->beof = 1;
 		    break;
 		}

@@ -1,7 +1,7 @@
 /*
  * Openmotif user interface
  *
- *   (c) 2000-2002 Gerd Knorr <kraxel@bytesex.org>
+ *   (c) 2000-2004 Gerd Knorr <kraxel@bytesex.org>
  *
  */
 
@@ -1439,9 +1439,9 @@ create_control(void)
     
     /* menu - tools / aspect ratio */
     smenu = xm_submenu(menu, NULL, "ratio", _("Aspect ratio"));
-    push = xm_pushbutton(smenu,"r_no",_("&no ratio"));
+    push = xm_pushbutton(smenu,"r_no",_("&none"));
     XtAddCallback(push,XmNactivateCallback,action_cb,"Ratio(0,0)");
-    push = xm_pushbutton(smenu,"r_43",_("&4:3"));
+    push = xm_pushbutton(smenu,"r_43","&4:3");
     XtAddCallback(push,XmNactivateCallback,action_cb,"Ratio(4,3)");
 
     /* menu - tools / launch */
@@ -1665,7 +1665,7 @@ create_strwin(void)
     h->text = XtVaCreateManagedWidget("fvideo",xmTextWidgetClass,
 				      rowcol,NULL);
     m_fvideo = h->text;
-    h->push = xm_pushbutton(rowcol,"files",_("Browse..."));
+    h->push = xm_pushbutton(rowcol,"files",_("Browse ..."));
     XtAddCallback(h->push,XmNactivateCallback,file_browse_cb,h);
 
     rowcol = XtVaCreateManagedWidget("faudioB",xmRowColumnWidgetClass,
@@ -1676,11 +1676,11 @@ create_strwin(void)
     h->text = XtVaCreateManagedWidget("faudio",xmTextWidgetClass,rowcol,
 				      NULL);
     m_faudio = h->text;
-    h->push = xm_pushbutton(rowcol,"files",_("Browse..."));
+    h->push = xm_pushbutton(rowcol,"files",_("Browse ..."));
     m_faudioB = h->push;
     XtAddCallback(h->push,XmNactivateCallback,file_browse_cb,h);
 
-    /* seperator, buttons */
+    /* separator, buttons */
     xm_label(form,"status","status");
     rowcol = XtVaCreateManagedWidget("buttons",xmRowColumnWidgetClass,form,
 				     NULL);

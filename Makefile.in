@@ -168,6 +168,34 @@ include $(srcdir)/x11/Subdir.mk
 
 
 #########################################################
+# translations
+
+I18N_SRCS := $(wildcard x11/*.c)
+LANGUAGES := $(patsubst po/%.po,%,$(wildcard po/*.po))
+
+po/xawtv.pot: $(I18N_SRCS)
+	xgettext -s -o $@ -d xawtv -k -k_ $(I18N_SRCS)
+
+%.pox: %.po po/xawtv.pot
+	msgmerge -o $@ $^
+
+%.mo: %.po
+	msgfmt -o $@ $<
+
+.PHONY: merge
+merge: $(patsubst %,po/%.pox,$(LANGUAGES))
+
+all:: $(patsubst %,po/%.mo,$(LANGUAGES))
+
+clean::
+	rm -f po/xawtv.pot
+	rm -f po/*.mo
+
+realclean::
+	rm -f po/*.pox
+
+
+#########################################################
 # just for me, some maintaining jobs.  Don't use them
 
 PRESULT := /work/pbuilder/result
