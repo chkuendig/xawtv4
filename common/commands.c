@@ -851,7 +851,8 @@ static int snap_handler(char *hname, int argc, char **argv)
     sprintf(tmpfilename,"%s.$$$",filename);
 
     if (jpeg) {
-	if (-1 == write_jpeg(tmpfilename, buf, ng_jpeg_quality, 0)) {
+	if (-1 == write_jpeg(tmpfilename, buf, ng_jpeg_quality,
+			     fmt.fmtid == VIDEO_GRAY)) {
 	    snprintf(message,sizeof(message),"open %s: %s\n",
 		     tmpfilename,strerror(errno));
 	} else {

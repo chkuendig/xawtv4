@@ -10,7 +10,8 @@ OBJS-common-dvb := \
 	structs/struct-dvb.o \
 	structs/struct-dump.o
 OBJS-glib-dvb := \
-	common/dvb-monitor.o
+	common/dvb-monitor.o \
+	common/dvb-epg.o
 endif
 
 OBJS-common-capture := \
@@ -34,3 +35,4 @@ OBJS-common-input := \
 # RegEdit.c is good old K&R ...
 common/RegEdit.o     : CFLAGS += -Wno-missing-prototypes -Wno-strict-prototypes
 common/dvb-monitor.o : CFLAGS += $(GTK_CFLAGS)  # uses glib only through
+common/dvb-epg.o     : CFLAGS += $(GTK_CFLAGS)  # uses glib only through

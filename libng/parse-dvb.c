@@ -61,18 +61,55 @@ static int iconv_string(char *from, char *to,
     return max-1 - olen;
 }
 
+static int handle_control_8(unsigned char *src,  int slen,
+			    unsigned char *dest, int dlen)
+{
+    int s,d;
+
+    for (s = 0, d = 0; s < slen && d < dlen;) {
+	if (src[s] >= 0x80  &&  src[s] <= 0x9f) {
+	    switch (src[s]) {
+	    case 0x86: /* <em>  */
+	    case 0x87: /* </em> */
+		s++;
+		break;
+	    case 0x8a: /* <br>  */
+		dest[d++] = '\n';
+		s++;
+		break;
+	    default:
+		s++;
+	    }
+	} else {
+	    dest[d++] = src[s++];
+	}
+    }
+    return d;
+}
+
 void mpeg_parse_psi_string(unsigned char *src, int slen,
 			   unsigned char *dest, int dlen)
 {
-    int ch = 0;
+    unsigned char *tmp;
+    int tlen,ch = 0;
 
     if (src[0] < 0x20) {
 	ch = src[0];
 	src++;
 	slen--;
     }
+
     memset(dest,0,dlen);
-    iconv_string(psi_charset[ch], "UTF-8", src, slen, dest, dlen);
+    if (ch < 0x10) {
+	/* 8bit charset */
+	tmp = malloc(slen);
+	tlen = handle_control_8(src, slen, tmp, slen);
+	iconv_string(psi_charset[ch], "UTF-8", tmp, tlen, dest, dlen);
+	free(tmp);
+    } else {
+	/* 16bit charset */
+	iconv_string(psi_charset[ch], "UTF-8", src, slen, dest, dlen);
+    }
 }
 
 static void parse_nit_desc_1(unsigned char *desc, int dlen,

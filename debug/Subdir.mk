@@ -27,8 +27,8 @@ debug/epg: \
 	debug/epg.o \
 	common/devs.o \
 	common/parseconfig.o \
-	common/dvb-monitor.o \
 	$(OBJS-common-dvb) \
+	$(OBJS-glib-dvb) \
 	libng/libng.a
 
 debug/xvideo:     debug/xvideo.o
