@@ -192,11 +192,11 @@ static enum ng_video_frame dropper(int drop)
 {
     enum ng_video_frame seek = NG_FRAME_UNKNOWN;
 
-    if (drop > 5) {
+    if (drop > 12) {
 	if (ng_debug)
 	    fprintf(stderr,"mpeg: seeking to next I frame\n");
 	seek = NG_FRAME_I_FRAME;
-    } else if (drop > 2) {
+    } else if (drop > 3) {
 	if (ng_debug)
 	    fprintf(stderr,"mpeg: seeking to next P frame\n");
 	seek = NG_FRAME_P_FRAME;

@@ -39,10 +39,17 @@ LIB_FLAGS	:= -I. -I./vbistuff -I./x11 \
 		   -I$(srcdir)/x11 -I$(srcdir)/structs \
 		   -I$(srcdir)/libng -Llibng
 
-# various libraries
+# X11 stuff
 ATHENA_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@ @ATHENA@
 MOTIF_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@ -lXm -lXmu -lXt @X_PRE_LIBS@ \
 		   -lXp -lXpm -lXext -lX11 @X_EXTRA_LIBS@
+
+# gtk2 stuff
+GTK_CFLAGS	:= @GTK_CFLAGS@
+GTK_CFLAGS	+= -Wno-strict-prototypes  # fsck gtk+ header files
+GTK_LIBS	:= @GTK_LIBS@ @X_LIBS@ @XFT_LIBS@ @LIBS@
+
+# various libraries
 THREAD_LIBS	:= @LIBPTHREAD@
 CURSES_LIBS	:= @LIBCURSES@
 LIRC_LIBS	:= @LIRC@
@@ -68,6 +75,7 @@ FOUND_ARTS	:= @FOUND_ARTS@
 FOUND_DV	:= @FOUND_DV@
 FOUND_DVB	:= @FOUND_DVB@
 FOUND_GL	:= @FOUND_GL@
+FOUND_GTK	:= @FOUND_GTK@
 FOUND_LQT	:= @FOUND_LQT@
 FOUND_MAD	:= @FOUND_MAD@
 FOUND_MPEG2	:= @FOUND_MPEG2@
@@ -165,6 +173,7 @@ include $(srcdir)/man/Subdir.mk
 include $(srcdir)/scripts/Subdir.mk
 include $(srcdir)/vbistuff/Subdir.mk
 include $(srcdir)/x11/Subdir.mk
+include $(srcdir)/gtk/Subdir.mk
 
 # dependencies
 -include $(depfiles)

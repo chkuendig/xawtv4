@@ -62,6 +62,7 @@ AC_SUBST(FOUND_AALIB)
 AC_SUBST(FOUND_ALSA)
 AC_SUBST(FOUND_ARTS)
 AC_SUBST(FOUND_DV)
+AC_SUBST(FOUND_GTK)
 AC_SUBST(FOUND_LQT)
 AC_SUBST(FOUND_MAD)
 AC_SUBST(FOUND_MPEG2)
@@ -75,6 +76,7 @@ FOUND_AALIB="no"
 FOUND_ALSA="no"
 FOUND_ARTS="no"
 FOUND_DV="no"
+FOUND_GTK="no"
 FOUND_LQT="no"
 FOUND_MAD="no"
 FOUND_MPEG2="no"
@@ -338,6 +340,19 @@ else
     echo "*** OpenGL disabled"
 fi
 
+AC_MSG_CHECKING(for gtk+ 2.0)
+pkg-config gtk+-x11-2.0 >/dev/null 2>&1
+if test "$?" = "0"; then
+    AC_MSG_RESULT(yes)
+    FOUND_GTK="yes"
+    GTK_CFLAGS=$(pkg-config --cflags gtk+-x11-2.0)
+    GTK_LIBS=$(pkg-config --libs gtk+-x11-2.0)
+    AC_SUBST(GTK_CFLAGS)
+    AC_SUBST(GTK_LIBS)
+else
+    AC_MSG_RESULT(no)
+fi
+
 dnl ---------------------------------------------------------------------
 AC_MSG_CHECKING(for X11 config directory)
 x11conf=/usr/X11R6/lib/X11
@@ -404,6 +419,7 @@ compile time options summary
     mad          : $FOUND_MAD
     mpeg2        : $FOUND_MPEG2
     X11R6        : $FOUND_X11
+    gtk+         : $FOUND_GTK
     OpenMotif    : $FOUND_MOTIF
     OpenGL       : $FOUND_GL
     zvbi         : $FOUND_ZVBI

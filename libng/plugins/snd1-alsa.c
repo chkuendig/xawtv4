@@ -163,8 +163,8 @@ ng_alsa_setformat(void *handle, struct ng_audio_fmt *fmt)
     h->fmtid = fmt->fmtid;
     h->mul   = ng_afmt_to_channels[fmt->fmtid] *
 	ng_afmt_to_bits[fmt->fmtid] / 8;
-    h->btime = 1000000; /* 1.0 sec */
-    h->ptime =  100000; /* 0.1 sec */
+    h->btime = 500000; /* 0.50 sec */
+    h->ptime =  30000; /* 0.03 sec */
     if (ng_debug)
 	fprintf(stderr,"alsa: setformat %s @ %d\n",
 		ng_afmt_to_desc[fmt->fmtid], fmt->rate);

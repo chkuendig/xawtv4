@@ -174,8 +174,11 @@ static struct ng_video_buf* mpeg_get_frame(void *handle)
 
     if (list_empty(&h->done))
 	return NULL;
+#if 0
+    /* try to keep the buffers in the queue constant */
     if (h->wip_cnt < h->wip_max)
 	return NULL;
+#endif
     fr = list_entry(h->done.next, struct mpeg_frame, list);
     if (!fr->released)
 	return NULL;

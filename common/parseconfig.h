@@ -9,6 +9,7 @@ struct cfg_option {
     char *entry;
 };    
 struct cfg_cmdline {
+    char               letter;
     char               *cmdline;
     struct cfg_option  option;
     char               *value;

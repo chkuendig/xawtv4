@@ -8,8 +8,7 @@ TARGETS-x11 += \
 	x11/propwatch \
 	x11/xawtv-remote \
 	x11/rootv \
-	x11/xawtv \
-	x11/pia
+	x11/xawtv
 endif
 ifeq ($(FOUND_MOTIF),yes)
 TARGETS-x11 += \

@@ -1074,13 +1074,13 @@ usage(void)
 	    "      -hwstore        write hardware configuration to config file\n"
 	    "\n");
 
-    cfg_help_cmdline(cmd_opts_devices,6,16,40);
+    cfg_help_cmdline(cmd_opts_devices,2,16,40);
     fprintf(stderr,"\n");
 
-    cfg_help_cmdline(cmd_opts_x11,6,16,40);
+    cfg_help_cmdline(cmd_opts_x11,2,16,40);
     fprintf(stderr,"\n");
 
-    cfg_help_cmdline(cmd_opts_record,6,16,40);
+    cfg_help_cmdline(cmd_opts_record,2,16,40);
     fprintf(stderr,"\n");
     
     fprintf(stderr,
