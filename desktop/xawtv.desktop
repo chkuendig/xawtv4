@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=xawtv
+GenericName=Watch TV
+Icon=xawtv
+Exec=xawtv
+Terminal=no
+Categories=AudioVideo;TV
