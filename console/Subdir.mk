@@ -61,8 +61,11 @@ console/v4l-info: \
 	console/v4l-info.o \
 	structs/struct-dump.o \
 	structs/struct-v4l.o \
-	structs/struct-v4l2.o \
+	structs/struct-v4l2.o
+ifeq ($(FOUND_DVB),yes)
+console/v4l-info: \
 	structs/struct-dvb.o
+endif
 
 console/radio: \
 	console/radio.o \
