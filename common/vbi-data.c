@@ -123,17 +123,18 @@ vbi_hasdata(struct vbi_state *vbi)
 void
 vbi_close(struct vbi_state *vbi)
 {
-    if (vbi) {
-	if (vbi->sliced)
-	    free(vbi->sliced);
-	if (vbi->raw)
-	    free(vbi->raw);
-	if (vbi->cap)
-	    vbi_capture_delete(vbi->cap);
-	if (vbi->dec)
-	    vbi_decoder_delete(vbi->dec);
-	free(vbi);
-    }
+    if (!vbi)
+	return;
+
+    if (vbi->sliced)
+	free(vbi->sliced);
+    if (vbi->raw)
+	free(vbi->raw);
+    if (vbi->cap)
+	vbi_capture_delete(vbi->cap);
+    if (vbi->dec)
+	vbi_decoder_delete(vbi->dec);
+    free(vbi);
 }
 
 void

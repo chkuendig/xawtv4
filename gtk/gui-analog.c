@@ -27,6 +27,8 @@ static GtkWidget     *status;
 static GtkListStore  *store;
 static GtkWidget     *view;
 
+static gint          scan_id;
+
 /* ------------------------------------------------------------------------ */
 
 enum {
@@ -34,10 +36,110 @@ enum {
     ST_COL_CHANNEL,
 
     ST_STATE_ACTIVE,
+    ST_STATE_NOSIGNAL,
     ST_STATE_SCANNED,
     
     ST_NUM_COLS
 };
+
+/* ------------------------------------------------------------------------ */
+
+static void mark_unscanned(void)
+{
+    gboolean valid;
+    GtkTreeIter iter;
+
+    for (valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store),&iter);
+	 valid;
+	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&iter)) {
+	gtk_list_store_set(store, &iter, ST_STATE_SCANNED, FALSE, -1);
+    }
+}
+
+static char* next_unscanned(void)
+{
+    gboolean valid, scanned;
+    GtkTreeIter iter;
+    char *channel,line[32];
+
+    for (valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store),&iter);
+	 valid;
+	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&iter)) {
+	gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			   ST_STATE_SCANNED, &scanned,
+			   ST_COL_CHANNEL,   &channel,
+			   -1);
+	if (scanned)
+	    continue;
+	gtk_list_store_set(store, &iter, ST_STATE_SCANNED, TRUE, -1);
+	snprintf(line,sizeof(line),_("scanning %s ..."),channel);
+	gtk_label_set_label(GTK_LABEL(status),line);
+	return channel;
+    }
+    return NULL;
+}
+
+static gboolean find_active(GtkTreeIter *iter)
+{
+    gboolean valid,active;
+
+    for (valid = gtk_tree_model_iter_children(GTK_TREE_MODEL(store),iter, NULL);
+	 valid;
+	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),iter)) {
+	gtk_tree_model_get(GTK_TREE_MODEL(store), iter,
+			   ST_STATE_ACTIVE, &active, -1);
+	if (active)
+	    return True;
+    }
+    return False;
+}
+
+static gboolean scan_timer(gpointer data)
+{
+    GtkTreeIter iter;
+    char *name,*channel,unknown[32];
+
+    if (find_active(&iter)) {
+	if (devs.video.type == NG_DEV_VIDEO &&
+	    devs.video.v->is_tuned(devs.video.handle)) {
+	    gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			       ST_COL_NAME,    &name,
+			       ST_COL_CHANNEL, &channel,
+			       -1);
+	    if (NULL == name || 0 == strlen(name)) {
+		snprintf(unknown,sizeof(unknown),"unknown (%s)",channel);
+		gtk_list_store_set(store, &iter, ST_COL_NAME, unknown, -1);
+	    }
+	    gtk_list_store_set(store, &iter, ST_STATE_NOSIGNAL, False, -1);
+	} else {
+	    gtk_list_store_set(store, &iter,
+			       ST_COL_NAME,       "<no signal>",
+			       ST_STATE_NOSIGNAL, True,
+			       -1);
+	}
+    }
+
+    channel = next_unscanned();
+    if (NULL == channel) {
+	gtk_label_set_label(GTK_LABEL(status),_("channel scan finished"));
+	scan_id = 0;
+	return FALSE;
+    }
+    do_va_cmd(2,"setchannel",channel);
+    return TRUE;
+}
+
+static void menu_cb_scan(void)
+{
+    char *channel;
+
+    mark_unscanned();
+    channel = next_unscanned();
+    if (channel) {
+	do_va_cmd(2,"setchannel",channel);
+	scan_id = g_timeout_add(1000, scan_timer, NULL);
+    }
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -54,16 +156,12 @@ static gboolean vbi_raw_data(GIOChannel *source, GIOCondition condition,
 static void vbi_set_name(char *name)
 {
     GtkTreeIter iter;
-    gboolean valid,active;
 
-    for (valid = gtk_tree_model_iter_children(GTK_TREE_MODEL(store),&iter, NULL);
-	 valid;
-	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&iter)) {
-	gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
-			   ST_STATE_ACTIVE, &active, -1);
-	if (active)
-	    gtk_list_store_set(store, &iter, ST_COL_NAME, name, -1);
-    }
+    if (find_active(&iter))
+	gtk_list_store_set(store, &iter,
+			   ST_COL_NAME,       name,
+			   ST_STATE_NOSIGNAL, False,
+			   -1);
 }
 
 static void vbi_dec_data(struct vbi_event *ev, void *user)
@@ -106,7 +204,8 @@ static void fill_entries(void)
     cfg_sections_for_each(ft,list) {
 	gtk_list_store_append(store, &iter);
 	gtk_list_store_set(store, &iter,
-			   ST_COL_CHANNEL, list,
+			   ST_COL_CHANNEL,    list,
+			   ST_STATE_NOSIGNAL, True,
 			   -1);
     }
 }
@@ -182,6 +281,16 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = menu_cb_close,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_QUIT,
+
+    },{
+	/* --- Commands menu ------------------------- */
+	.path        = "/_Commands",
+	.item_type   = "<Branch>",
+    },{
+	.path        = "/Commands/_Scan",
+	.accelerator = "S",
+	.callback    = menu_cb_scan,
+	.item_type   = "<Item>",
     }
 };
 static gint nmenu_items = sizeof(menu_items)/sizeof (menu_items[0]);
@@ -191,9 +300,16 @@ static void destroy(GtkWidget *widget,
 		    gpointer   data)
 {
     if (devs.vbi) {
+	g_source_remove(vbi_id);
+	g_io_channel_unref(vbi_ch);
 	vbi_event_handler_unregister(devs.vbi->dec,vbi_dec_data,NULL);
 	vbi_close(devs.vbi);
 	devs.vbi = NULL;
+    }
+    if (scan_id) {
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(), scan_id));
+	scan_id = 0;
     }
     analog_win = 0;
 }
@@ -243,6 +359,7 @@ void analog_create_window(void)
 			       G_TYPE_STRING,   // channel
 
 			       G_TYPE_BOOLEAN,  // active
+			       G_TYPE_BOOLEAN,  // signal
 			       G_TYPE_BOOLEAN); // scanned
     gtk_tree_view_set_model(GTK_TREE_VIEW(view),
 			    GTK_TREE_MODEL(store));
@@ -254,21 +371,25 @@ void analog_create_window(void)
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer,
 		 "weight",      PANGO_WEIGHT_BOLD,
+		 "foreground",  "gray",
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Name", renderer,
 	 "text",           ST_COL_NAME,
 	 "weight-set",     ST_STATE_ACTIVE,
+	 "foreground-set", ST_STATE_NOSIGNAL,
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer,
 		 "weight",      PANGO_WEIGHT_BOLD,
+		 "foreground",  "gray",
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Channel", renderer,
 	 "text",           ST_COL_CHANNEL,
 	 "weight-set",     ST_STATE_ACTIVE,
+	 "foreground-set", ST_STATE_NOSIGNAL,
 	 NULL);
 
     col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NAME);
