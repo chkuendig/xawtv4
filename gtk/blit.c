@@ -633,37 +633,43 @@ static int gl_attrib[] = { GLX_RGBA,
 			   None };
 
 struct {
+    int  ifmt;
     int  fmt;
     int  type;
     char *ext;
     int  works;
 } gl_formats[VIDEO_FMT_COUNT] = {
     [ VIDEO_RGB24 ] = {
+	ifmt: GL_RGB,
 	fmt:  GL_RGB,
 	type: GL_UNSIGNED_BYTE,
     },
 #ifdef GL_EXT_bgra
     [ VIDEO_BGR24 ] = {
+	ifmt: GL_RGB,
 	fmt:  GL_BGR_EXT,
 	type: GL_UNSIGNED_BYTE,
 	ext:  "GL_EXT_bgra",
     },
     [ VIDEO_BGR32 ] = {
+	ifmt: GL_RGB,
 	fmt:  GL_BGRA_EXT,
 	type: GL_UNSIGNED_BYTE,
 	ext:  "GL_EXT_bgra",
     },
 #endif
-#if 0 /* def GL_EXT_MESA_ycbcr_texture -- untested ... */
-    [ VIDEO_YUYV ] = {
-	fmt:  YCBCR_422_MESA,
-	type: UNSIGNED_SHORT_8_8_MESA,
-	ext:  "GL_EXT_MESA_ycbcr_texture",
-    },
+#ifdef GL_MESA_ycbcr_texture
     [ VIDEO_UYVY ] = {
-	fmt:  YCBCR_422_MESA,
-	type: UNSIGNED_SHORT_8_8_REV_MESA,
-	ext:  "GL_EXT_MESA_ycbcr_texture",
+	ifmt: GL_YCBCR_MESA,
+	fmt:  GL_YCBCR_MESA,
+	type: GL_UNSIGNED_SHORT_8_8_MESA,
+	ext:  "GL_MESA_ycbcr_texture",
+    },
+    [ VIDEO_YUYV ] = {
+	ifmt: GL_YCBCR_MESA,
+	fmt:  GL_YCBCR_MESA,
+	type: GL_UNSIGNED_SHORT_8_8_REV_MESA,
+	ext:  "GL_MESA_ycbcr_texture",
     },
 #endif
 };
@@ -950,7 +956,9 @@ blit_create_buf(struct blit_handle *h, struct ng_video_fmt *fmt)
 	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	    dummy = malloc(p->tw * p->th * 4);
 	    memset(dummy, 128, p->tw * p->th * 4);
-	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, p->tw, p->th,0,
+	    glTexImage2D(GL_TEXTURE_2D, 0,
+			 gl_formats[fmt->fmtid].ifmt,
+			 p->tw, p->th,0,
 			 gl_formats[fmt->fmtid].fmt,
 			 gl_formats[fmt->fmtid].type,
 			 dummy);
