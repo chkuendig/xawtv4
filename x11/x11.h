@@ -17,7 +17,6 @@ void video_gd_stop(void);
 void video_gd_suspend(void);
 void video_gd_restart(void);
 void video_gd_configure(int width, int height);
-#endif
 
 void video_new_size(void);
 void video_overlay(int state);
@@ -25,3 +24,4 @@ void video_overlay(int state);
 Widget video_init(Widget parent, XVisualInfo *vinfo,
 		  WidgetClass class, int args_bpp);
 void video_close(void);
+#endif

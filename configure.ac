@@ -9,7 +9,7 @@ dnl ---------------------------------------------------------------------
 dnl compile time options
 
 AC_ARG_ENABLE(xfree-ext,
-  [  --enable-xfree-ext      use XFree extensions (DGA,VidMode,DPMS)])
+  [  --enable-xfree-ext      use XFree extensions (VidMode,DPMS)])
 AC_ARG_ENABLE(xvideo,
   [  --enable-xvideo         use the Xvideo extension])
 AC_ARG_ENABLE(lirc,
@@ -300,8 +300,6 @@ fi
 AC_SUBST(QTLIBS)
 
 if test "$enable_xfree_ext" != "no"; then
-    AC_CHECK_LIB(Xxf86dga, XF86DGAQueryExtension,,, 
-	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
     AC_CHECK_LIB(Xxf86vm, XF86VidModeQueryExtension,,, 
 	$X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS)
     AC_CHECK_LIB(Xdpms, DPMSQueryExtension,,, 

@@ -95,12 +95,6 @@ x11_label_pixmap(Display *dpy, Colormap colormap, Pixmap pixmap,
     XFreeGC(dpy, gc);
 }
 
-static int
-x11_error_dev_null(Display * dpy, XErrorEvent * event)
-{
-    return 0;
-}
-
 /* ------------------------------------------------------------------------ */
 /* video grabdisplay stuff                                                  */
 
@@ -344,6 +338,7 @@ video_gd_configure(int width, int height)
 
 #endif
 
+#if 0
 /* ------------------------------------------------------------------------ */
 /* video overlay stuff                                                      */
 
@@ -792,3 +787,5 @@ video_close(void)
     XSelectInput(XtDisplay(video),root,0);
     XtUnregisterDrawable(XtDisplay(video),root);
 }
+
+#endif

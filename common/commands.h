@@ -52,7 +52,6 @@ extern void (*exit_hook)(void);
 extern void (*movie_hook)(int argc, char **argv);
 
 extern int debug;
-extern int do_overlay;
 extern char *snapbase;
 extern int have_shmem;
 extern unsigned int cur_tv_width,cur_tv_height;

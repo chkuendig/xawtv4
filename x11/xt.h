@@ -29,27 +29,20 @@ Status DPMSDisable(Display*);
 #endif
 
 struct ARGS {
-    /* char */
-    char *driver;
-    char *joydev;
-    char *basename;
-
     /* int */
     int  debug;
-    int  bpp;
-    int  shift;
-    int  xv_port;
-    int  parallel;
-    int  bufcount;
 
     /* boolean */
-    int  remote;
-    int  readconfig;
-    int  fullscreen;
-    int  fbdev;
     int  help;
-    int  hwscan;
     int  printver;
+    int  readconfig;
+
+#if 0
+    /* TODO: list, rescan, ... */
+    int  hwscan;
+#endif
+
+    int  fullscreen;
 };
 
 extern struct ARGS args;
@@ -125,7 +118,6 @@ void VtxAction(Widget, XEvent*, String*, Cardinal*);
 void FilterAction(Widget, XEvent*, String*, Cardinal*);
 void EventAction(Widget, XEvent*, String*, Cardinal*);
 
-Boolean MyResize(XtPointer client_data);
 void do_fullscreen(void);
 
 void create_onscreen(WidgetClass class);
@@ -157,18 +149,13 @@ void set_property(void);
 /*----------------------------------------------------------------------*/
 
 void x11_misc_init(Display *dpy);
-void xfree_dga_init(Display *dpy);
 void xfree_xinerama_init(Display *dpy);
-void xfree_vm_init(Display *dpy);
-void xfree_randr_init(Display *dpy);
 
 void grabber_init(char *dev);
 void grabber_fini(void);
-void grabber_scan(void);
-void x11_check_remote(void);
 void visual_init(char *n1, char *n2);
 void hello_world(char *name);
-void handle_cmdline_args(void);
+void handle_cmdline_args(int *argc, char **argv);
 int x11_ctrl_alt_backspace(Display *dpy);
 
 void mouse_event(Widget widget, XtPointer client_data,
@@ -205,5 +192,5 @@ extern Pixmap bm_no;
 /*----------------------------------------------------------------------*/
 
 int xt_handle_pending(Display *dpy);
-int xt_vm_randr_input_init(Display *dpy);
+int xt_input_init(Display *dpy);
 int xt_main_loop(void);

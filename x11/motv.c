@@ -143,7 +143,7 @@ static Widget prop_vdr,prop_vdrL;
 static Widget prop_group;
 
 /* preferences */
-static Widget pref_dlg,pref_fs_toggle,pref_fs_menu,pref_fs_option;
+static Widget pref_dlg;
 static Widget pref_osd,pref_ntsc,pref_partial,pref_quality;
 
 /* streamer */
@@ -1829,9 +1829,9 @@ update_movie_menus(void)
     Boolean sensitive;
     int i;
     
-    char *driver = cfg_get_str(O_MOV_DRIVER);
-    char *video  = cfg_get_str(O_MOV_VIDEO);
-    char *audio  = cfg_get_str(O_MOV_AUDIO);
+    char *driver = cfg_get_str(O_REC_DRIVER);
+    char *video  = cfg_get_str(O_REC_VIDEO);
+    char *audio  = cfg_get_str(O_REC_AUDIO);
 
     /* drivers  */
     if (first) {
@@ -2036,7 +2036,9 @@ do_movie_record(int argc, char **argv)
 	     &devs.video, &devs.sndrec,
 	     &video, wr->video[movie_video].priv,
 	     &audio, wr->audio[movie_audio].priv,
-	     fps, args.bufcount, args.parallel);
+	     fps,
+	     GET_REC_BUFCOUNT(),
+	     GET_REC_THREADS());
 	if (NULL == movie_state) {
 	    /* init failed */
 //	    video_gd_restart();
@@ -2231,99 +2233,11 @@ chscan_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 /*----------------------------------------------------------------------*/
 
 static void
-pref_menu(Widget option, Widget menu, int enable)
-{
-    delete_children(menu);
-    XtVaSetValues(XmOptionButtonGadget(option),XtNsensitive,enable,NULL);
-    XtVaSetValues(XmOptionLabelGadget(option),XtNsensitive,enable,NULL);
-    if (!enable)
-	XtVaCreateManagedWidget("none",xmPushButtonWidgetClass,menu,NULL);
-}
-
-#if defined(HAVE_LIBXXF86VM) || defined(HAVE_LIBXRANDR)
-
-static void
-pref_fs(void)
-{
-    int fs_width  = GET_FS_WIDTH();
-    int fs_height = GET_FS_HEIGHT();
-    Widget push;
-    char s[32];
-    int i,on;
-    
-    on = XmToggleButtonGetState(pref_fs_toggle);
-    if (on) {
-	if (0 == have_randr && 0 == have_vm) {
-	    on = 0;
-	    XtVaSetValues(pref_fs_toggle,XtNsensitive,0,NULL);
-	}
-    }
-    
-    XmToggleButtonSetState(pref_fs_toggle,on,False);
-    if (on) {
-	pref_menu(pref_fs_option,pref_fs_menu,1);
-#if defined(HAVE_LIBXXF86VM)
-	if (have_vm) {
-	    for (i = 0; i < vm_count; i++) {
-		sprintf(s,"%d x %d",
-			vm_modelines[i]->hdisplay,
-			vm_modelines[i]->vdisplay);
-		push = XtVaCreateManagedWidget(s,xmPushButtonWidgetClass,
-					       pref_fs_menu,NULL);
-		if (vm_modelines[i]->hdisplay == fs_width &&
-		    vm_modelines[i]->vdisplay == fs_height) {
-		    XtVaSetValues(pref_fs_menu,XmNmenuHistory,push,NULL);
-		}
-	    }
-	}
-#endif
-#if defined(HAVE_LIBXRANDR)
-	if (!have_vm) {
-	    for (i = 0; i < nrandr; i++) {
-		sprintf(s,"%d x %d",randr[i].width,randr[i].height);
-		push = XtVaCreateManagedWidget(s,xmPushButtonWidgetClass,
-					       pref_fs_menu,NULL);
-		if (randr[i].width  == fs_width &&
-		    randr[i].height == fs_height) {
-		    XtVaSetValues(pref_fs_menu,XmNmenuHistory,push,NULL);
-		}
-	    }
-	}
-#endif
-    } else {
-	pref_menu(pref_fs_option,pref_fs_menu,0);
-    }
-}
-
-static void
-pref_fst_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
-{
-    pref_fs();
-}
-#endif
-
-static void
 pref_done_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 {
     XmSelectionBoxCallbackStruct *cb = call_data;
-    Widget w;
-    char *name = NULL;
-    int on,width,height;
 
     if (cb->reason == XmCR_OK  ||  cb->reason == XmCR_APPLY) {
-#ifdef HAVE_LIBXXF86VM
-	on = XmToggleButtonGetState(pref_fs_toggle);
-	if (on) {
-	    XtVaGetValues(pref_fs_menu,XmNmenuHistory,&w,NULL);
-	    name = XtName(w);
-	    sscanf(name,"%d x %d",&width,&height);
-	    cfg_set_int(O_FS_WIDTH,  width);
-	    cfg_set_int(O_FS_HEIGHT, height);
-	} else {
-	    cfg_set_int(O_FS_WIDTH,  0);
-	    cfg_set_int(O_FS_HEIGHT, 0);
-	}
-#endif
 	cfg_set_bool(O_OSD,            XmToggleButtonGetState(pref_osd));
 	cfg_set_bool(O_KEYPAD_NTSC,    XmToggleButtonGetState(pref_ntsc));
 	cfg_set_bool(O_KEYPAD_PARTIAL, XmToggleButtonGetState(pref_partial));
@@ -2339,14 +2253,8 @@ pref_done_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 static void
 pref_manage_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 {
-    int fs_width  = GET_FS_WIDTH();
-    int fs_height = GET_FS_HEIGHT();
     char tmp[16];
     
-#ifdef HAVE_LIBXXF86VM
-    XmToggleButtonSetState(pref_fs_toggle,fs_width && fs_height,False);
-    pref_fs();
-#endif
     XmToggleButtonSetState(pref_osd, GET_OSD(),
 			   False);
     XmToggleButtonSetState(pref_ntsc, GET_KEYPAD_NTSC(),
@@ -2362,7 +2270,6 @@ static void
 create_pref(void)
 {
     Widget rc1,frame,rc2,rc3;
-    Arg args[2];
 
     pref_dlg = XmCreatePromptDialog(control_shell,"pref",NULL,0);
     XmdRegisterEditres(XtParent(pref_dlg));
@@ -2374,22 +2281,6 @@ create_pref(void)
     rc1 = XtVaCreateManagedWidget("rc", xmRowColumnWidgetClass, pref_dlg,
 				  NULL);
 
-#ifdef HAVE_LIBXXF86VM
-    /* first frame */
-    frame = XtVaCreateManagedWidget("fsF",xmFrameWidgetClass,rc1,NULL);
-    XtVaCreateManagedWidget("fsL",xmLabelWidgetClass,frame,NULL);
-    rc2 = XtVaCreateManagedWidget("rc",xmRowColumnWidgetClass,frame,NULL);
-
-    /* fullscreen */
-    pref_fs_toggle = XtVaCreateManagedWidget("fsT",xmToggleButtonWidgetClass,
-					     rc2,NULL);
-    XtAddCallback(pref_fs_toggle,XmNvalueChangedCallback,pref_fst_cb,NULL);
-    pref_fs_menu = XmCreatePulldownMenu(rc2,"fsM",NULL,0);
-    XtSetArg(args[0],XmNsubMenuId,pref_fs_menu);
-    pref_fs_option = XmCreateOptionMenu(rc2,"fsO",args,1);
-    XtManageChild(pref_fs_option);
-#endif
-    
     /* third frame */
     frame = XtVaCreateManagedWidget("optF",xmFrameWidgetClass,rc1,NULL);
     XtVaCreateManagedWidget("optL",xmLabelWidgetClass,frame,NULL);
@@ -3072,7 +2963,7 @@ main(int argc, char *argv[])
 
     /* handle command line args */
     ng_init();
-    handle_cmdline_args();
+    handle_cmdline_args(&argc,argv);
     hello_world("motv");
     
     /* read config file + related settings */
@@ -3083,9 +2974,6 @@ main(int argc, char *argv[])
     if (debug)
 	fprintf(stderr,"looking for available devices\n");
     devlist_init(1);
-    if (args.hwscan) {
-	/* FIXME */
-    }
     
     /* set hooks (command.c) */
     update_title        = new_title;
@@ -3108,19 +2996,11 @@ main(int argc, char *argv[])
     /* look for a useful visual */
     visual_init("motv","MoTV4");
     
-    /* remote display? */
-    do_overlay = !args.remote;
-    if (do_overlay)
-	x11_check_remote();
-
     /* x11 stuff */
     XtAppAddActions(app_context,actionTable,
 		    sizeof(actionTable)/sizeof(XtActionsRec));
     x11_misc_init(dpy);
     XmAddWMProtocolCallback(app_shell,WM_DELETE_WINDOW,ExitCB,NULL);
-    if (debug)
-	fprintf(stderr,"main: dga extention...\n");
-    xfree_dga_init(dpy);
     if (debug)
 	fprintf(stderr,"main: xinerama extention...\n");
     xfree_xinerama_init(dpy);
@@ -3133,7 +3013,7 @@ main(int argc, char *argv[])
 
     if (debug)
 	fprintf(stderr,"main: init main window...\n");
-    tv = video_init(app_shell,&vinfo,xmPrimitiveWidgetClass,args.bpp);
+    tv = XtVaCreateManagedWidget("tv",xmPrimitiveWidgetClass,app_shell,NULL);
     XtAddEventHandler(XtParent(tv),StructureNotifyMask, True,
 		      resize_event, NULL);
     if (debug)
@@ -3165,7 +3045,7 @@ main(int argc, char *argv[])
 #endif
 
     /* finalize X11 init + show windows */
-    xt_vm_randr_input_init(dpy);
+    xt_input_init(dpy);
     if (debug)
 	fprintf(stderr,"main: mapping main window ...\n");
     stderr_init();
@@ -3209,8 +3089,6 @@ main(int argc, char *argv[])
     if (args.fullscreen) {
 	XSync(dpy,False);
 	do_motif_fullscreen();
-    } else {
-	XtAppAddWorkProc(app_context,MyResize,NULL);
     }
 
     xt_main_loop();

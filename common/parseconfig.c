@@ -312,25 +312,99 @@ cfg_del_entry(char *dname, char *sname, char *ename)
     free(entry);
 }
 
-#if 0
 void
-cfg_parse_options(int *argc, char **argv)
+cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt)
 {
-    char section[64], tag[64];
-    int i,j;
+    int i,j,o,shift,len;
 
     for (i = 1; i+1 < *argc;) {
-	if (2 == sscanf(argv[i],"-%63[^:]:%63s",section,tag)) {
-	    cfg_parse_option(section,tag,argv[i+1]);
-	    for (j = i; j < *argc-1; j++)
-		argv[j] = argv[j+2];
-	    (*argc) -= 2;
-	} else {
+	if (argv[i][0] != '-') {
 	    i++;
+	    continue;
 	}
+
+	for (shift = 0, o = 0;
+	     0 == shift && opt[o].cmdline != NULL;
+	     o++) {
+	    len = strlen(opt[o].cmdline);
+	    if (opt[o].yesno && 0 == strcmp(argv[i]+1,opt[o].cmdline)) {
+		/* yesno: -foo */
+		cfg_set_bool(opt[o].option.domain,
+			     opt[o].option.section,
+			     opt[o].option.entry,
+			     1);
+		shift = 1;
+
+	    } else if (opt[o].yesno &&
+		       0 == strncmp(argv[i]+1,"no",2) &&
+		       0 == strcmp(argv[i]+3,opt[o].cmdline)) {
+		/* yesno: -nofoo */
+		cfg_set_bool(opt[o].option.domain,
+			     opt[o].option.section,
+			     opt[o].option.entry,
+			     0);
+		shift = 1;
+
+	    } else if (opt[o].needsarg &&
+		       0 == strcmp(argv[i]+1,opt[o].cmdline) &&
+		       i+2 < *argc) {
+		/* arg: -foo bar */
+		cfg_set_str(opt[o].option.domain,
+			    opt[o].option.section,
+			    opt[o].option.entry,
+			    argv[i+1]);
+		shift = 2;
+
+	    } else if (opt[o].needsarg &&
+		       0 == strncmp(argv[i]+1,opt[o].cmdline,len) &&
+		       0 == strncmp(argv[i]+1+len,"=",1)) {
+		/* arg: -foo=bar */
+		cfg_set_str(opt[o].option.domain,
+			    opt[o].option.section,
+			    opt[o].option.entry,
+			    argv[i]+2+len);
+		shift = 1;
+
+	    } else if (opt[o].value &&
+		       0 == strcmp(argv[i]+1,opt[o].cmdline)) {
+		/* -foo sets some fixed value */
+		cfg_set_str(opt[o].option.domain,
+			    opt[o].option.section,
+			    opt[o].option.entry,
+			    opt[o].value);
+		shift = 1;
+	    }
+	}
+
+	if (shift) {
+	    /* remove processed args */
+	    for (j = i; j < *argc+1-shift; j++)
+		argv[j] = argv[j+shift];
+	    (*argc) -= shift;
+	} else
+	    i++;
     }
 }
-#endif
+
+void
+cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2)
+{
+    int o,len;
+    
+    for (o = 0; opt[o].cmdline != NULL; o++) {
+	fprintf(stderr,"%*s",w1,"");
+	if (opt[o].yesno) {
+	    len = fprintf(stderr,"-(no)%s ",opt[o].cmdline);
+	} else if (opt[o].needsarg) {
+	    len = fprintf(stderr,"-%s <arg> ",opt[o].cmdline);
+	} else {
+	    len = fprintf(stderr,"-%s ",opt[o].cmdline);
+	}
+	if (len < w2)
+	    fprintf(stderr,"%*s",w2-len,"");
+	fprintf(stderr,"%s\n",opt[o].desc);
+    }
+}
 
 /* ------------------------------------------------------------------------ */
 /* export config data                                                       */

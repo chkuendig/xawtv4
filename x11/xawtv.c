@@ -65,6 +65,7 @@
 #include "blit.h"
 #include "vbi-data.h"
 #include "vbi-x11.h"
+#include "dvb.h"
 
 #define LABEL_WIDTH         "16"
 #define BOOL_WIDTH          "24"
@@ -1258,7 +1259,9 @@ do_movie_record(int argc, char **argv)
 	     &devs.video, &devs.sndrec,
 	     &video, wr->video[movie_video].priv,
 	     &audio, wr->audio[movie_audio].priv,
-	     movie_fps,args.bufcount,args.parallel);
+	     movie_fps,
+	     GET_REC_BUFCOUNT(),
+	     GET_REC_THREADS());
 	if (NULL == movie_state) {
 	    /* init failed */
 //	    video_gd_restart();
@@ -1467,7 +1470,7 @@ main(int argc, char *argv[])
 
     /* command line args */
     ng_init();
-    handle_cmdline_args();
+    handle_cmdline_args(&argc,argv);
     hello_world("xawtv");
 
     /* read config file + related settings */
@@ -1478,9 +1481,6 @@ main(int argc, char *argv[])
     if (debug)
 	fprintf(stderr,"looking for available devices\n");
     devlist_init(1);
-    if (args.hwscan) {
-	/* FIXME */
-    }
     
     /* set hooks (command.c) */
     update_title        = new_title;
@@ -1503,18 +1503,10 @@ main(int argc, char *argv[])
     /* look for a useful visual */
     visual_init("xawtv","Xawtv4");
 
-    /* remote display? */
-    do_overlay = !args.remote;
-    if (do_overlay)
-	x11_check_remote();
-
     /* x11 stuff */
     XtAppAddActions(app_context,actionTable,
 		    sizeof(actionTable)/sizeof(XtActionsRec));
     x11_misc_init(dpy);
-    if (debug)
-	fprintf(stderr,"main: dga extention...\n");
-    xfree_dga_init(dpy);
     if (debug)
 	fprintf(stderr,"main: xinerama extention...\n");
     xfree_xinerama_init(dpy);
@@ -1527,8 +1519,7 @@ main(int argc, char *argv[])
         
     if (debug)
 	fprintf(stderr,"main: init main window...\n");
-    tv = video_init(app_shell, &vinfo, simpleWidgetClass,
-		    args.bpp);
+    tv = XtVaCreateManagedWidget("tv",simpleWidgetClass,app_shell,NULL);
     XtAddEventHandler(XtParent(tv),StructureNotifyMask, True,
 		      resize_event, NULL);
     if (debug)
@@ -1553,7 +1544,7 @@ main(int argc, char *argv[])
     init_movie_menus();
     
     /* finalize X11 init + show windows */
-    xt_vm_randr_input_init(dpy);
+    xt_input_init(dpy);
     if (debug)
 	fprintf(stderr,"main: mapping main window ...\n");
     XtRealizeWidget(app_shell);
@@ -1576,6 +1567,15 @@ main(int argc, char *argv[])
     XtAddEventHandler(tv, PointerMotionMask, True, mouse_event, NULL);
     mouse_event(tv,NULL,NULL,NULL);
 
+#if 1
+    if (0 == cfg_sections_count("stations") &&
+	0 != cfg_sections_count("dvb") &&
+	NULL != cfg_get_str("devs",cfg_sections_first("devs"),"dvb")) {
+	/* easy start for dvb users, import vdr's list ... */
+	vdr_import_stations();
+    }
+#endif
+
     /* build channel list */
     if (args.readconfig) {
 	if (debug)
@@ -1591,8 +1591,6 @@ main(int argc, char *argv[])
     if (args.fullscreen) {
 	XSync(dpy,False);
 	do_fullscreen();
-    } else {
-	XtAppAddWorkProc(app_context,MyResize,NULL);
     }
 
     xt_main_loop();

@@ -75,30 +75,15 @@ int               stay_on_top = 0;
 XVisualInfo       vinfo;
 Colormap          colormap;
 
-int               have_dga   = 0;
-int               have_vm    = 0;
-int               have_randr = 0;
-int               fs = 0;
-
 void              *movie_state;
 int               movie_blit;
 
 XtIntervalId      zap_timer,scan_timer;
 
-#ifdef HAVE_LIBXXF86VM
-int               vm_count;
-XF86VidModeModeInfo **vm_modelines;
-XF86VidModeModeLine vm_line;
-unsigned int        vm_dot;
-#endif
+int               fs = 0;
 #ifdef HAVE_LIBXINERAMA
 XineramaScreenInfo *xinerama;
 int                nxinerama;
-#endif
-#ifdef HAVE_LIBXRANDR
-XRRScreenSize      *randr;
-int                nrandr;
-int                randr_evbase;
 #endif
 
 static Widget on_label;
@@ -117,57 +102,21 @@ struct ARGS args;
 XtResource args_desc[] = {
     /* name, class, type, size, offset, default_type, default_addr */
     {
-	/* Strings */
-	"driver",
-	XtCString, XtRString, sizeof(char*),
-	XtOffset(struct ARGS*,driver),
-	XtRString, NULL
-    },{
-	"joydev",
-	XtCString, XtRString, sizeof(char*),
-	XtOffset(struct ARGS*,joydev),
-	XtRString, NULL
-    },{
-	"basename",
-	XtCString, XtRString, sizeof(char*),
-	XtOffset(struct ARGS*,basename),
-	XtRString, "snap"
-    },{
 	/* Integer */
 	"debug",
 	XtCValue, XtRInt, sizeof(int),
 	XtOffset(struct ARGS*,debug),
 	XtRString, "0"
     },{
-	"bpp",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,bpp),
-	XtRString, "0"
-    },{
-	"shift",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,shift),
-	XtRString, "0"
-    },{
-	"xvport",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,xv_port),
-	XtRString, "0"
-    },{
-	"parallel",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,parallel),
-	XtRString, "1"
-    },{
-	"bufcount",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,bufcount),
-	XtRString, "16"
-    },{
 	/* Boolean */
-	"remote",
+	"help",
 	XtCBoolean, XtRBoolean, sizeof(int),
-	XtOffset(struct ARGS*,remote),
+	XtOffset(struct ARGS*,help),
+	XtRString, "0"
+    },{
+	"printver",
+	XtCBoolean, XtRBoolean, sizeof(int),
+	XtOffset(struct ARGS*,printver),
 	XtRString, "0"
     },{
 	"readconfig",
@@ -179,82 +128,26 @@ XtResource args_desc[] = {
 	XtCBoolean, XtRBoolean, sizeof(int),
 	XtOffset(struct ARGS*,fullscreen),
 	XtRString, "0"
-    },{
-	"fbdev",
-	XtCBoolean, XtRBoolean, sizeof(int),
-	XtOffset(struct ARGS*,fbdev),
-	XtRString, "0"
-    },{
-	"help",
-	XtCBoolean, XtRBoolean, sizeof(int),
-	XtOffset(struct ARGS*,help),
-	XtRString, "0"
-    },{
-	"hwscan",
-	XtCBoolean, XtRBoolean, sizeof(int),
-	XtOffset(struct ARGS*,hwscan),
-	XtRString, "0"
-    },{
-	"printver",
-	XtCBoolean, XtRBoolean, sizeof(int),
-	XtOffset(struct ARGS*,printver),
-	XtRString, "0"
     }
 };
-
 const int args_count = XtNumber(args_desc);
 
 XrmOptionDescRec opt_desc[] = {
-    { "-c",          "device",      XrmoptionSepArg, NULL },
-    { "-device",     "device",      XrmoptionSepArg, NULL },
-    { "-driver",     "driver",      XrmoptionSepArg, NULL },
-    { "-C",          "dspdev",      XrmoptionSepArg, NULL },
-    { "-dspdev",     "dspdev",      XrmoptionSepArg, NULL },
-    { "-vbidev",     "vbidev",      XrmoptionSepArg, NULL },
-    { "-joydev",     "joydev",      XrmoptionSepArg, NULL },
-    { "-o",          "basename",    XrmoptionSepArg, NULL },
-    { "-outfile",    "basename",    XrmoptionSepArg, NULL },
-    
     { "-v",          "debug",       XrmoptionSepArg, NULL },
     { "-debug",      "debug",       XrmoptionSepArg, NULL },
-    { "-b",          "bpp",         XrmoptionSepArg, NULL },
-    { "-bpp",        "bpp",         XrmoptionSepArg, NULL },
-    { "-shift",      "shift",       XrmoptionSepArg, NULL },
-    { "-xvport",     "xvport",      XrmoptionSepArg, NULL },
-    { "-parallel",   "parallel",    XrmoptionSepArg, NULL },
-    { "-bufcount",   "bufcount",    XrmoptionSepArg, NULL },
-    
-    { "-remote",     "remote",      XrmoptionNoArg,  "1" },
-    { "-n",          "readconfig",  XrmoptionNoArg,  "0" },
-    { "-noconf",     "readconfig",  XrmoptionNoArg,  "0" },
-    { "-f",          "fullscreen",  XrmoptionNoArg,  "1" },
-    { "-fullscreen", "fullscreen",  XrmoptionNoArg,  "1" },
-    { "-hwscan",     "hwscan",      XrmoptionNoArg,  "1" },
-    { "-fb",         "fbdev",       XrmoptionNoArg,  "1" },
-    { "-version",    "printver",    XrmoptionNoArg,  "1" },
-    
-    { "-xv",         "xv",          XrmoptionNoArg,  "1" },
-    { "-noxv",       "xv",          XrmoptionNoArg,  "0" },
-    { "-xv-video",   "xvVideo",     XrmoptionNoArg,  "1" },
-    { "-noxv-video", "xvVideo",     XrmoptionNoArg,  "0" },
-    { "-xv-image",   "xvImage",     XrmoptionNoArg,  "1" },
-    { "-noxv-image", "xvImage",     XrmoptionNoArg,  "0" },
-    { "-gl",         "gl",          XrmoptionNoArg,  "1" },
-    { "-nogl",       "gl",          XrmoptionNoArg,  "0" },
-
-    { "-vm",         "vidmode",     XrmoptionNoArg,  "1" },
-    { "-novm",       "vidmode",     XrmoptionNoArg,  "0" },
-    { "-dga",        "dga",         XrmoptionNoArg,  "1" },
-    { "-nodga",      "dga",         XrmoptionNoArg,  "0" },
-    { "-randr",      "randr",       XrmoptionNoArg,  "1" },
-    { "-norandr",    "randr",       XrmoptionNoArg,  "0" },
     
     { "-h",          "help",        XrmoptionNoArg,  "1" },
     { "-help",       "help",        XrmoptionNoArg,  "1" },
     { "--help",      "help",        XrmoptionNoArg,  "1" },
-};
+    { "-version",    "printver",    XrmoptionNoArg,  "1" },
 
+    { "-n",          "readconfig",  XrmoptionNoArg,  "0" },
+    { "-noconf",     "readconfig",  XrmoptionNoArg,  "0" },
+    { "-f",          "fullscreen",  XrmoptionNoArg,  "1" },
+    { "-fullscreen", "fullscreen",  XrmoptionNoArg,  "1" },
+};
 const int opt_count = (sizeof(opt_desc)/sizeof(XrmOptionDescRec));
+
 /*----------------------------------------------------------------------*/
 
 void
@@ -710,170 +603,6 @@ xscreensaver_timefunc(XtPointer clientData, XtIntervalId *id)
 
 /*----------------------------------------------------------------------*/
 
-#ifdef HAVE_LIBXXF86VM
-#if 0
-static void
-vidmode_timer(XtPointer clientData, XtIntervalId *id)
-{
-    do_va_cmd(2,"capture", "on");
-}
-#endif
-
-static void
-set_vidmode(XF86VidModeModeInfo *mode)
-{
-#if 0 /* FIXME */
-    if (CAPTURE_OVERLAY == cur_capture) {
-	do_va_cmd(2,"capture", "off");
-	XtAppAddTimeOut(app_context,VIDMODE_DELAY,vidmode_timer,NULL);
-    }
-#endif
-    /* usleep(VIDMODE_DELAY*1000); */
-    if (debug)
-	fprintf(stderr,"switching mode: %d  %d %d %d %d  %d %d %d %d  %d\n",
-		mode->dotclock,
-		mode->hdisplay,
-		mode->hsyncstart,
-		mode->hsyncend,
-		mode->htotal,
-		mode->vdisplay,
-		mode->vsyncstart,
-		mode->vsyncend,
-		mode->vtotal,
-		mode->flags);
-    XF86VidModeSwitchToMode(dpy,XDefaultScreen(dpy),mode);
-    XSync(dpy,False);
-}
-
-static void
-do_vidmode_modeswitch(int fs_state, int *vp_width, int *vp_height)
-{
-    static int                  vm_switched;
-    static XF86VidModeModeInfo  *vm_current    = NULL;
-    static XF86VidModeModeInfo  *vm_fullscreen = NULL;
-    int fs_width  = cfg_get_int("options","global","fs-width",0);
-    int fs_height = cfg_get_int("options","global","fs-height",0);
-    int i;
-    
-    if (fs_state) {
-	/* enter fullscreen mode */
-	XF86VidModeGetModeLine(dpy,XDefaultScreen(dpy),&vm_dot,&vm_line);
-	XF86VidModeGetAllModeLines(dpy,XDefaultScreen(dpy),
-				   &vm_count,&vm_modelines);
-	vm_fullscreen = NULL;
-	for (i = 0; i < vm_count; i++) {
-	    if (fs_width  == vm_modelines[i]->hdisplay &&
-		fs_height == vm_modelines[i]->vdisplay &&
-		vm_fullscreen == NULL)
-		vm_fullscreen = vm_modelines[i];
-	    if (vm_line.hdisplay == vm_modelines[i]->hdisplay &&
-		vm_line.vdisplay == vm_modelines[i]->vdisplay &&
-		vm_dot           == vm_modelines[i]->dotclock &&
-		vm_current == NULL)
-		vm_current = vm_modelines[i];
-	}
-	if (debug) {
-	    fprintf(stderr,"vm: current=%dx%d",
-		    vm_current->hdisplay,vm_current->vdisplay);
-	    if (vm_fullscreen)
-		fprintf(stderr,"fullscreen=%dx%d",
-			vm_fullscreen->hdisplay,vm_fullscreen->vdisplay);
-	    fprintf(stderr,"\n");
-	}
-	if (vm_current && vm_fullscreen &&
-	    vm_fullscreen->hdisplay != vm_current->hdisplay &&
-	    vm_fullscreen->vdisplay != vm_current->vdisplay) {
-	    set_vidmode(vm_fullscreen);
-	    vm_switched = 1;
-	    *vp_width   = vm_fullscreen->hdisplay;
-	    *vp_height  = vm_fullscreen->vdisplay;
-	} else {
-	    vm_switched = 0;
-	    *vp_width   = vm_current->hdisplay;
-	    *vp_height  = vm_current->vdisplay;
-	}
-    } else {
-	/* leave fullscreen mode */
-	if (vm_switched) {
-	    set_vidmode(vm_current);
-	    vm_switched = 0;
-	}
-    }
-}
-#endif
-
-#ifdef HAVE_LIBXRANDR
-static void
-do_randr_modeswitch(int fs_state, int *vp_width, int *vp_height)
-{
-    static SizeID normal;
-    int fs_width  = cfg_get_int("options","global","fs-width",0);
-    int fs_height = cfg_get_int("options","global","fs-height",0);
-    Window root = RootWindow(dpy, DefaultScreen(dpy));
-    XRRScreenConfiguration *sc;
-    Rotation rotation;
-    SizeID current, new, i;
-    
-    sc = XRRGetScreenInfo(dpy, root);
-    current = XRRConfigCurrentConfiguration(sc, &rotation);
-    new = current;
-    if (fs_state) {
-	/* enter fullscreen mode */
-	normal = current;
-	new = current;
-	for (i = 0; i < nrandr; i++) {
-	    if (randr[i].width  == fs_width &&
-		randr[i].height == fs_height) {
-		new = i;
-		break;
-	    }
-	}
-    } else {
-	/* leave fullscreen mode */
-	new = normal;
-    }
-
-    if (new != current) {
-	/* switch mode */
-	if (debug)
-	    fprintf(stderr, "randr: switch to %dx%d\n",
-		    randr[new].width, randr[new].height);
-	XRRSetScreenConfig(dpy, sc, root, new, rotation, CurrentTime);
-    }
-    XRRFreeScreenConfigInfo(sc);
-
-    /* FIXME: change swidth / sheight instead */
-    *vp_width  = randr[new].width;
-    *vp_height = randr[new].height;
-}
-#endif
-
-static void
-do_modeswitch(int fs_state, int *vp_width, int *vp_height)
-{
-    *vp_width  = swidth;
-    *vp_height = sheight;
-
-#ifdef HAVE_LIBXXF86VM
-    if (have_vm)
-	do_vidmode_modeswitch(fs_state,vp_width,vp_height);
-#endif
-#ifdef HAVE_LIBXRANDR
-    if (!have_vm && have_randr)
-	do_randr_modeswitch(fs_state,vp_width,vp_height);
-#endif
-}
-
-/*----------------------------------------------------------------------*/
-
-Boolean
-MyResize(XtPointer client_data)
-{
-    /* needed for program-triggered resizes (fullscreen mode) */
-    video_new_size();
-    return TRUE;
-}
-
 static void
 do_screensaver(int fs_state)
 {
@@ -917,11 +646,9 @@ do_fullscreen(void)
 {
     static Dimension x,y,w,h;
     static int rpx,rpy;
-    static int warp_pointer;
 
     Window root,child;
     int    wpx,wpy,mask;
-    unsigned int vp_width, vp_height;
 
     if (wm_fullscreen &&
 	cfg_get_bool("options","global","use-wm-fullscreen",1)) {
@@ -929,9 +656,6 @@ do_fullscreen(void)
 	fs = !fs;
 	if (debug)
 	    fprintf(stderr,"fullscreen %s via netwm\n", fs ? "on" : "off");
-
-	do_modeswitch(fs,&vp_width,&vp_height);
-	XSync(dpy,False);
 	wm_fullscreen(dpy,XtWindow(app_shell),fs);
 
 	if (0 == fs  &&  on_timer) {
@@ -946,7 +670,6 @@ do_fullscreen(void)
     if (fs) {
 	if (debug)
 	    fprintf(stderr,"turning fs off (%dx%d+%d+%d)\n",w,h,x,y);
-	do_modeswitch(0,&vp_width,&vp_height);
 	
 	if (on_timer) {
 	    XtPopdown(on_shell);
@@ -964,37 +687,25 @@ do_fullscreen(void)
 		      NULL);
 
 	do_screensaver(0);
-    	if (warp_pointer)
-	    XWarpPointer(dpy, None, RootWindowOfScreen(XtScreen(tv)),
-			 0, 0, 0, 0, rpx, rpy);
 	fs = 0;
     } else {
-	int vp_x, vp_y;
+	int vp_x, vp_y, vp_width, vp_height;
 
 	if (debug)
 	    fprintf(stderr,"turning fs on\n");
 	XQueryPointer(dpy, RootWindowOfScreen(XtScreen(tv)),
 		      &root, &child, &rpx, &rpy, &wpx, &wpy, &mask);
-
-	vp_x = 0;
-	vp_y = 0;
-	do_modeswitch(1,&vp_width,&vp_height);
-	if (vp_width < sheight || vp_width < swidth) {
-	    /* move viewpoint, make sure the pointer is in there */
-	    warp_pointer = 1;
-	    XWarpPointer(dpy, None, RootWindowOfScreen(XtScreen(tv)),
-			 0, 0, 0, 0, vp_width/2, vp_height/2);
-#ifdef HAVE_LIBXXF86VM
-	    XF86VidModeSetViewPort(dpy,XDefaultScreen(dpy),0,0);
-#endif
-	}
 	XtVaGetValues(app_shell,
 		      XtNx,          &x,
 		      XtNy,          &y,
 		      XtNwidth,      &w,
 		      XtNheight,     &h,
 		      NULL);
-
+	
+	vp_x      = 0;
+	vp_y      = 0;
+	vp_width  = XtScreen(app_shell)->width;
+	vp_height = XtScreen(app_shell)->height;
 #ifdef HAVE_LIBXINERAMA
 	if (nxinerama) {
 	    /* check which physical screen we are visible on */
@@ -1030,11 +741,8 @@ do_fullscreen(void)
 
         XRaiseWindow(dpy, XtWindow(app_shell));
 	do_screensaver(1);
-	if (warp_pointer)
-	    XWarpPointer(dpy, None, XtWindow(tv), 0, 0, 0, 0, 30, 15);
 	fs = 1;
     }
-    XtAppAddWorkProc (app_context, MyResize, NULL);
 }
 
 /*----------------------------------------------------------------------*/
@@ -1221,85 +929,6 @@ void pick_device_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 /*----------------------------------------------------------------------*/
 
 void
-xfree_dga_init(Display *dpy)
-{
-#ifdef HAVE_LIBXXF86DGA
-    int  flags,foo,bar,ma,mi;
-
-    if (!do_overlay)
-	return;
-    
-    if (GET_EXT_DGA()) {
-	if (XF86DGAQueryExtension(dpy,&foo,&bar)) {
-	    XF86DGAQueryDirectVideo(dpy,XDefaultScreen(dpy),&flags);
-	    if (flags & XF86DGADirectPresent) {
-		XF86DGAQueryVersion(dpy,&ma,&mi);
-		if (debug)
-		    fprintf(stderr,"DGA version %d.%d\n",ma,mi);
-		have_dga = 1;
-	    }
-	}
-    }
-#endif
-}
-
-void
-xfree_vm_init(Display *dpy)
-{
-#ifdef HAVE_LIBXXF86VM
-    int  foo,bar,i,ma,mi;
-
-    if (!do_overlay)
-	return;
-
-    if (GET_EXT_XVIDMODE()) {
-	if (XF86VidModeQueryExtension(dpy,&foo,&bar)) {
-	    XF86VidModeQueryVersion(dpy,&ma,&mi);
-	    if (debug)
-		fprintf(stderr,"VidMode  version %d.%d\n",ma,mi);
-	    have_vm = 1;
-	    XF86VidModeGetAllModeLines(dpy,XDefaultScreen(dpy),
-				       &vm_count,&vm_modelines);
-	    if (debug) {
-		fprintf(stderr,"  available video mode(s):");
-		for (i = 0; i < vm_count; i++) {
-		    fprintf(stderr," %dx%d",
-			    vm_modelines[i]->hdisplay,
-			    vm_modelines[i]->vdisplay);
-		}	    
-		fprintf(stderr,"\n");
-	    }
-	}
-    }
-#endif
-}
-
-void
-xfree_randr_init(Display *dpy)
-{
-#ifdef HAVE_LIBXRANDR
-    int bar,i;
-    
-    if (GET_EXT_XRANDR()) {
-	if (XRRQueryExtension(dpy,&randr_evbase,&bar)) {
-	    randr = XRRSizes(dpy,DefaultScreen(dpy),&nrandr);
-	    if (nrandr > 0) {
-		have_randr = 1;
-		if (debug) {
-		    fprintf(stderr,"xrandr:");
-		    for (i = 0; i < nrandr; i++) {
-			fprintf(stderr, " %dx%d",
-				randr[i].width, randr[i].height);
-		    }
-		    fprintf(stderr,"\n");
-		}
-	    }
-	}
-    }
-#endif
-}
-
-void
 xfree_xinerama_init(Display *dpy)
 {
 #ifdef HAVE_LIBXINERAMA
@@ -1320,64 +949,11 @@ xfree_xinerama_init(Display *dpy)
 #endif
 }
 
-static void
-v4lconf_init(char *dev)
-{
-    if (!do_overlay)
-	return;
-
-#if 0
-    strcpy(ng_v4l_conf,"v4l-conf");
-    if (!args.debug)
-	strcat(ng_v4l_conf," -q");
-    if (args.fbdev)
-	strcat(ng_v4l_conf," -f");
-    if (args.shift)
-	sprintf(ng_v4l_conf+strlen(ng_v4l_conf)," -s %d",args.shift);
-    if (args.bpp)
-	sprintf(ng_v4l_conf+strlen(ng_v4l_conf)," -b %d",args.bpp);
-    if (args.device)
-	sprintf(ng_v4l_conf+strlen(ng_v4l_conf)," -c %s",args.device);
-#endif
-}
-
 void
 grabber_init(char *dev)
 {
-#if 0
-    struct ng_video_fmt screen;
-    void *base = NULL;
-
-    memset(&screen,0,sizeof(screen));
-#ifdef HAVE_LIBXXF86DGA
-    if (have_dga) {
-	int bar,fred;
-    	XF86DGAGetVideoLL(dpy,XDefaultScreen(dpy),(void*)&base,
-			  &screen.bytesperline,&bar,&fred);
-    }
-    if (!do_overlay) {
-	if (debug)
-	    fprintf(stderr,"x11: remote display (overlay disabled)\n");
-    } else {
-	screen.width  = XtScreen(app_shell)->width;
-	screen.height = XtScreen(app_shell)->height;
-	screen.fmtid  = x11_dpy_fmtid;
-	screen.bytesperline *= ng_vfmt_to_depth[x11_dpy_fmtid]/8;
-	if (debug)
-	    fprintf(stderr,"x11: %dx%d, %d bit/pixel, %d byte/scanline%s%s\n",
-		    screen.width,screen.height,
-		    ng_vfmt_to_depth[screen.fmtid],
-		    screen.bytesperline,
-		    have_dga ? ", DGA"     : "",
-		    have_vm  ? ", VidMode" : "");
-	ng_vid_screen(&devs.video, &screen, base);
-    }
-#endif
-#endif
-
     char *val;
 
-    v4lconf_init(dev);
     device_init(dev);
     audio_on();
 
@@ -1409,115 +985,6 @@ grabber_fini(void)
 {
     audio_off();
     device_fini();
-}
-
-#if 0 /* FIXME */
-void
-grabber_scan(void)
-{
-    const struct ng_vid_driver  *driver;
-    void *handle;
-    struct stat st;
-    int n,i,fh,flags;
-
-    for (i = 0; ng_dev.video_scan[i] != NULL; i++) {
-	if (-1 == lstat(ng_dev.video_scan[i],&st)) {
-	    if (ENOENT == errno)
-		continue;
-	    fprintf(stderr,"%s: %s\n",ng_dev.video_scan[i],strerror(errno));
-	    continue;
-	}
-	fh = open(ng_dev.video_scan[i],O_RDWR);
-	if (-1 == fh) {
-	    if (ENODEV == errno)
-		continue;
-	    fprintf(stderr,"%s: %s\n",ng_dev.video_scan[i],strerror(errno));
-	    continue;
-	}
-	close(fh);
-
-	driver = ng_vid_open(ng_dev.video_scan[i], args.driver,
-			     NULL, NULL, &handle);
-	if (NULL == driver) {
-	    fprintf(stderr,"%s: initialization failed\n",ng_dev.video_scan[i]);
-	    continue;
-	}
-	flags = driver->capabilities(handle);
-	n = fprintf(stderr,"%s: OK",ng_dev.video_scan[i]);
-	fprintf(stderr,"%*s[ -device %s ]\n",40-n,"",ng_dev.video_scan[i]);
-	fprintf(stderr,"    type : %s\n",driver->name);
-	if (driver->get_devname)
-	    fprintf(stderr,"    name : %s\n",driver->get_devname(handle));
-	fprintf(stderr,"    flags: %s %s %s %s\n",
-		(flags & CAN_OVERLAY)     ? "overlay"   : "",
-		(flags & CAN_CAPTURE)     ? "capture"   : "",
-		(flags & CAN_TUNE)        ? "tuner"     : "",
-		(flags & NEEDS_CHROMAKEY) ? "chromakey" : "");
-	driver->close(handle);
-	fprintf(stderr,"\n");
-    }
-    exit(0);
-}
-#endif
-
-void
-x11_check_remote()
-{
-#if defined(HAVE_GETNAMEINFO) && defined(HAVE_SOCKADDR_STORAGE)
-    int fd = ConnectionNumber(dpy);
-    struct sockaddr_storage ss;
-    char me[INET6_ADDRSTRLEN+1];
-    char peer[INET6_ADDRSTRLEN+1];
-    char port[17];
-    int length;
-
-    if (debug)
-	fprintf(stderr, "check if the X-Server is local ... ");
-    
-    /* me */
-    length = sizeof(ss);
-    if (-1 == getsockname(fd,(struct sockaddr*)&ss,&length)) {
-	perror("getsockname");
-	return;
-    }
-    if (debug)
-	fprintf(stderr,"*");
-
-    /* catch unix sockets on FreeBSD */
-    if (0 == length || ss.ss_family == AF_UNIX) {
-	if (debug)
-	    fprintf(stderr, " ok (unix socket)\n");
-	return;
-    }
-    
-    getnameinfo((struct sockaddr*)&ss,length,
-		me,INET6_ADDRSTRLEN,port,16,
-		NI_NUMERICHOST | NI_NUMERICSERV);
-    if (debug)
-	fprintf(stderr,"*");
-
-    /* peer */
-    length = sizeof(ss);
-    if (-1 == getpeername(fd,(struct sockaddr*)&ss,&length)) {
-	perror("getsockname");
-	return;
-    }
-    if (debug)
-	fprintf(stderr,"*");
-
-    getnameinfo((struct sockaddr*)&ss,length,
-		peer,INET6_ADDRSTRLEN,port,16,
-		NI_NUMERICHOST | NI_NUMERICSERV);
-    if (debug)
-	fprintf(stderr,"*");
-
-    if (debug)
-	fprintf(stderr," ok\nx11 socket: me=%s, server=%s\n",me,peer);
-    if (0 != strcmp(me,peer))
-	/* different hosts => assume remote display */
-	do_overlay = 0;
-#endif
-    return;
 }
 
 void x11_misc_init(Display *dpy)
@@ -1569,41 +1036,18 @@ usage(void)
 	    "  -v  -debug n        debug level n, n = [0..2]\n"
 	    "      -remote         assume remote display\n"
 	    "  -n  -noconf         don't read the config file\n"
-	    "  -m  -nomouse        startup with mouse pointer disabled\n"
-	    "  -f  -fullscreen     startup in fullscreen mode\n"
-#ifdef HAVE_LIBXXF86DGA
-	    "      -(no)dga        enable/disable DGA extension\n"
-#endif
-#ifdef HAVE_LIBXXF86VM
-	    "      -(no)vm         enable/disable VidMode extension\n"
-#endif
-#ifdef HAVE_LIBXRANDR
-	    "      -(no)randr      enable/disable Xrandr extension\n"
-#endif
-#ifdef HAVE_LIBXV
-	    "      -(no)xv         enable/disable Xvideo extension altogether\n"
-	    "      -(no)xv-video   enable/disable Xvideo extension (for video only,\n"
-	    "                      i.e. XvPutVideo() calls)\n"
-	    "      -(no)xv-image   enable/disable Xvideo extension (for image scaling\n"
-	    "                      only, i.e. XvPutImage() calls)\n"
-#endif
-#ifdef HAVE_GL
-	    "      -(no)gl         enable/disable OpenGL\n"
-#endif
-	    "  -b  -bpp n          color depth of the display is n (n=24,32)\n"
-	    "  -o  -outfile file   filename base for snapshots\n"
-	    "  -c  -device file    use <file> as video4linux device\n"
-	    "  -C  -dspdev file    use <file> as audio (oss) device\n"
-	    "      -vbidev file    use <file> as vbi device\n"
-	    "      -joydev file    use <file> as joystick device\n"
-	    "      -shift x        shift display by x bytes\n"
-	    "      -fb             let fb (not X) set up v4l device\n"
-	    "      -parallel n     use n compression threads\n"
-	    "      -bufcount n     use n video buffers\n"
-	    "      -hwscan         print a list of available devices.\n"
+	    "  -f  -fullscreen     startup in fullscreen mode\n");
+
+    fprintf(stderr,"\n");
+    cfg_help_cmdline(cmd_opts_x11,6,16);
+    
+    fprintf(stderr,
+	    "\n"
+#if 0
 	    "station:\n"
 	    "  this is one of the stations listed in $HOME/.xawtv\n"
 	    "\n"
+#endif
 	    "Check the manual page for a more detailed description.\n"
 	    "\n"
 	    "--\n"
@@ -1628,8 +1072,9 @@ hello_world(char *name)
 }
 
 void
-handle_cmdline_args(void)
+handle_cmdline_args(int *argc, char **argv)
 {
+    cfg_parse_cmdline(argc,argv,cmd_opts_x11);
     XtGetApplicationResources(app_shell,&args,
 			      args_desc,args_count,
 			      NULL,0);
@@ -1637,7 +1082,7 @@ handle_cmdline_args(void)
 	usage();
 	exit(0);
     }
-    snapbase = args.basename;
+
     debug    = args.debug;
     ng_debug = args.debug;
     ng_log_bad_stream = args.debug;
@@ -1652,8 +1097,6 @@ x11_ctrl_alt_backspace(Display *dpy)
     if (debug)
 	abort();
     do_va_cmd(2,"capture", "off");
-    video_overlay(0);
-    video_close();
     grabber_fini();
     exit(0);
 }
@@ -1838,20 +1281,23 @@ int xt_lirc_init(void)
     return 0;
 }
 
+#if 0
 static int xt_joystick;
-
 static void
 xt_joystick_data(XtPointer data, int *fd, XtInputId *iproc)
 {
     joystick_tv_havedata(xt_joystick);
 }
+#endif
 
 int xt_joystick_init(void)
 {
-    if (-1 != (xt_joystick = joystick_tv_init(args.joydev)))
+#if 0 /* FIXME */
+    if (-1 != (xt_joystick = joystick_tv_init(devs.joydev)))
 	XtAppAddInput(app_context,xt_joystick,(XtPointer)XtInputReadMask,
 		      xt_joystick_data,NULL);
     return 0;
+#endif
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1939,16 +1385,8 @@ create_bitmaps(Widget app_shell)
 
 /* ---------------------------------------------------------------------- */
 
-int xt_vm_randr_input_init(Display *dpy)
+int xt_input_init(Display *dpy)
 {
-    /* vidmode / randr */
-    if (debug)
-	fprintf(stderr,"xt: checking for vidmode extension ...\n");
-    xfree_vm_init(dpy);
-    if (debug)
-	fprintf(stderr,"xt: checking for randr extension ...\n");
-    xfree_randr_init(dpy);
-    
     /* input */
     if (debug)
 	fprintf(stderr,"xt: checking for lirc ...\n");
@@ -2055,7 +1493,7 @@ int xt_main_loop()
     if (debug)
 	fprintf(stderr,"xt: open grabber device...\n");
     grabber_init(NULL);
-    blit = blit_init(tv, &vinfo, GET_EXT_XV_SCALE(), GET_EXT_OPENGL());
+    blit = blit_init(tv, &vinfo, GET_EXT_XVIDEO(), GET_EXT_OPENGL());
     signal(SIGHUP,SIG_IGN); /* don't really need a tty ... */
 
     /* mainloop */

@@ -1,11 +1,23 @@
+/* config options */
+struct cfg_option {
+    char *domain;
+    char *section;
+    char *entry;
+};    
+struct cfg_cmdline {
+    char               *cmdline;
+    struct cfg_option  option;
+    char               *value;
+    char               *desc;
+    int                needsarg:1;
+    int                yesno:1;
+};
+void   cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt);
+void   cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2);
+
 /* file I/O */
 int    cfg_parse_file(char *dname, char *filename);
 int    cfg_write_file(char *dname, char *filename);
-
-#if 0
-void   cfg_parse_option(char *section, char *tag, char *value);
-void   cfg_parse_options(int *argc, char **argv);
-#endif
 
 /* update */
 void   cfg_set_str(char *dname, char *sname, char *ename, const char *value);

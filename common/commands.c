@@ -54,7 +54,6 @@ void (*exit_hook)(void);
 void (*movie_hook)(int argc, char **argv);
 
 int debug;
-int do_overlay;
 char *snapbase = "snap";
 int have_shmem;
 

@@ -1,5 +1,5 @@
 /* 
-    (c) 1998-2003 Gerd Knorr <kraxel@bytesex.org>
+    (c) 2004 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,15 +26,6 @@
 #include <math.h>
 #include <pthread.h>
 
-#ifndef NO_X11
-# include <X11/Xlib.h>
-# include <X11/Intrinsic.h>
-# include <X11/StringDefs.h>
-# include <X11/Xaw/XawInit.h>
-# include <X11/Xaw/Command.h>
-# include <X11/Xaw/Paned.h>
-#endif
-
 #include "grab-ng.h"
 #include "tv-config.h"
 #include "commands.h"
@@ -52,6 +43,34 @@ struct ng_video_filter *cur_filter;
 
 /* ----------------------------------------------------------------------- */
 
+struct cfg_cmdline cmd_opts_x11[] = {
+    {
+	.cmdline = "randr",
+	.option  = { O_EXT_XRANDR },
+	.yesno   = 1,
+	.desc    = "enable/disable Xrandr extention",
+    },{
+	.cmdline = "vm",
+	.option  = { O_EXT_XVIDMODE },
+	.yesno   = 1,
+	.desc    = "enable/disable VidMode extention",
+    },{
+	.cmdline = "xv",
+	.option  = { O_EXT_XVIDEO },
+	.yesno   = 1,
+	.desc    = "enable/disable Xvideo extention",
+    },{
+	.cmdline = "gl",
+	.option  = { O_EXT_OPENGL },
+	.yesno   = 1,
+	.desc    = "enable/disable OpenGL (via GLX extention)",
+    },{
+	/* end of list */
+    }
+};
+
+/* ----------------------------------------------------------------------- */
+
 void apply_config(void)
 {
     char *val;
@@ -60,6 +79,8 @@ void apply_config(void)
     ng_ratio_x      = GET_RATIO_X();
     ng_ratio_y      = GET_RATIO_Y();
     ng_jpeg_quality = GET_JPEG_QUALITY();
+
+    // snapbase = FIXME ;
 
     /* update GUI */
     if (NULL != (val = cfg_get_str(O_FREQTAB)))
