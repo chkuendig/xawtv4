@@ -12,13 +12,13 @@
 ! ----------------------------------------------------------------------------
 ! strings [i18n]
 
-MoTV.about_box_popup.title:		About motv
-MoTV*about_box_popup*messageString:	\
+MoTV4.about_box_popup.title:		About motv
+MoTV4*about_box_popup*messageString:	\
 	motv - Motif TV application	\n\
 	\n\
 	(c) 2002 Gerd Knorr <kraxel@bytesex.org>
 
-MoTV.errbox_popup.title:		Errors
+MoTV4.errbox_popup.title:		Errors
 
 control*menubar*fileM.tearOffTitle:	File
 control*menubar*editM.tearOffTitle:	Edit
@@ -262,7 +262,7 @@ streamer*buttons.stop.labelString:	Stop
 streamer*buttons.play.labelString:	Playback
 streamer*buttons.cancel.labelString:	Close
 
-MoTV.man_popup.title:			Manual page
-MoTV.man_popup*okLabelString:		close window
-MoTV.man_popup*label.labelString:	please wait ...
+MoTV4.man_popup.title:			Manual page
+MoTV4.man_popup*okLabelString:		close window
+MoTV4.man_popup*label.labelString:	please wait ...
 

@@ -179,7 +179,7 @@ create_confwin(void)
 {
     Widget form, label, command;
     
-    conf_shell = XtVaAppCreateShell("Config", "Xawtv",
+    conf_shell = XtVaAppCreateShell("Config", "Xawtv4",
 				    topLevelShellWidgetClass,
 				    dpy,
 				    XtNclientLeader,app_shell,

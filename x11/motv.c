@@ -116,7 +116,7 @@ static XtActionsRec actionTable[] = {
 };
 
 static String fallback_ressources[] = {
-#include "MoTV.h"
+#include "MoTV4.h"
     NULL
 };
 
@@ -664,7 +664,7 @@ create_attrs(void)
 #endif
     Widget attr_scroll;
     
-    attr_shell = XtVaAppCreateShell("attr","MoTV",
+    attr_shell = XtVaAppCreateShell("attr","MoTV4",
 				    topLevelShellWidgetClass,
 				    dpy,
 				    XtNclientLeader,app_shell,
@@ -1291,7 +1291,7 @@ create_control(void)
     char action[256];
 #endif
     
-    control_shell = XtVaAppCreateShell("control","MoTV",
+    control_shell = XtVaAppCreateShell("control","MoTV4",
 				       topLevelShellWidgetClass,
 				       dpy,
 				       XtNclientLeader,app_shell,
@@ -1721,7 +1721,7 @@ create_strwin(void)
     struct FILE_DATA *h;
     Arg args[2];
     
-    str_shell = XtVaAppCreateShell("streamer", "MoTV",
+    str_shell = XtVaAppCreateShell("streamer", "MoTV4",
 				   topLevelShellWidgetClass,
 				   dpy,
 				   XtNclientLeader,app_shell,
@@ -2945,7 +2945,7 @@ create_levels(void)
 {
     Widget rc;
     
-    levels_shell = XtVaAppCreateShell("levels", "MoTV",
+    levels_shell = XtVaAppCreateShell("levels", "MoTV4",
 				      topLevelShellWidgetClass,
 				      dpy,
 				      XtNclientLeader,app_shell,
@@ -3060,7 +3060,7 @@ main(int argc, char *argv[])
 #endif
     
     XtSetLanguageProc(NULL,NULL,NULL);
-    app_shell = XtVaAppInitialize(&app_context, "MoTV",
+    app_shell = XtVaAppInitialize(&app_context, "MoTV4",
 				  opt_desc, opt_count,
 				  &argc, argv,
 				  fallback_ressources,
@@ -3106,7 +3106,7 @@ main(int argc, char *argv[])
 #endif
 
     /* look for a useful visual */
-    visual_init("motv","MoTV");
+    visual_init("motv","MoTV4");
     
     /* remote display? */
     do_overlay = !args.remote;

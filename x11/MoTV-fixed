@@ -15,34 +15,34 @@
                         -*-*-*-*-*-*-14-*-*-*-*-*-*-*, \
                         -*-*-*-*-*-*-16-*-*-*-*-*-*-*,*
 
-MoTV.onscreen.label.renderTable:
-MoTV.onscreen.label.renderTable.fontType: FONT_IS_FONTSET
-MoTV.onscreen.label.renderTable.fontName: \
+MoTV4.onscreen.label.renderTable:
+MoTV4.onscreen.label.renderTable.fontType: FONT_IS_FONTSET
+MoTV4.onscreen.label.renderTable.fontName: \
      -*-ledfixed-medium-r-semicondensed--39-*-*-*-c-*-*-*, \
  -*-bitstream vera sans-medium-r-normal--39-*-*-*-*-*-*-*, \
            -*-luxi sans-medium-r-normal--39-*-*-*-*-*-*-*, \
                           -*-*-r-normal--39-*-*-*-*-*-*-*, \
                                -*-*-*-*--39-*-*-*-*-*-*-*,*
 
-MoTV.vtx.label.renderTable:
-MoTV.vtx.label.renderTable.fontType: FONT_IS_FONTSET
-MoTV.vtx.label.renderTable.fontName: \
+MoTV4.vtx.label.renderTable:
+MoTV4.vtx.label.renderTable.fontType: FONT_IS_FONTSET
+MoTV4.vtx.label.renderTable.fontName: \
 	-*-fixed-medium-r-normal--20-*-*-*-*-*-*, *
 
 
 ! ----------------------------------------------------------------------------
 ! main window
 
-MoTV.geometry:			320x240+50+50
-MoTV.winGravity:		Static
+MoTV4.geometry:			320x240+50+50
+MoTV4.winGravity:		Static
 
-MoTV.translations:		#override			\n\
+MoTV4.translations:		#override			\n\
 	<PropertyNotify>:	Remote()
 
-MoTV.tv.traversalOn:		false
-MoTV.tv.highlightThickness:	0
-MoTV.tv.background:		black
-MoTV.tv.translations:		#replace			\n\
+MoTV4.tv.traversalOn:		false
+MoTV4.tv.highlightThickness:	0
+MoTV4.tv.background:		black
+MoTV4.tv.translations:		#replace			\n\
 	<Btn2Down>:		Ipc(drag)			\n\
 	<Btn3Up>:		Popup(control)			\n\
 	~Alt ~Ctrl <Key>C:	Popup(control)			\n\
@@ -111,12 +111,12 @@ MoTV.tv.translations:		#replace			\n\
 	<Key>osfBackSpace:	Command(setstation,back)
 
 
-MoTV.tv*stationsM.menuPost:	<Btn1>
+MoTV4.tv*stationsM.menuPost:		<Btn1>
 
-MoTV.about_box_popup.deleteResponse:	DESTROY
-MoTV.errbox_popup.deleteResponse:	UNMAP
+MoTV4.about_box_popup.deleteResponse:	DESTROY
+MoTV4.errbox_popup.deleteResponse:	UNMAP
 
-MoTV.tv*stationsM.packing:		PACK_COLUMN
+MoTV4.tv*stationsM.packing:		PACK_COLUMN
 control*menubar*stationsM.packing:	PACK_COLUMN
 
 
@@ -331,43 +331,43 @@ streamer.form.*.borderWidth:		0
 ! ----------------------------------------------------------------------------
 ! man page renderer
 
-MoTV.man_popup.deleteResponse:			DESTROY
-MoTV.man_popup*view.width:			500
-MoTV.man_popup*view.height:			600
-MoTV.man_popup*view.scrollingPolicy:		AUTOMATIC
-MoTV.man_popup*view.scrollBarPlacement:		BOTTOM_RIGHT
+MoTV4.man_popup.deleteResponse:			DESTROY
+MoTV4.man_popup*view.width:			500
+MoTV4.man_popup*view.height:			600
+MoTV4.man_popup*view.scrollingPolicy:		AUTOMATIC
+MoTV4.man_popup*view.scrollBarPlacement:	BOTTOM_RIGHT
 
-MoTV.man_popup*label.alignment:			ALIGNMENT_BEGINNING
-MoTV.man_popup*label.marginWidth:		5
-MoTV.man_popup*label.marginHeight:		5
-MoTV.man_popup*label.renderTable: bold,underline
-MoTV.man_popup*label.renderTable.fontType: FONT_IS_FONTSET
-MoTV.man_popup*label.renderTable.fontName: \
+MoTV4.man_popup*label.alignment:		ALIGNMENT_BEGINNING
+MoTV4.man_popup*label.marginWidth:		5
+MoTV4.man_popup*label.marginHeight:		5
+MoTV4.man_popup*label.renderTable: bold,underline
+MoTV4.man_popup*label.renderTable.fontType: FONT_IS_FONTSET
+MoTV4.man_popup*label.renderTable.fontName: \
 	-*-fixed-medium-r-normal--13-*-*-*-*-*-iso8859-*, \
 	-*-fixed-medium-r-normal-ja-13-*-*-*-*-*-iso10646-1, \
 	-gnu-unifont-medium-r-normal--16-*-*-*-*-*-*-*, \
 	*
-MoTV.man_popup*label.renderTable.bold.fontType: FONT_IS_FONTSET
-MoTV.man_popup*label.renderTable.bold.fontName: \
+MoTV4.man_popup*label.renderTable.bold.fontType: FONT_IS_FONTSET
+MoTV4.man_popup*label.renderTable.bold.fontName: \
 	-*-fixed-bold-r-normal--13-*-*-*-*-*-iso8859-*, \
 	-*-fixed-medium-r-normal-ja-13-*-*-*-*-*-iso10646-1, \
 	-gnu-unifont-bold-r-normal--16-*-*-*-*-*-*-*, \
 	*
-MoTV.man_popup*label.renderTable.underline.underlineType: SINGLE_LINE
+MoTV4.man_popup*label.renderTable.underline.underlineType: SINGLE_LINE
 
 
 ! ----------------------------------------------------------------------------
 ! Onscreen window
 
-MoTV.onscreen.allowShellResize:		true
-MoTV.onscreen*background:		black
-MoTV.onscreen*borderColor:		black
-MoTV.onscreen*foreground:		lightgreen
-MoTV.onscreen*highlightThickness:	0
+MoTV4.onscreen.allowShellResize:	true
+MoTV4.onscreen*background:		black
+MoTV4.onscreen*borderColor:		black
+MoTV4.onscreen*foreground:		lightgreen
+MoTV4.onscreen*highlightThickness:	0
 
-MoTV.vtx.allowShellResize:		true
-MoTV.vtx*borderColor:			black
-MoTV.vtx*background:			black
-MoTV.vtx*foreground:			white
-MoTV.vtx*highlightThickness:		0
+MoTV4.vtx.allowShellResize:		true
+MoTV4.vtx*borderColor:			black
+MoTV4.vtx*background:			black
+MoTV4.vtx*foreground:			white
+MoTV4.vtx*highlightThickness:		0
 

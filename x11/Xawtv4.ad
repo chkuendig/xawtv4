@@ -2,9 +2,9 @@
 ! ----------------------------------------------------------------------------
 ! Strings
 
-Xawtv*international:		true
-Xawtv*font:			7x13bold
-Xawtv*fontSet:			\
+Xawtv4*international:		true
+Xawtv4*font:			7x13bold
+Xawtv4*fontSet:			\
  -*-lucidatypewriter-bold-r-normal-*-14-*-*-*-m-*-iso8859-*, \
           -*-courier-bold-r-normal-*-14-*-*-*-m-*-iso8859-*, \
          -gnu-unifont-bold-r-normal--16-*-*-*-c-*-*-*, \
@@ -25,7 +25,7 @@ TopLevelShell*fontSet:		\
                         -*-*-*-*-*-*-16-*-*-*-*-*-*-*,*
 
 *popup_help.title:		Welcome to xawtv!
-xawtv.tv.help: \
+Xawtv4.tv.help: \
 \n\
 Copyright (c) 1997-2001 Gerd Knorr <kraxel@bytesex.org>\n\
 \n\
@@ -102,14 +102,14 @@ Streamer*xanim.label:		playback (start pia)
 ! ----------------------------------------------------------------------------
 ! general settings
 
-Xawtv*beNiceToColormap:			false
-Xawtv*highlightThickness:		0
+Xawtv4*beNiceToColormap:		false
+Xawtv4*highlightThickness:		0
 
-Xawtv*foreground:			black
-Xawtv*background:			lightgray
-Xawtv*justify:				left
+Xawtv4*foreground:			black
+Xawtv4*background:			lightgray
+Xawtv4*justify:				left
 
-Xawtv*menu.translations:		#override	\n\
+Xawtv4*menu.translations:		#override	\n\
 	<Motion>:	Autoscroll() highlight()
 
 TopLevelShell*beNiceToColormap:		false
@@ -126,16 +126,16 @@ TopLevelShell*menu.translations:	#override	\n\
 ! ----------------------------------------------------------------------------
 ! TV Window
 
-xawtv.tv.width:			384
-xawtv.tv.height:		288
-xawtv.tv.background:		green
-xawtv.winGravity:		Static
-xawtv.translations:		#override			\n\
+Xawtv4.tv.width:		384
+Xawtv4.tv.height:		288
+Xawtv4.tv.background:		green
+Xawtv4.winGravity:		Static
+Xawtv4.translations:		#override			\n\
 	<PropertyNotify>:	Remote()			\n\
 	<Message>WM_PROTOCOLS:	CloseMain()
 
-xawtv.tv.background:		black
-xawtv.tv.translations:		#override			\n\
+Xawtv4.tv.background:		black
+Xawtv4.tv.translations:		#override			\n\
 	<Key>C:			Popup(channels)			\n\
 	<Key>O:			Popup(options)			\n\
 	<Key>H:			Help()				\n\
@@ -375,28 +375,28 @@ Channels.viewport.translations:	#override\n\
 ! ----------------------------------------------------------------------------
 ! onscreen + vtx window
 
-xawtv.onscreen.allowShellResize:	true
-xawtv.onscreen.label.resize:		true
+Xawtv4.onscreen.allowShellResize:	true
+Xawtv4.onscreen.label.resize:		true
 
-xawtv.onscreen*background:		black
-xawtv.onscreen*borderColor:		black
-xawtv.onscreen*foreground:		lightgreen
-xawtv.onscreen.label.justify:		left
-xawtv.onscreen.label.font:		-*-ledfixed-medium-r-*--39-*-*-*-c-*-*-*
-xawtv.onscreen.label.fontSet:		\
+Xawtv4.onscreen*background:		black
+Xawtv4.onscreen*borderColor:		black
+Xawtv4.onscreen*foreground:		lightgreen
+Xawtv4.onscreen.label.justify:		left
+Xawtv4.onscreen.label.font:		-*-ledfixed-medium-r-*--39-*-*-*-c-*-*-*
+Xawtv4.onscreen.label.fontSet:		\
      -*-ledfixed-medium-r-semicondensed--39-*-*-*-c-*-*-*, \
  -*-bitstream vera sans-medium-r-normal--39-*-*-*-*-*-*-*, \
            -*-luxi sans-medium-r-normal--39-*-*-*-*-*-*-*, \
                           -*-*-r-normal--39-*-*-*-*-*-*-*, \
                                -*-*-*-*--39-*-*-*-*-*-*-*,*
 
-xawtv.vtx.allowShellResize:		true
-xawtv.vtx.label.resize:			true
+Xawtv4.vtx.allowShellResize:		true
+Xawtv4.vtx.label.resize:		true
 
-xawtv.vtx*background:			black
-xawtv.vtx*borderColor:			black
-xawtv.vtx*foreground:			lightgreen
-xawtv.vtx.label.justify:		center
+Xawtv4.vtx*background:			black
+Xawtv4.vtx*borderColor:			black
+Xawtv4.vtx*foreground:			lightgreen
+Xawtv4.vtx.label.justify:		center
 
 
 ! ----------------------------------------------------------------------------

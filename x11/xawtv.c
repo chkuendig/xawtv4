@@ -72,7 +72,7 @@
 /*--- public variables ----------------------------------------------------*/
 
 static String fallback_ressources[] = {
-#include "Xawtv.h"
+#include "Xawtv4.h"
     NULL
 };
 
@@ -583,7 +583,7 @@ ChannelAction(Widget widget, XEvent *event,
 
 static void create_chanwin(void)
 {
-    chan_shell = XtVaAppCreateShell("Channels", "Xawtv",
+    chan_shell = XtVaAppCreateShell("Channels", "Xawtv4",
 				    topLevelShellWidgetClass,
 				    dpy,
 				    XtNclientLeader,app_shell,
@@ -995,7 +995,7 @@ create_optwin(void)
 {
     Widget c;
 
-    opt_shell = XtVaAppCreateShell("Options", "Xawtv",
+    opt_shell = XtVaAppCreateShell("Options", "Xawtv4",
 				   topLevelShellWidgetClass,
 				   dpy,
 				   XtNclientLeader,app_shell,
@@ -1312,7 +1312,7 @@ create_strwin(void)
 {
     Widget form,label,button,text;
 
-    str_shell = XtVaAppCreateShell("Streamer", "Xawtv",
+    str_shell = XtVaAppCreateShell("Streamer", "Xawtv4",
 				   topLevelShellWidgetClass,
 				   dpy,
 				   XtNclientLeader,app_shell,
@@ -1431,7 +1431,7 @@ create_strwin(void)
 static void
 create_launchwin(void)
 {
-    launch_shell = XtVaAppCreateShell("Launcher", "Xawtv",
+    launch_shell = XtVaAppCreateShell("Launcher", "Xawtv4",
 				     topLevelShellWidgetClass,
 				     dpy,
 				     XtNclientLeader,app_shell,
@@ -1457,7 +1457,7 @@ main(int argc, char *argv[])
 
     /* toplevel */
     XtSetLanguageProc(NULL,NULL,NULL);
-    app_shell = XtVaAppInitialize(&app_context, "Xawtv",
+    app_shell = XtVaAppInitialize(&app_context, "Xawtv4",
 				  opt_desc, opt_count,
 				  &argc, argv,
 				  fallback_ressources,
@@ -1501,7 +1501,7 @@ main(int argc, char *argv[])
 #endif
 
     /* look for a useful visual */
-    visual_init("xawtv","Xawtv");
+    visual_init("xawtv","Xawtv4");
 
     /* remote display? */
     do_overlay = !args.remote;

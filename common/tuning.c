@@ -164,7 +164,6 @@ static int tune_dvb_station(char *station)
 #ifndef HAVE_DVB
     return -1;
 #else
-    char pids[32];
     char *vdrname;
     int32_t freq;
 
@@ -180,9 +179,8 @@ static int tune_dvb_station(char *station)
 
     /* update info */
     freq = cfg_get_int("dvb", vdrname, "frequency", 0);
-    snprintf(pids,sizeof(pids),"%d / %d",ng_mpeg_vpid,ng_mpeg_apid);
     new_station(station);
-    new_channel(pids);
+    new_channel(NULL);
     snprintf(curr_details, sizeof(curr_details),
 	     "%.2f MHz", (float)freq/1000);
     return 0;

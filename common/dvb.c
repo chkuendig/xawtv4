@@ -93,6 +93,43 @@ static char *fe_status[] = {
     "reinit",
 };
 
+static char *fe_caps[] = {
+    "FE_CAN_INVERSION_AUTO",
+    "FE_CAN_FEC_1_2",
+    "FE_CAN_FEC_2_3",
+    "FE_CAN_FEC_3_4",
+
+    "FE_CAN_FEC_4_5",
+    "FE_CAN_FEC_5_6",
+    "FE_CAN_FEC_6_7",
+    "FE_CAN_FEC_7_8",
+
+    "FE_CAN_FEC_8_9",
+    "FE_CAN_FEC_AUTO",
+    "FE_CAN_QPSK",
+    "FE_CAN_QAM_16",
+    
+    "FE_CAN_QAM_32",
+    "FE_CAN_QAM_64",
+    "FE_CAN_QAM_128",
+    "FE_CAN_QAM_256",
+    
+    "FE_CAN_QAM_AUTO",
+    "FE_CAN_TRANSMISSION_MODE_AUTO",
+    "FE_CAN_BANDWIDTH_AUTO",
+    "FE_CAN_GUARD_INTERVAL_AUTO",
+    
+    "FE_CAN_HIERARCHY_AUTO",
+    "?","?","?",
+
+    "?","?","?","?",
+
+    "?",
+    "FE_CAN_RECOVER",
+    "FE_CAN_CLEAN_SETUP",
+    "FE_CAN_MUTE_TS",
+};
+
 static char *fe_name_bandwidth[] = {
     [ BANDWIDTH_AUTO  ] = "auto",
     [ BANDWIDTH_8_MHZ ] = "8 MHz",
@@ -141,6 +178,12 @@ static char *fe_name_hierarchy[] = {
     [ HIERARCHY_1 ]    = "1",
     [ HIERARCHY_2 ]    = "2",
     [ HIERARCHY_4 ]    = "3",
+};
+
+static char *fe_name_inversion[] = {
+    [ INVERSION_OFF  ] = "off",
+    [ INVERSION_ON   ] = "on",
+    [ INVERSION_AUTO ] = "auto",
 };
 
 /* ----------------------------------------------------------------------- */
@@ -322,18 +365,19 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 
 	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
-	h->p.frequency = val - lof;
+	h->p.frequency = (val - lof) * 1000;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
 
 	val = cfg_get_int("dvb", name, "symbol_rate", 0);
-	h->p.u.qpsk.symbol_rate = val;
+	h->p.u.qpsk.symbol_rate = val * 1000;
 	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
 
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d+%d, inv=%d "
+	    fprintf(stderr,"dvb fe: tuning freq=%d+%d, inv=%s "
 		    "symbol_rate=%d fec_inner=%s\n",
-		    lof, h->p.frequency, h->p.inversion,
+		    lof, h->p.frequency / 1000,
+		    fe_name_inversion [ h->p.inversion ],
 		    h->p.u.qpsk.symbol_rate,
 		    fe_name_rates [ h->p.u.qpsk.fec_inner ]);
 	}
@@ -652,9 +696,15 @@ struct dvb_state* dvb_init(char *adapter)
 	perror("dvb fe: ioctl FE_GET_INFO");
 	goto oops;
     }
-    if (dvb_debug)
+    if (dvb_debug) {
+	int i;
+
 	fprintf(stderr,"dvb fe: %s: %s\n",
 		fe_type[h->info.type], h->info.name);
+	for (i = 0; i < sizeof(fe_caps)/sizeof(fe_caps[0]); i++)
+	    if (h->info.caps & ((int32_t)1 << i))
+		fprintf(stderr,"dvb fe caps: %s\n",fe_caps[i]);
+    }
 
     dvb_frontend_release(h);
     return h;

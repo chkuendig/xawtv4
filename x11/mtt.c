@@ -59,7 +59,7 @@ int           dvbmode;
 char          *vbidev;
 
 static String fallback_ressources[] = {
-#include "mtt.h"
+#include "mtt4.h"
     NULL
 };
 
