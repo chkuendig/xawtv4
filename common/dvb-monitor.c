@@ -132,8 +132,9 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
     
     /* get data */
     if (dvb_demux_get_section(tab->fd, buf, sizeof(buf)) < 0) {
-	fprintf(stderr,"dvbmon: reading %s failed (frontend not locked?), "
-		"fd %d, trying to re-init.\n", tab->name, tab->fd);
+	if (dvb_debug)
+	    fprintf(stderr,"dvbmon: reading %s failed (frontend not locked?), "
+		    "fd %d, trying to re-init.\n", tab->name, tab->fd);
 	table_refresh(dm,tab);
 	return TRUE;
     }

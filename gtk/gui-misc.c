@@ -253,7 +253,7 @@ stderr_data(GIOChannel *source, GIOCondition condition,
     }
     buf[rc] = 0;
 
-    h->messages = realloc(h->messages,h->msgsize+rc);
+    h->messages = realloc(h->messages,h->msgsize+rc+1);
     if (!h->messages) {
 	/* oom */
 	h->msgsize = 0;
