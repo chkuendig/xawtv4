@@ -262,6 +262,7 @@ stderr_data(GIOChannel *source, GIOCondition condition,
     strcpy(h->messages+h->msgsize,buf);
     h->msgsize += rc;
 
+    gtk_window_resize(GTK_WINDOW(h->win), 100, 20);
     gtk_label_set_text(GTK_LABEL(h->label),h->messages);
     gtk_widget_show_all(h->win);
     return TRUE;
@@ -332,7 +333,11 @@ void gtk_about_box(GtkWindow *parent, char *name, char *version, char *text)
     gtk_box_set_spacing(box, SPACING);
     gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
 
-    label = gtk_label_new (text);
+    label = gtk_label_new(text);
+    gtk_widget_set(label,
+		   "xpad", SPACING,
+		   "ypad", SPACING,
+		   NULL);
     gtk_box_pack_start(box, label, TRUE, TRUE, 0);
     g_signal_connect(about, "response",
 		     G_CALLBACK(dialog_destroy), NULL);

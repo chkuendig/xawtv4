@@ -76,7 +76,6 @@ enum {
 static void menu_cb_about(void)
 {
     static char *text =
-	"\n"
 	"This is alexplore, a DVB Channel browser & scanner\n"
 	"\n"
 	THIS_IS_GPLv2
@@ -87,8 +86,7 @@ static void menu_cb_about(void)
 	"  - The channel scan needs a starting point, thus you have to\n"
 	"    tune one channel manually before starting a scan.\n"
 	"  - Activate a row (double-click or enter key) to tune that\n"
-	"    transport stream.\n"
-	"\n";
+	"    transport stream.";
 
     gtk_about_box(GTK_WINDOW(dvbscan_win), "alexplore", VERSION, text);
 }

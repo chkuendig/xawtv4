@@ -641,13 +641,12 @@ vbi_menu_cb(gpointer    user_data,
 	    GtkWidget  *widget)
 {
     static char *about_text =
-	"\n"
 	"This is mtt, a teletext browser for X11.\n"
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
-	"\n";
+	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]";
+
     struct vbi_window *vw = user_data;
     GdkAtom sel;
 

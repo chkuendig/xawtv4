@@ -273,13 +273,11 @@ static void menu_cb_station_prev(void)
 static void menu_cb_about(void)
 {
     static char *text =
-	"\n"
 	"This is " APPNAME ", a dvb radio application for X11\n"
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
-	"\n";
+	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]";
 
     gtk_about_box(GTK_WINDOW(main_win), APPNAME, VERSION, text);
 }

@@ -363,9 +363,11 @@ void create_epg(void)
     box = gtk_vbox_new(TRUE, 0);
     epg_time = gtk_widget_new(GTK_TYPE_LABEL,
 			      "xalign", 0.5,
+			      "xpad", SPACING,
 			      NULL);
     epg_name = gtk_widget_new(GTK_TYPE_LABEL,
 			      "xalign", 0.5,
+			      "xpad", SPACING,
 			      NULL);
     epg_colors(epg_time);
     epg_colors(epg_name);
@@ -524,13 +526,11 @@ static void menu_cb_fine_prev(void)
 static void menu_cb_about(void)
 {
     static char *text =
-	"\n"
 	"This is xawtv, a TV application for X11, using the gtk2 toolkit\n"
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 1997-2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
-	"\n";
+	"(c) 1997-2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]";
 
     gtk_about_box(GTK_WINDOW(control_win), "xawtv", VERSION, text);
 }

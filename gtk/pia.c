@@ -407,13 +407,11 @@ static void next_cb(void)
 static void about_cb(void)
 {
     static char *text =
-	"\n"
 	"This is pia, a simple movie player for X11.\n"
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
-	"\n";
+	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]";
 
     gtk_about_box(GTK_WINDOW(toplevel), "pia", VERSION, text);
 }
