@@ -681,6 +681,7 @@ create_attrs(void)
 				    XtNvisual,vinfo.visual,
 				    XtNcolormap,colormap,
 				    XtNdepth,vinfo.depth,
+				    XtNtitle,_("Device settings"),
 				    XmNdeleteResponse,XmDO_NOTHING,
 				    NULL);
     XmdRegisterEditres(attr_shell);
@@ -2800,6 +2801,7 @@ stderr_init(void)
     memset(h,0,sizeof(*h));
     h->str = XmStringGenerate("", NULL, XmMULTIBYTE_TEXT,NULL);
     h->box = XmCreateErrorDialog(app_shell,"errbox",NULL,0);
+    XtVaSetValues(XtParent(h->box),XtNtitle,_("Error messages"),NULL);
     XtUnmanageChild(XmMessageBoxGetChild(h->box,XmDIALOG_HELP_BUTTON));
     XtUnmanageChild(XmMessageBoxGetChild(h->box,XmDIALOG_CANCEL_BUTTON));
     XtAddCallback(h->box,XmNokCallback,stderr_ok_cb,h);

@@ -17,6 +17,7 @@
 #include <Xm/SelectioB.h>
 
 #include "RegEdit.h"
+#include "motif-gettext.h"
 #include "man.h"
 
 extern Display *dpy;
@@ -52,15 +53,14 @@ man(char *page)
 
     /* build dialog */
     dlg = XmCreatePromptDialog(app_shell,"man",NULL,0);
-    XmdRegisterEditres(XtParent(dlg));
+    XtVaSetValues(XtParent(dlg),XtNtitle,_("Manual page"),NULL);
+    xm_init_dialog(dlg,_("Close window"),NULL,NULL,NULL);
     XtUnmanageChild(XmSelectionBoxGetChild(dlg,XmDIALOG_SELECTION_LABEL));
-    XtUnmanageChild(XmSelectionBoxGetChild(dlg,XmDIALOG_HELP_BUTTON));
-    XtUnmanageChild(XmSelectionBoxGetChild(dlg,XmDIALOG_CANCEL_BUTTON));
     XtUnmanageChild(XmSelectionBoxGetChild(dlg,XmDIALOG_TEXT));
     XtAddCallback(dlg,XmNokCallback,man_destroy,dlg);
     view = XmCreateScrolledWindow(dlg,"view",NULL,0);
     XtManageChild(view);
-    label = XtVaCreateManagedWidget("label", xmLabelWidgetClass,view, NULL);
+    label = xm_label(view,"label",_("please wait ..."));
     XtManageChild(dlg);
     
     /* fetch page and render into XmString */
