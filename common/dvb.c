@@ -89,7 +89,8 @@ struct dvb_state {
     char                             demux[32];
 
     /* frontend */
-    int                              fd;
+    int                              fdro;
+    int                              fdwr;
     struct dvb_frontend_info         info;
     struct dvb_frontend_parameters   p;
     struct dvb_frontend_parameters   plast;
@@ -211,18 +212,30 @@ static char *find_diseqc(char *name)
 /* ----------------------------------------------------------------------- */
 /* handle dvb frontend                                                     */
 
-static int dvb_frontend_open(struct dvb_state *h)
+static int dvb_frontend_open(struct dvb_state *h, int write)
 {
-    if (-1 != h->fd)
+    int *fd = write ? &h->fdwr : &h->fdro;
+
+    if (-1 != *fd)
 	return 0;
 
-    h->fd = open(h->frontend,O_RDWR);
-    if (-1 == h->fd) {
+    *fd = open(h->frontend, (write ? O_RDWR : O_RDONLY) | O_NONBLOCK);
+    if (-1 == *fd) {
 	fprintf(stderr,"dvb fe: open %s: %s\n",
 		h->frontend,strerror(errno));
 	return -1;
     }
     return 0;
+}
+
+void dvb_frontend_release(struct dvb_state *h, int write)
+{
+    int *fd = write ? &h->fdwr : &h->fdro;
+
+    if (-1 != *fd) {
+	close(*fd);
+	*fd = -1;
+    }
 }
 
 int dvb_frontend_tune(struct dvb_state *h, char *name)
@@ -232,7 +245,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
     int lof;
     int val;
 
-    if (-1 == dvb_frontend_open(h))
+    if (-1 == dvb_frontend_open(h,1))
 	return -1;
 
     switch (h->info.type) {
@@ -250,7 +263,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	action = cfg_get_str("diseqc", diseqc, "action");
 	if (dvb_debug)
 	    fprintf(stderr,"diseqc action: \"%s\"\n",action);
-	exec_diseqc(h->fd,action);
+	exec_diseqc(h->fdwr,action);
 
 	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
@@ -350,7 +363,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	}
     }
 
-    if (-1 == xioctl(h->fd,FE_SET_FRONTEND,&h->p, 0))
+    if (-1 == xioctl(h->fdwr,FE_SET_FRONTEND,&h->p, 0))
 	return -1;
     memcpy(&h->plast, &h->p, sizeof(h->plast));
     return 0;
@@ -370,13 +383,11 @@ void dvb_frontend_status_print(struct dvb_state *h)
     uint32_t     ublocks = 0;
     int i;
 
-    if (-1 == dvb_frontend_open(h))
-	return;
-    ioctl(h->fd, FE_READ_STATUS,             &status);
-    ioctl(h->fd, FE_READ_BER,                &ber);
-    ioctl(h->fd, FE_READ_SNR,                &snr);
-    ioctl(h->fd, FE_READ_SIGNAL_STRENGTH,    &signal);
-    ioctl(h->fd, FE_READ_UNCORRECTED_BLOCKS, &ublocks);
+    ioctl(h->fdro, FE_READ_STATUS,             &status);
+    ioctl(h->fdro, FE_READ_BER,                &ber);
+    ioctl(h->fdro, FE_READ_SNR,                &snr);
+    ioctl(h->fdro, FE_READ_SIGNAL_STRENGTH,    &signal);
+    ioctl(h->fdro, FE_READ_UNCORRECTED_BLOCKS, &ublocks);
     
     fprintf(stderr,"dvb fe: %7d %7d %7d %7d | ",
 	    ber, snr, signal, ublocks);
@@ -390,9 +401,7 @@ int dvb_frontend_is_locked(struct dvb_state *h)
 {
     fe_status_t  status  = 0;
 
-    if (-1 == dvb_frontend_open(h))
-	return 0;
-    if (-1 == ioctl(h->fd, FE_READ_STATUS, &status)) {
+    if (-1 == ioctl(h->fdro, FE_READ_STATUS, &status)) {
 	perror("dvb fe: ioctl FE_READ_STATUS");
 	return 0;
     }
@@ -405,7 +414,7 @@ int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
     struct timeval tv;
 
     if (0 == timeout)
-	timeout = 3;
+	timeout = 10;
 
     time(&start);
     time(&now);
@@ -422,14 +431,6 @@ int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
 	time(&now);
     }
     return -1;
-}
-
-void dvb_frontend_release(struct dvb_state *h)
-{
-    if (-1 != h->fd) {
-	close(h->fd);
-	h->fd = -1;
-    }
 }
 
 /* ----------------------------------------------------------------------- */
@@ -563,7 +564,8 @@ int dvb_demux_get_section(int *fd, unsigned char *buf, int len, int oneshot)
 
 void dvb_fini(struct dvb_state *h)
 {
-    dvb_frontend_release(h);
+    dvb_frontend_release(h,1);
+    dvb_frontend_release(h,0);
     dvb_demux_station_release(h);
     free(h);
 }
@@ -576,26 +578,21 @@ struct dvb_state* dvb_init(char *adapter)
     if (NULL == h)
 	goto oops;
     memset(h,0,sizeof(*h));
-    h->fd       = -1;
+    h->fdro     = -1;
+    h->fdwr     = -1;
     h->audio.fd = -1;
     h->video.fd = -1;
 
     snprintf(h->frontend, sizeof(h->frontend),"%s/frontend0", adapter);
     snprintf(h->demux,    sizeof(h->demux),   "%s/demux0",    adapter);
 
-    h->fd = open(h->frontend,O_RDWR);
-    if (-1 == h->fd) {
-	fprintf(stderr,"dvb fe: open %s: %s\n",
-		h->frontend,strerror(errno));
+    if (0 != dvb_frontend_open(h,0))
 	goto oops;
-    }
 
-    if (-1 == xioctl(h->fd, FE_GET_INFO, &h->info, 0)) {
+    if (-1 == xioctl(h->fdro, FE_GET_INFO, &h->info, 0)) {
 	perror("dvb fe: ioctl FE_GET_INFO");
 	goto oops;
     }
-
-    dvb_frontend_release(h);
     return h;
 
  oops:
@@ -626,7 +623,6 @@ int dvb_tune(struct dvb_state *h, char *name)
 	fprintf(stderr,"dvb: pid filter setup failed\n");
 	return -1;
     }
-    dvb_frontend_release(h);
     return 0;
 }
 

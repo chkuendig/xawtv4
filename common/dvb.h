@@ -20,7 +20,7 @@ void dvb_frontend_status_title(void);
 void dvb_frontend_status_print(struct dvb_state *h);
 int dvb_frontend_is_locked(struct dvb_state *h);
 int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout);
-void dvb_frontend_release(struct dvb_state *h);
+void dvb_frontend_release(struct dvb_state *h, int write);
 
 /* low level demux interface */
 int dvb_demux_station_filter(struct dvb_state *h, char *name);
