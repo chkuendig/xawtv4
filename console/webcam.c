@@ -202,7 +202,7 @@ static int ssh_xfer(struct xfer_state *s, char *image, int width, int height)
 
     if ((sshp=popen(cmd, "w")) == NULL) {
 	perror("popen");
-	exit(1);
+	goto err;
     }
     if ((imgdata = fopen(filename,"rb"))==NULL) {
 	perror("fopen");
@@ -217,6 +217,7 @@ static int ssh_xfer(struct xfer_state *s, char *image, int width, int height)
     fclose(imgdata);
     pclose(sshp);
 
+err:
     unlink(filename);
     return 0;
 }

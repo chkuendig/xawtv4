@@ -309,7 +309,7 @@ ng_alsa_write(void *handle, struct ng_audio_buf *buf)
  again:
     rc = snd_pcm_writei(h->pcm, buf->data + buf->written,
 			(buf->size - buf->written) / h->mul);
-    if (-EPIPE == rc && !restart) {
+    if ((-EPIPE == rc || -ESTRPIPE == rc) && !restart) {
 	if (ng_log_resync)
 	    fprintf(stderr,"alsa: write: buffer underun, restarting playback ...\n");
 	snd_pcm_prepare(h->pcm);
@@ -323,7 +323,7 @@ ng_alsa_write(void *handle, struct ng_audio_buf *buf)
 	ng_free_audio_buf(buf);
 	buf = NULL;
     } else if (rc < 0) {
-	fprintf(stderr,"alsa: write: %s\n", snd_strerror(rc));
+	fprintf(stderr,"alsa: write: %s (rc=%d)\n", snd_strerror(rc), rc);
 	ng_free_audio_buf(buf);
 	buf = NULL;
     } else {
