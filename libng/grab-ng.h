@@ -556,9 +556,12 @@ struct ng_audio_conv {
 
 /* must be changed if we break compatibility */
 #define NG_PLUGIN_MAGIC 0x20040625
+
 #define __init __attribute__ ((constructor))
 #define __fini __attribute__ ((destructor))
+#ifndef __used
 #define __used __attribute__ ((used))
+#endif
 
 extern struct list_head ng_conv;
 extern struct list_head ng_aconv;
