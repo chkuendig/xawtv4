@@ -21,6 +21,8 @@ extern int debug;
 char *curr_station;
 char *curr_channel;
 char curr_details[32];
+int  curr_tsid;
+int  curr_pnr;
 
 static void new_string(char **curr, char *update)
 {
@@ -184,6 +186,8 @@ int tune_dvb_channel(char *pr)
 	     "TSID %d / PNR %d", tsid, pnr);
     new_station(NULL);
     new_channel(NULL);
+    curr_tsid = tsid;
+    curr_pnr  = pnr;
     return 0;
 #endif
 }
@@ -222,6 +226,8 @@ static int tune_dvb_station(char *station)
     }
     new_station(station);
     new_channel(NULL);
+    curr_tsid = tsid;
+    curr_pnr  = pnr;
     return 0;
 #endif
 }
@@ -234,6 +240,8 @@ int tune_station(char *station)
 
     /* reset state */
     curr_details[0] = 0;
+    curr_tsid = 0;
+    curr_pnr  = 0;
 
     /* try dvb ... */
     rc = tune_dvb_station(station);

@@ -45,6 +45,7 @@
 #include "atoms.h"
 #include "dvb-tuning.h"
 #include "dvb-monitor.h"
+#include "dvb-epg.h"
 #include "gui.h"
 
 #include "logo.xpm"
@@ -220,6 +221,8 @@ static void siginit(void)
 
 /* ------------------------------------------------------------------------ */
 
+static struct eit_state *eit;
+
 static void
 grabber_init(char *dev)
 {
@@ -247,6 +250,7 @@ grabber_init(char *dev)
 	display_mode = DISPLAY_DVB;
 	devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
 	dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
+	eit = eit_add_watch(devs.dvb, 0x4e,0xff, 0, 0);
 	if (debug)
 	    dvbmon_add_callback(devs.dvbmon,dvbwatch_logger,NULL);
 #endif
@@ -277,6 +281,8 @@ grabber_fini(void)
 	devs.dvbmon = NULL;
 	write_config_file("dvb-ts");
 	write_config_file("dvb-pr");
+	if (eit)
+	    eit_del_watch(eit);
     }
 #endif
     if (NULL != analog_win)
@@ -327,13 +333,14 @@ static char* record_filename(char *ext)
 /* hooks                                                                    */
 
 static char default_title[256];
-static guint title_timer;
+static guint title_timer_id;
+static guint epg_timer_id;
 
 static gboolean title_timeout(gpointer data)
 {
     keypad_timeout();
     gtk_window_set_title(GTK_WINDOW(main_win), default_title);
-    title_timer = 0;
+    title_timer_id = 0;
     return FALSE;
 }
 
@@ -342,10 +349,10 @@ static void new_message(char *txt)
     gtk_window_set_title(GTK_WINDOW(main_win), txt);
     display_onscreen(txt);
 
-    if (title_timer)
+    if (title_timer_id)
 	g_source_destroy(g_main_context_find_source_by_id
-			 (g_main_context_default(),title_timer));
-    title_timer = g_timeout_add(TITLE_TIME, title_timeout, NULL);
+			 (g_main_context_default(),title_timer_id));
+    title_timer_id = g_timeout_add(TITLE_TIME, title_timeout, NULL);
 }
 
 static void new_title(char *txt)
@@ -354,11 +361,57 @@ static void new_title(char *txt)
     gtk_window_set_title(GTK_WINDOW(main_win), default_title);
     display_onscreen(default_title);
 
-    if (title_timer) {
+    if (title_timer_id) {
 	g_source_destroy(g_main_context_find_source_by_id
-			 (g_main_context_default(),title_timer));
-	title_timer = 0;
+			 (g_main_context_default(),title_timer_id));
+	title_timer_id = 0;
     }
+}
+
+static void print_epg(struct epgitem *epg)
+{
+    char from[10], to[10];
+    struct tm tm;
+    time_t total, passed;
+    int c;
+
+    localtime_r(&epg->start,&tm);
+    strftime(from,sizeof(from),"%H:%M",&tm);
+    localtime_r(&epg->stop,&tm);
+    strftime(to,sizeof(to),"%H:%M",&tm);
+
+    total  = epg->stop  - epg->start;
+    passed = time(NULL) - epg->start;
+
+    fprintf(stderr,"<epg>\n");
+    fprintf(stderr,"time    : %s - %s  (%2d%%)\n",
+	    from, to, (int)(passed * 100 / total));
+    if (epg->name[0])
+	fprintf(stderr,"title   : %s\n",epg->name);
+    if (epg->stext[0])
+	fprintf(stderr,"subtitle: %s\n",epg->stext);
+    for (c = 0; c < DIMOF(epg->cat); c++)
+	if (NULL != epg->cat[c])
+	    fprintf(stderr,"category: %s\n",epg->cat[c]);
+    if (epg->etext)
+	fprintf(stderr,"<desc>\n%s\n</desc>\n",epg->etext);
+    fprintf(stderr,"</epg>\n");
+}
+
+static gboolean epg_timer_func(gpointer data)
+{
+    struct epgitem *epg;
+
+    if (curr_tsid && curr_pnr) {
+	epg = eit_lookup(curr_tsid, curr_pnr, time(NULL));
+	if (NULL == epg)
+	    return TRUE;
+	if (debug)
+	    print_epg(epg);
+	display_epg(GTK_WINDOW(main_win), epg);
+    }
+    epg_timer_id = 0;
+    return FALSE;
 }
 
 static void do_exit(void)
@@ -369,6 +422,7 @@ static void do_exit(void)
 
 static void new_station(void)
 {
+    struct epgitem *epg;
     char label[256];
 
     snprintf(label, sizeof(label), "%s | %s | %s",
@@ -379,6 +433,22 @@ static void new_station(void)
     set_property();
     x11_station_activate(curr_station);
     analog_set_channel(curr_channel);
+
+    if (epg_timer_id) {
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(),epg_timer_id));
+	epg_timer_id = 0;
+    }
+    if (curr_tsid && curr_pnr) {
+	epg = eit_lookup(curr_tsid, curr_pnr, time(NULL));
+	if (NULL != epg) {
+	    if (debug)
+		print_epg(epg);
+	    display_epg(GTK_WINDOW(main_win), epg);
+	} else {
+	    epg_timer_id = g_timeout_add(250, epg_timer_func, NULL);
+	}
+    }
 }
 
 static void new_freqtab(void)
@@ -1006,6 +1076,7 @@ main(int argc, char *argv[])
 #endif
     create_control();
     create_onscreen();
+    create_epg();
     gtk_window_add_accel_group(GTK_WINDOW(main_win), control_accel_group);
     
     /* finalize X11 init + show windows */

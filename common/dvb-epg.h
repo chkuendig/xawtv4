@@ -19,10 +19,10 @@ struct epgitem {
     int                 pnr;
     int                 updated;
     time_t              start;       /* unix epoch */
-    int                 length;      /* seconds */
+    time_t              stop;
     char                lang[4];
     char                name[64];
-    char                stext[64];
+    char                stext[128];
     char                *etext;
     char                *cat[4];
     uint64_t            flags;
@@ -34,3 +34,5 @@ extern time_t eit_last_new_record;
 struct eit_state;
 struct eit_state* eit_add_watch(struct dvb_state *dvb,
 				int section, int mask, int verbose, int alive);
+void eit_del_watch(struct eit_state *eit);
+struct epgitem* eit_lookup(int tsid, int pnr, time_t when);

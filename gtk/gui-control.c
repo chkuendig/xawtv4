@@ -19,6 +19,7 @@
 #include "commands.h"
 #include "tuning.h"
 #include "devs.h"
+#include "dvb-epg.h"
 
 #include "gui.h"
 
@@ -310,7 +311,7 @@ void display_onscreen(char *title)
 {
     if (!fs)
 	return;
-    if (!cfg_get_bool("options","global","osd",1))
+    if (!GET_OSD())
 	return;
 
     if (debug)
@@ -320,12 +321,115 @@ void display_onscreen(char *title)
     gtk_window_move(GTK_WINDOW(on_win),
 		    cfg_get_int("options","global","osd-x",30),
 		    cfg_get_int("options","global","osd-y",20));
+    gtk_window_resize(GTK_WINDOW(on_win), 1, 1);
     gtk_widget_show_all(on_win);
 
     if (on_timer)
 	g_source_destroy(g_main_context_find_source_by_id
 			 (g_main_context_default(), on_timer));
     on_timer = g_timeout_add(TITLE_TIME, popdown_onscreen, NULL);
+}
+
+/* ------------------------------------------------------------------------ */
+/* epg display                                                              */
+
+static GtkWidget *epg_win, *epg_time, *epg_name;
+static guint epg_timer;
+
+static void epg_colors(GtkWidget *widget)
+{
+    GdkColormap *cmap;
+    GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
+    GtkRcStyle *style;
+
+    cmap = gtk_widget_get_colormap(widget);
+    gdk_colormap_alloc_color(cmap, &black, FALSE, TRUE);
+
+    style = gtk_widget_get_modifier_style(widget);
+    style->fg[GTK_STATE_INSENSITIVE] = black;
+    style->fg[GTK_STATE_NORMAL] = black;
+    style->color_flags[GTK_STATE_INSENSITIVE] |=
+	GTK_RC_FG;
+    style->color_flags[GTK_STATE_NORMAL] |=
+	GTK_RC_FG;
+    gtk_widget_modify_style(widget,style);
+}
+
+void create_epg(void)
+{
+    GtkWidget *box;
+    
+    epg_win  = gtk_window_new(GTK_WINDOW_POPUP);
+    box = gtk_vbox_new(TRUE, 0);
+    epg_time = gtk_widget_new(GTK_TYPE_LABEL,
+			      "xalign", 0.5,
+			      NULL);
+    epg_name = gtk_widget_new(GTK_TYPE_LABEL,
+			      "xalign", 0.5,
+			      NULL);
+    epg_colors(epg_time);
+    epg_colors(epg_name);
+
+    gtk_container_add(GTK_CONTAINER(epg_win), box);
+    gtk_box_pack_start(GTK_BOX(box), epg_time,  FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(box), epg_name,  FALSE, TRUE, 0);
+
+    gtk_window_set_resizable(GTK_WINDOW(epg_win), TRUE);
+    gtk_widget_set_sensitive(epg_win,   FALSE);
+    gtk_widget_set_sensitive(epg_time,  FALSE);
+    gtk_widget_set_sensitive(epg_name,  FALSE);
+}
+
+static gboolean popdown_epg(gpointer data)
+{
+    gtk_widget_hide(epg_win);
+    epg_timer = 0;
+    return FALSE;
+}
+
+void display_epg(GtkWindow *win, struct epgitem *epg)
+{
+    char buf[64];
+    struct tm tm;
+    int len,i;
+    gint vx,vy,vw,vh;
+    gint ex,ey,ew,eh;
+    time_t total, passed;
+
+    if (!GET_EPG())
+	return;
+    gtk_widget_hide(epg_win);
+
+    total  = epg->stop  - epg->start;
+    passed = time(NULL) - epg->start;
+
+    localtime_r(&epg->start,&tm);
+    len = strftime(buf,sizeof(buf),"%H:%M - ",&tm);
+    localtime_r(&epg->stop,&tm);
+    len += strftime(buf+len,sizeof(buf)-len,"%H:%M",&tm);
+    len += snprintf(buf+len,sizeof(buf)-len," (%d%%)",
+		    (int)(passed*100/total));
+    gtk_label_set_text(GTK_LABEL(epg_time), buf);
+
+    len = snprintf(buf,sizeof(buf),"%s",epg->name);
+    for (i = 0; i < len; i++)
+	if (buf[i] == '\n')
+	    buf[i] = ' ';
+    gtk_label_set_text(GTK_LABEL(epg_name), buf);
+
+    gtk_window_resize(GTK_WINDOW(epg_win), 100, 20);
+    gtk_window_get_size(GTK_WINDOW(epg_win), &ew, &eh);
+    gtk_window_get_position(win, &vx, &vy);
+    gtk_window_get_size(win, &vw, &vh);
+    ex = vx + (vw-ew)/2;
+    ey = vy + vh - eh - 10;
+    gtk_window_move(GTK_WINDOW(epg_win), ex, ey);
+
+    gtk_widget_show_all(epg_win);
+    if (epg_timer)
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(), epg_timer));
+    epg_timer = g_timeout_add(TITLE_TIME, popdown_epg, NULL);
 }
 
 /* ------------------------------------------------------------------------ */

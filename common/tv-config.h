@@ -49,6 +49,7 @@ const char* int_to_str(int n, struct STRTAB *tab);
 #define O_KEYPAD_PARTIAL       	O_OPTIONS, "keypad-partial"
 #define O_KEYPAD_NTSC		O_OPTIONS, "keypad-ntsc"
 #define O_OSD			O_OPTIONS, "osd"
+#define O_EPG			O_OPTIONS, "epg"
 #define O_WM_FULLSCREEN		O_OPTIONS, "use-wm-fullscreen"
 #define O_EXT_XRANDR		O_OPTIONS, "use-xext-xrandr"
 #define O_EXT_XVIDMODE		O_OPTIONS, "use-xext-vidmode"
@@ -59,6 +60,7 @@ const char* int_to_str(int n, struct STRTAB *tab);
 #define GET_KEYPAD_PARTIAL()	cfg_get_bool(O_KEYPAD_PARTIAL,	1)
 #define GET_KEYPAD_NTSC()	cfg_get_bool(O_KEYPAD_NTSC,	0)
 #define GET_OSD()		cfg_get_bool(O_OSD,		1)
+#define GET_EPG()		cfg_get_bool(O_EPG,		1)
 #define GET_WM_FILLSCREEN()	cfg_get_bool(O_WM_FULLSCREEN,	1)
 #define GET_EXT_DGA()		cfg_get_bool(O_EXT_DGA,		1)
 #define GET_EXT_XRANDR()	cfg_get_bool(O_EXT_XRANDR,	1)

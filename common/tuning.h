@@ -2,6 +2,8 @@
 extern char *curr_station;
 extern char *curr_channel;
 extern char curr_details[];
+extern int  curr_tsid;
+extern int  curr_pnr;
 
 /* analog */
 char* freqtab_get(void);

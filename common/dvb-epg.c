@@ -470,11 +470,11 @@ static int mpeg_parse_psi_eit(unsigned char *data, int verbose)
 	length = mpeg_getbits(data,j+56,24);
 	epg = epgitem_get(tsid,pnr,id);
 	epg->start  = decode_mjd_time(mjd,start);
-	epg->length = decode_length(length);
+	epg->stop   = epg->start + decode_length(length);
 
 	if (verbose > 1)
 	    fprintf(stderr,"  id %d mjd %d time %06x du %06x r %d ca %d  #",
-		    id, mjd, start, epg->length,
+		    id, mjd, start, length,
 		    mpeg_getbits(data,j+80,3),
 		    mpeg_getbits(data,j+83,1));
 	dlen = mpeg_getbits(data,j+84,12);
@@ -537,4 +537,32 @@ struct eit_state* eit_add_watch(struct dvb_state *dvb,
     eit->ch   = g_io_channel_unix_new(eit->fd);
     eit->id   = g_io_add_watch(eit->ch, G_IO_IN, eit_data, eit);
     return eit;
+}
+
+void eit_del_watch(struct eit_state *eit)
+{
+    g_source_remove(eit->id);
+    g_io_channel_unref(eit->ch);
+    close(eit->fd);
+    free(eit);
+}
+
+struct epgitem* eit_lookup(int tsid, int pnr, time_t when)
+{
+    struct epgitem   *epg;
+    struct list_head *item;
+
+    list_for_each(item,&epg_list) {
+	epg = list_entry(item, struct epgitem, next);
+	if (epg->tsid  != tsid)
+	    continue;
+	if (epg->pnr   != pnr)
+	    continue;
+	if (epg->start > when)
+	    continue;
+	if (epg->stop  < when)
+	    continue;
+	return epg;
+    }
+    return NULL;
 }

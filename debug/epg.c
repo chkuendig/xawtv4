@@ -101,7 +101,6 @@ static int export_xmltv(int tsid, char *filename)
     xmlNodePtr tv, prog, chan, attr;
     struct epgitem   *epg;
     struct list_head *item;
-    time_t stop;
     struct tm *tm;
     char buf[64],*list,*name,*enc;
     int ts,pr,c,type;
@@ -150,9 +149,7 @@ static int export_xmltv(int tsid, char *filename)
 	tm = localtime(&epg->start);
 	strftime(buf,sizeof(buf),"%Y%m%d%H%M%S %Z",tm);
 	xmlNewProp(prog, BAD_CAST "start", buf);
-
-	stop = epg->start + epg->length;
-	tm = localtime(&stop);
+	tm = localtime(&epg->stop);
 	strftime(buf,sizeof(buf),"%Y%m%d%H%M%S %Z",tm);
 	xmlNewProp(prog, BAD_CAST "stop", buf);
 
@@ -266,7 +263,7 @@ usage(FILE *out, char *argv0)
 	    "options:\n"
 	    "  -h          print this help text.\n"
 	    "  -v          be verbose.\n"
-	    "  -c          scan currently tuned transponder only.\n"
+	    "  -c          no tuning, scan current transponder only.\n"
 	    "  -t          dump tvbrowser files.\n",
 	    name);
 };
@@ -274,6 +271,7 @@ usage(FILE *out, char *argv0)
 int main(int argc, char *argv[])
 {
     GMainContext *context;
+    struct eit_state *eit;
     char filename[1024];
     char ts[8],*sec = NULL,*name;
     int tuned = 0;
@@ -312,7 +310,7 @@ int main(int argc, char *argv[])
     devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_tsid,NULL);
-    eit_add_watch(devs.dvb, 0x50,0xf0, verbose, 1);
+    eit = eit_add_watch(devs.dvb, 0x50,0xf0, verbose, 1);
     context = g_main_context_default();
 
     if (!dvb_frontend_is_locked(devs.dvb)) {
@@ -381,6 +379,7 @@ int main(int argc, char *argv[])
 	export_tvbrowser_channels("TvChannels.xml");
     }
 
+    eit_del_watch(eit);
     dvbmon_fini(devs.dvbmon);
     device_fini();
     return 0;

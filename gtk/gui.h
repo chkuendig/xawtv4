@@ -4,6 +4,7 @@
 
 #define TITLE_TIME          6000
 #define ONSCREEN_TIME       5000
+#define EPG_TIME            5000
 #define SPACING               12
 
 #define _(string) string
@@ -55,6 +56,8 @@ gint gtk_sort_iter_compare_str(GtkTreeModel *model,
 /* ------------------------------------------------------------------- */
 /* gui-control.c                                                       */
 
+struct epgitem;
+
 extern int           fs;
 
 extern char          *curr_station;
@@ -71,6 +74,8 @@ extern GtkWidget     *control_status;
 extern void create_control(void);
 extern void create_onscreen(void);
 extern void display_onscreen(char *title);
+extern void create_epg(void);
+extern void display_epg(GtkWindow *win, struct epgitem *epg);
 
 extern void menu_cb_fullscreen(void);
 extern void x11_station_activate(char *current);
