@@ -25,7 +25,6 @@ extern int debug;
 GtkWidget *dvbscan_win;
 
 static int           standalone;
-static struct dvbmon *dvbmon;
 
 static GtkWidget     *status;
 static GtkTreeStore  *store;
@@ -225,7 +224,7 @@ static void scan_do_start(int seconds)
 
     timeout_data = seconds;
     mark_stale();
-    dvbmon_refresh(dvbmon);
+    dvbmon_refresh(devs.dvbmon);
     scan_ts_start();
     scan_do_next(time(NULL));
 }
@@ -389,7 +388,7 @@ static void destroy(GtkWidget *widget,
 			 (g_main_context_default(), fe_poll_id));
 	fe_poll_id = 0;
     }
-    dvbmon_del_callback(dvbmon,dvbwatch_gui,NULL);
+    dvbmon_del_callback(devs.dvbmon,dvbwatch_gui,NULL);
     dvbscan_win = 0;
 
     if (standalone)
@@ -425,7 +424,7 @@ static void activate(GtkTreeView        *treeview,
 }
 
 
-static void dvbscan_init_gui(struct dvbmon *d)
+static void dvbscan_init_gui(void)
 {
     GtkTreeIter iter;
     int tsid,pnr;
@@ -455,13 +454,12 @@ static void dvbscan_init_gui(struct dvbmon *d)
     }
     mark_stale();
 
-    dvbmon = d;
-    dvbmon_add_callback(dvbmon,dvbwatch_gui,NULL);
-    dvbmon_refresh(dvbmon);
+    dvbmon_add_callback(devs.dvbmon,dvbwatch_gui,NULL);
+    dvbmon_refresh(devs.dvbmon);
     fe_poll_id = g_timeout_add(1000, frontend_poll, NULL);
 }
 
-void dvbscan_create_window(int s, struct dvbmon *d)
+void dvbscan_create_window(int s)
 {
     GtkWidget *vbox,*hbox,*menubar,*scroll;
     GtkCellRenderer *renderer;
@@ -671,7 +669,7 @@ void dvbscan_create_window(int s, struct dvbmon *d)
     gtk_box_pack_end(GTK_BOX(vbox), status, FALSE, TRUE, 0);
 
     /* fill data */
-    dvbscan_init_gui(d);
+    dvbscan_init_gui();
     return;
 }
 

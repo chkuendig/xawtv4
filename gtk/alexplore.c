@@ -40,9 +40,6 @@
 int debug = 0;
 Display *dpy;
 
-/* local globales */
-static struct dvbmon *dvbmon;
-
 /* ------------------------------------------------------------------------ */
 
 #define O_CMDLINE               "cmdline", "cmdline"
@@ -103,14 +100,14 @@ main(int argc, char *argv[])
 	fprintf(stderr,"no dvb device found\n");
 	exit(1);
     }
-    dvbmon = dvbmon_init(devs.dvb, debug);
-    dvbmon_add_callback(dvbmon,dvbwatch_scanner,NULL);
+    devs.dvbmon = dvbmon_init(devs.dvb, debug);
+    dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
 
     if (gtk_init_check(&argc, &argv)) {
 	/* setup gtk gui */
-	dvbscan_create_window(1,dvbmon);
+	dvbscan_create_window(1);
 	gtk_widget_show_all(dvbscan_win);
     } else {
 	/* enter tty mode */
@@ -127,7 +124,7 @@ main(int argc, char *argv[])
     write_config_file("vdr-channels");  // DEBUG
     write_config_file("vdr-diseqc");    // DEBUG
     
-    dvbmon_fini(dvbmon);
+    dvbmon_fini(devs.dvbmon);
     device_fini();
     exit(0);
 }

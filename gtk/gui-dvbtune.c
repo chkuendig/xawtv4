@@ -20,6 +20,7 @@
 #include "parseconfig.h"
 #include "tv-config.h"
 #include "dvb-tuning.h"
+#include "dvb-monitor.h"
 #include "gui.h"
 
 /* ---------------------------------------------------------------------------- */
@@ -305,6 +306,7 @@ static void response(GtkDialog *dialog,
 #endif
 	dvb_frontend_tune(devs.dvb, d, s);
 	cfg_del_section(d, s);
+	dvbmon_refresh(devs.dvbmon);
     }
 
     if (arg1 != GTK_RESPONSE_APPLY)

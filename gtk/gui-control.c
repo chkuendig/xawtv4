@@ -909,7 +909,7 @@ extern struct dvbmon *dvbmon;
 static void menu_cb_scan_dvb(void)
 {
     if (NULL == dvbscan_win)
-	dvbscan_create_window(0,dvbmon);
+	dvbscan_create_window(0);
     gtk_widget_show_all(dvbscan_win);
 }
 #endif

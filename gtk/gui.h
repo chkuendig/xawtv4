@@ -79,15 +79,12 @@ extern void control_switchdevice(void);
 /* gui-dvbscan.c                                                       */
 
 extern GtkWidget *dvbscan_win;
-struct dvbmon;
-
-void dvbscan_create_window(int s, struct dvbmon *d);
+void dvbscan_create_window(int s);
 
 /* ------------------------------------------------------------------- */
 /* gui-dvbtune.c                                                       */
 
 extern GtkWidget *dvbtune_dialog;
-
 void create_dvbtune(GtkWindow *parent);
 
 /* ------------------------------------------------------------------- */

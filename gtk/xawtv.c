@@ -211,10 +211,6 @@ static void siginit(void)
 
 /* ------------------------------------------------------------------------ */
 
-#ifdef HAVE_DVB
-struct dvbmon *dvbmon;
-#endif
-
 static void
 grabber_init(char *dev)
 {
@@ -240,10 +236,10 @@ grabber_init(char *dev)
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
 	display_mode = DISPLAY_DVB;
-	dvbmon = dvbmon_init(devs.dvb, debug);
-	dvbmon_add_callback(dvbmon,dvbwatch_scanner,NULL);
+	devs.dvbmon = dvbmon_init(devs.dvb, debug);
+	dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
 	if (debug)
-	    dvbmon_add_callback(dvbmon,dvbwatch_logger,NULL);
+	    dvbmon_add_callback(devs.dvbmon,dvbwatch_logger,NULL);
 #endif
 
     } else {
@@ -263,13 +259,13 @@ static void
 grabber_fini(void)
 {
 #ifdef HAVE_DVB
-    if (NULL != dvbmon) {
+    if (NULL != devs.dvbmon) {
 	if (dvbscan_win)
 	    gtk_widget_destroy(dvbscan_win);
 	if (dvbtune_dialog)
 	    gtk_widget_destroy(dvbtune_dialog);
-	dvbmon_fini(dvbmon);
-	dvbmon = NULL;
+	dvbmon_fini(devs.dvbmon);
+	devs.dvbmon = NULL;
 	write_config_file("dvb-ts");
 	write_config_file("dvb-pr");
     }

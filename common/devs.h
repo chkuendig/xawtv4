@@ -10,12 +10,13 @@ struct devs {
     struct ng_devstate mixer;
 
     /* vbi don't use libng ... */
-    char *vbidev;
-    struct vbi_state *vbi;
+    char              *vbidev;
+    struct vbi_state  *vbi;
 
     /* ... and neither does dvb */
-    char *dvbadapter;
-    struct dvb_state *dvb;
+    char              *dvbadapter;
+    struct dvb_state  *dvb;
+    struct dvbmon     *dvbmon;
 };
 
 extern struct devs devs;
