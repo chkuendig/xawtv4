@@ -10,6 +10,7 @@ TARGETS-gtk += \
 	gtk/dvbrowse \
 	gtk/dvbradio
 OBJS-gtk-dvb := \
+	gtk/epg-store.o \
 	gtk/gui-epg.o \
 	gtk/gui-dvbscan.o \
 	gtk/gui-dvbtune.o
@@ -37,7 +38,6 @@ gtk/xawtv: \
 	gtk/gui-analog.o \
 	$(OBJS-gtk-dvb) \
 	gtk/gui-misc.o \
-	gtk/epg-store.o \
 	gtk/xscreensaver.o \
 	x11/xv.o \
 	x11/atoms.o \

@@ -446,12 +446,13 @@ main(int argc, char *argv[])
 		ifreq -= ifreq % FREQ_STEP;
 	    }
 	    break;
-    /* GPP added -l list current frequency, implies -q */
-    case 'l':
-        lfreq = 1;
-        quit = 1;
-	    break;
 
+	    /* GPP added -l list current frequency, implies -q */
+	case 'l':
+	    lfreq = 1;
+	    quit = 1;
+	    break;
+	    
 	case 'c':
 	    device = optarg;
 	    break;

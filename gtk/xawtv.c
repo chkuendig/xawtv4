@@ -220,7 +220,9 @@ static void siginit(void)
 
 /* ------------------------------------------------------------------------ */
 
+#ifdef HAVE_DVB
 static struct eit_state *eit;
+#endif
 
 static void
 grabber_init(char *dev)
@@ -822,8 +824,16 @@ static gboolean mouse_button_eh(GtkWidget *widget,
 				GdkEventButton *event,
 				gpointer user_data)
 {
-    struct epgitem *epg = NULL;
-    
+    /* left button */
+    if (NULL != control_st_menu  &&  1 == event->button) {
+	gtk_widget_show_all(control_st_menu);
+	gtk_menu_popup(GTK_MENU(control_st_menu),
+		       NULL, NULL, NULL, NULL,
+		       event->button, event->time);
+	return TRUE;
+    }
+
+    /* right button */
     if (NULL != control_win  &&  3 == event->button) {
 	if (GTK_WIDGET_VISIBLE(control_win))
 	    gtk_widget_hide(control_win);
@@ -831,7 +841,11 @@ static gboolean mouse_button_eh(GtkWidget *widget,
 	    gtk_widget_show_all(control_win);
 	return TRUE;
     }
+
+#ifdef HAVE_DVB
+    /* middle button */
     if (NULL != epg_win && 2 == event->button) {
+	struct epgitem *epg = NULL;
 
 	if (!GTK_WIDGET_VISIBLE(epg_win)) {
 	    epg = eit_lookup(curr_tsid, curr_pnr, time(NULL), epg_debug);
@@ -840,13 +854,8 @@ static gboolean mouse_button_eh(GtkWidget *widget,
 	    gtk_widget_hide(epg_win);
 	}
     }
-    if (NULL != control_st_menu  &&  1 == event->button) {
-	gtk_widget_show_all(control_st_menu);
-	gtk_menu_popup(GTK_MENU(control_st_menu),
-		       NULL, NULL, NULL, NULL,
-		       event->button, event->time);
-	return TRUE;
-    }
+#endif
+
     return FALSE;
 }
 
@@ -1065,7 +1074,9 @@ main(int argc, char *argv[])
     /* basic init */
     ng_init();
     parse_args(&argc,argv);
+#ifdef HAVE_DVB
     dvb_lang_init();
+#endif
 
     /* gtk main window */
     if (debug)
@@ -1144,7 +1155,9 @@ main(int argc, char *argv[])
     create_control();
     create_onscreen();
     create_epg();
+#ifdef HAVE_DVB
     create_epgwin(GTK_WINDOW(main_win));
+#endif
     gtk_window_add_accel_group(GTK_WINDOW(main_win), control_accel_group);
     
     /* finalize X11 init + show windows */
