@@ -2,6 +2,7 @@
 
 /* print debug info? */
 extern int dvb_debug;
+extern int dvb_type_override;
 
 extern char *dvb_src;
 extern char *dvb_lnb;

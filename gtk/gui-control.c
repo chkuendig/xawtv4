@@ -450,10 +450,10 @@ static void menu_cb_start_stop_record()
 	fprintf(stderr,"%s\n", __FUNCTION__);
     if (recording) {
 	if (0 == mm_rec_stop())
-	    display_message("recording stopped");
+	    display_message(_("recording stopped"));
     } else {
 	if (0 == mm_rec_start())
-	    display_message("recording started");
+	    display_message(_("recording started"));
     }
 }
 
@@ -889,7 +889,7 @@ static void create_station_prop(GtkWindow *parent)
     GtkBox *vbox, *box, *hbox;
 	
     station_dialog =
-	gtk_dialog_new_with_buttons("TV Station Properties", parent, 0,
+	gtk_dialog_new_with_buttons(_("TV Station Properties"), parent, 0,
 				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
 				    GTK_STOCK_APPLY,  GTK_RESPONSE_APPLY,
 				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -901,49 +901,49 @@ static void create_station_prop(GtkWindow *parent)
     vbox = GTK_BOX(GTK_DIALOG(station_dialog)->vbox);
 
     /* general */
-    frame = gtk_frame_new("General");
+    frame = gtk_frame_new(_("General"));
     gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
     gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
     box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
     gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
     gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
 
-    hbox = gtk_add_hbox_with_label(box, "Name");
+    hbox = gtk_add_hbox_with_label(box, _("Name"));
     station_name = gtk_entry_new();
     gtk_box_pack_start(hbox, station_name, TRUE, TRUE, 0);
 
-    hbox = gtk_add_hbox_with_label(box, "Group");
+    hbox = gtk_add_hbox_with_label(box, _("Group"));
     station_group_c = gtk_combo_new();
     station_group_e = GTK_COMBO(station_group_c)->entry;
     gtk_box_pack_start(hbox, station_group_c, TRUE, TRUE, 0);
 
-    hbox = gtk_add_hbox_with_label(box, "Hotkey");
+    hbox = gtk_add_hbox_with_label(box, _("Hotkey"));
     station_hotkey = gtk_entry_new();
     gtk_box_pack_start(hbox, station_hotkey, TRUE, TRUE, 0);
 
     /* analog TV */
-    frame = gtk_frame_new("Analog TV");
+    frame = gtk_frame_new(_("Analog TV"));
     gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
     gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
     box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
     gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
     gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
 
-    hbox = gtk_add_hbox_with_label(box, "Channel");
+    hbox = gtk_add_hbox_with_label(box, _("Channel"));
     bmenu = gtk_menu_new();
     station_ch_omenu = gtk_option_menu_new();
     gtk_option_menu_set_menu(GTK_OPTION_MENU(station_ch_omenu),bmenu);
     gtk_box_pack_start(hbox, station_ch_omenu, TRUE, TRUE, 0);
 
     /* DVB */
-    frame = gtk_frame_new("Digital TV (DVB)");
+    frame = gtk_frame_new(_("Digital TV (DVB)"));
     gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
     gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
     box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
     gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
     gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
 
-    hbox = gtk_add_hbox_with_label(box, "TSID/PNR");
+    hbox = gtk_add_hbox_with_label(box, _("TSID/PNR"));
     bmenu = gtk_menu_new();
     station_dvb_omenu = gtk_option_menu_new();
     gtk_option_menu_set_menu(GTK_OPTION_MENU(station_dvb_omenu),bmenu);
@@ -1042,11 +1042,11 @@ static void station_activate(GtkTreeView        *treeview,
 static GtkItemFactoryEntry menu_items[] = {
     {
 	/* --- File menu ----------------------------- */
-	.path        = "/_File",
+	.path        = noop("/_File"),
 	.item_type   = "<Branch>",
 #if 0
     },{
-	.path        = "/File/_Record ...",
+	.path        = noop("/File/_Record ..."),
 	.accelerator = "<control>R",
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_SAVE,
@@ -1055,7 +1055,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/File/sep1",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/File/_Quit",
+	.path        = noop("/File/_Quit"),
 	.accelerator = "Q",
 	.callback    = gtk_quit_cb,
 	.item_type   = "<StockItem>",
@@ -1063,51 +1063,51 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- Edit menu ----------------------------- */
-	.path        = "/_Edit",
+	.path        = noop("/_Edit"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Edit/_Add Station ...",
+	.path        = noop("/Edit/_Add station ..."),
 	.callback    = menu_cb_add_station,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Edit/_Edit Station ...",
+	.path        = noop("/Edit/_Edit station ..."),
 	.accelerator = "E",
 	.callback    = menu_cb_edit_station,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Edit/_Delete Station",
+	.path        = noop("/Edit/_Delete station"),
 	.callback    = menu_cb_del_station,
 	.item_type   = "<Item>",
     },{
 	.path        = "/Edit/sep1",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Edit/_Save Stations",
+	.path        = noop("/Edit/_Save stations"),
 	.callback    = menu_cb_save_stations,
 	.item_type   = "<Item>",
     },{
 	.path        = "/Edit/sep2",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Edit/Scan analog ...",
+	.path        = noop("/Edit/Scan analog ..."),
 	.callback    = menu_cb_scan_analog,
 	.item_type   = "<Item>",
 #ifdef HAVE_DVB
     },{
-	.path        = "/Edit/Scan DVB ...",
+	.path        = noop("/Edit/Scan DVB ..."),
 	.callback    = menu_cb_scan_dvb,
 	.item_type   = "<Item>",
 #endif
     },{
 
 	/* --- dynamic devices/stations menus -------- */
-	.path        = "/_Stations",
+	.path        = noop("/_Stations"),
 	.item_type   = "<Branch>",
     },{
 	.path        = "/Stations/tearoff",
 	.item_type   = "<Tearoff>",
     },{
-	.path        = "/_Devices",
+	.path        = noop("/_Devices"),
 	.item_type   = "<Branch>",
     },{
 	.path        = "/Devices/tearoff",
@@ -1115,16 +1115,16 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 	
 	/* --- Settings menu ------------------------- */
-	.path        = "/_Settings",
+	.path        = noop("/_Settings"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Settings/Frequency _Table",
+	.path        = noop("/Settings/Frequency _Table"),
 	.item_type   = "<Branch>",
     },{
 	.path        = "/Settings/sep1",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Settings/Device _Options",
+	.path        = noop("/Settings/Device _Options"),
 	.item_type   = "<Branch>",
     },{
 	.path        = "/Settings/Device Options/tearoff",
@@ -1132,15 +1132,15 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- Commands menu ------------------------- */
-	.path        = "/_Commands",
+	.path        = noop("/_Commands"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Commands/_Fullscreen",
+	.path        = noop("/Commands/_Fullscreen"),
 	.accelerator = "F",
 	.callback    = menu_cb_fullscreen,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Start or stop _recording",
+	.path        = noop("/Commands/Start or stop _recording"),
 	.accelerator = "R",
 	.callback    = menu_cb_start_stop_record,
 	.item_type   = "<Item>",
@@ -1148,17 +1148,17 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/sep1",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Commands/Mute",
+	.path        = noop("/Commands/Mute"),
 	.accelerator = "KP_Enter",
 	.callback    = menu_cb_mute,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Increase Volume",
+	.path        = noop("/Commands/Increase Volume"),
 	.accelerator = "KP_Add",
 	.callback    = menu_cb_vol_inc,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Decrease Volume",
+	.path        = noop("/Commands/Decrease Volume"),
 	.accelerator = "KP_Subtract",
 	.callback    = menu_cb_vol_dec,
 	.item_type   = "<Item>",
@@ -1166,50 +1166,50 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/sep2",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Commands/Next Station",
+	.path        = noop("/Commands/Next station"),
 	.accelerator = "space",  // Page_Up
 	.callback    = menu_cb_station_next,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_FORWARD,
     },{
-	.path        = "/Commands/Previous Station",
+	.path        = noop("/Commands/Previous station"),
 	.accelerator = "BackSpace", // Page_Down
 	.callback    = menu_cb_station_prev,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_BACK,
     },{
-	.path        = "/Commands/Tuning",
+	.path        = noop("/Commands/Tuning"),
 	.item_type   = "<Branch>",
     },{
 	.path        = "/Commands/Tuning/tearoff",
 	.item_type   = "<Tearoff>",
     },{
-	.path        = "/Commands/Tuning/Channel up",
+	.path        = noop("/Commands/Tuning/Channel up"),
 	// .accelerator = "Up",
 	.callback    = menu_cb_channel_next,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Tuning/Channel down",
+	.path        = noop("/Commands/Tuning/Channel down"),
 	// .accelerator = "Down",
 	.callback    = menu_cb_channel_prev,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Tuning/Finetuning up",
+	.path        = noop("/Commands/Tuning/Finetuning up"),
 	// .accelerator = "Right",
 	.callback    = menu_cb_fine_next,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Tuning/Finetuning down",
+	.path        = noop("/Commands/Tuning/Finetuning down"),
 	// .accelerator = "Left",
 	.callback    = menu_cb_fine_prev,
 	.item_type   = "<Item>",
     },{
 
 	/* --- Help menu ----------------------------- */
-	.path        = "/_Help",
+	.path        = noop("/_Help"),
 	.item_type   = "<LastBranch>",
     },{
-	.path        = "/Help/_About ...",
+	.path        = noop("/Help/_About ..."),
 	.callback    = menu_cb_about,
 	.item_type   = "<Item>",
     }
@@ -1400,29 +1400,29 @@ static void init_freqtab_list(void)
 
 static struct toolbarbutton toolbaritems[] = {
     {
-	.text     = "prev",
-	.tooltip  = "previous station",
+	.text     = noop("prev"),
+	.tooltip  = noop("previous station"),
 	.stock    = GTK_STOCK_GO_BACK,
 	.callback = menu_cb_station_prev,
     },{
-	.text     = "next",
-	.tooltip  = "next station",
+	.text     = noop("next"),
+	.tooltip  = noop("next station"),
 	.stock    = GTK_STOCK_GO_FORWARD,
 	.callback = menu_cb_station_next,
     },{
-	.text     = "mute",
-	.tooltip  = "mute sound",
+	.text     = noop("mute"),
+	.tooltip  = noop("mute sound"),
 	.callback = menu_cb_mute,
 #if 0
     },{
-	.text     = "stop",
+	.text     = noop("stop"),
 	.stock    = GTK_STOCK_STOP,
 #endif
     },{
 	/* nothing */
     },{
-	.text     = "quit",
-	.tooltip  = "quit application",
+	.text     = noop("quit"),
+	.tooltip  = noop("quit application"),
 	.stock    = GTK_STOCK_QUIT,
 	.callback = gtk_quit_cb,
     }
@@ -1514,7 +1514,7 @@ void create_control(void)
 		 "weight",      PANGO_WEIGHT_BOLD,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(st_view), -1, "Name", renderer,
+	(GTK_TREE_VIEW(st_view), -1, _("Name"), renderer,
 	 "text",        ST_COL_NAME,
 	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
@@ -1524,7 +1524,7 @@ void create_control(void)
 		 "weight",      PANGO_WEIGHT_BOLD,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(st_view), -1, "Group", renderer,
+	(GTK_TREE_VIEW(st_view), -1, _("Group"), renderer,
 	 "text",        ST_COL_GROUP,
 	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
@@ -1534,7 +1534,7 @@ void create_control(void)
 		 "weight",      PANGO_WEIGHT_BOLD,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(st_view), -1, "Key", renderer,
+	(GTK_TREE_VIEW(st_view), -1, _("Key"), renderer,
 	 "text",        ST_COL_HOTKEY,
 	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
@@ -1544,7 +1544,7 @@ void create_control(void)
 		 "weight",      PANGO_WEIGHT_BOLD,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(st_view), -1, "Ch", renderer,
+	(GTK_TREE_VIEW(st_view), -1, _("Ch"), renderer,
 	 "text",        ST_COL_CHANNEL,
 	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);

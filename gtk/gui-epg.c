@@ -416,7 +416,7 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
 	if (epg->flags&EPG_FLAG_VIDEO_16_9)
 	    TBNORM("16:9");
 	if (epg->flags&EPG_FLAG_VIDEO_HDTV)
-	    TBNORM("HDTV");
+	    TBNORM(_("HDTV"));
 	TBNORM("\n");
     }
 

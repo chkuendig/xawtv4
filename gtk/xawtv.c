@@ -34,6 +34,10 @@
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
+#ifdef HAVE_DVB
+# include <linux/dvb/frontend.h>
+#endif
+
 #include "grab-ng.h"
 #include "blit.h"
 #include "devs.h"
@@ -76,6 +80,9 @@ static XVisualInfo vinfo;
 #define O_CMD_DEVICE	       	O_CMDLINE, "device"
 #define O_CMD_READCONF	       	O_CMDLINE, "readconf"
 #define O_CMD_GEOMETRY	       	O_CMDLINE, "geometry"
+#define O_CMD_DVB_S	       	O_CMDLINE, "dvbs"
+#define O_CMD_DVB_C	       	O_CMDLINE, "dvbc"
+#define O_CMD_DVB_T	       	O_CMDLINE, "dvbt"
 
 #define O_CMD_HW_LS	       	O_CMDLINE, "hw-ls"
 #define O_CMD_HW_CONFIG	       	O_CMDLINE, "hw-config"
@@ -127,6 +134,21 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.option   = { O_CMD_READCONF },
 	.value    = "0",
 	.desc     = "don't read the config file",
+    },{
+	.cmdline  = "dvbs",
+	.option   = { O_CMD_DVB_S },
+	.value    = "1",
+	.desc     = "force DVB-S mode (for hackers only)",
+    },{
+	.cmdline  = "dvbc",
+	.option   = { O_CMD_DVB_C },
+	.value    = "1",
+	.desc     = "force DVB-C mode (for hackers only)",
+    },{
+	.cmdline  = "dvbt",
+	.option   = { O_CMD_DVB_T },
+	.value    = "1",
+	.desc     = "force DVB-T mode (for hackers only)",
 
     },{
 	.cmdline  = "geometry",
@@ -1042,6 +1064,16 @@ parse_args(int *argc, char **argv)
 	device_ls_devs(GET_CMD_VERBOSE());
 	exit(0);
     }
+
+#ifdef HAVE_DVB
+    /* dvb type override */
+    if (cfg_get_bool(O_CMD_DVB_S,0))
+	dvb_type_override = FE_QPSK;
+    if (cfg_get_bool(O_CMD_DVB_C,0))
+	dvb_type_override = FE_QAM;
+    if (cfg_get_bool(O_CMD_DVB_T,0))
+	dvb_type_override = FE_OFDM;
+#endif
 
     /* handle devices */
     if (debug)

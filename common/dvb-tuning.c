@@ -23,6 +23,7 @@
 #include "dvb-tuning.h"
 
 int dvb_debug = 0;
+int dvb_type_override = -1;
 
 /* maintain current state for these ... */
 char *dvb_src   = NULL;
@@ -796,14 +797,9 @@ struct dvb_state* dvb_init(char *adapter)
 	goto oops;
     }
 
-#if 0
     /* hacking DVB-S without hardware ;) */
-    h->info.type = FE_QPSK;
-#endif
-#if 0
-    /* hacking DVB-C without hardware ;) */
-    h->info.type = FE_QAM;
-#endif
+    if (-1 != dvb_type_override)
+	h->info.type = dvb_type_override;
     return h;
 
  oops:

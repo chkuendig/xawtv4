@@ -1,27 +1,12 @@
 
-translate motv app
-==================
+translate apps
+==============
 
-The new motif-gui version has i18n support, it is handled by using
-different application default files for the different languages.  All
-the strings are in the MoTV-<lang> files.  MoTV-default is the english
-version.  MoTV-fixed has the other (language-independant) app-default
-settings.  The Makefile merges these into MoTV.<lang>.ad files.
+main focus for i18n is on the gtk GUI stuff at the moment.  gettext is
+used for that, so it should be easy as it is the well-known procedure ;)
 
-To add another language you just need to create a new MoTV-<lang>
-file, edit x11/Subdir.mk and add the language to the LANGUAGES= line.
-You can test the translations without "make install" this way (bash):
-
-once at start:
-
-$ cd x11
-$ export XUSERFILESEARCHPATH="./%N.%l.ad:./%N.ad"
-$ export LC_ALL=<lang>
-
-every time after editing MoTV-<lang>:
-
-$ make
-$ ./motv
+The files are in the po/ directory.  "make merge" will build the
+po/xawtv.pot template and the merged po/<lang>.pox files.
 
 
 translate documentation
@@ -34,9 +19,4 @@ good idea to add your email address to the translated page, so people
 can reach you directly with spell fixes and stuff like that.  I can't
 proof-read pages in foreign languages ...
 
-
-other stuff
-===========
-
-Currently I have no plans to localize xawtv and the command line tools.
 
