@@ -16,6 +16,14 @@
   "it under the terms of the GNU General Public License version 2 as\n" \
   "published by the Free Software Foundation.\n"
 
+struct toolbarbutton {
+    char           *text;
+    char           *tooltip;
+    char           *priv;
+    char           *stock;
+    GtkSignalFunc  callback;
+};
+
 extern void gtk_quit_cb(void);
 
 extern gboolean gtk_wm_delete_quit(GtkWidget *widget, GdkEvent  *event,
@@ -24,7 +32,10 @@ extern gboolean gtk_wm_delete_quit(GtkWidget *widget, GdkEvent  *event,
 extern void gtk_about_box(GtkWindow *parent, char *name, char *version,
 			  char *text);
 extern void gtk_error_box(GtkWindow *parent, char *title, char *text);
+
 extern GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text);
+extern GtkWidget *gtk_build_toolbar(struct toolbarbutton *btns, int count,
+				    void *user_data);
 
 gint gtk_sort_iter_compare_int(GtkTreeModel *model,
 			       GtkTreeIter  *a,
@@ -64,3 +75,10 @@ void x11_station_activate(char *current);
 extern GtkWidget *dvbtune_dialog;
 
 void create_dvbtune(GtkWindow *parent);
+
+/* ------------------------------------------------------------------- */
+/* gui-teletext.c                                                      */
+
+struct vbi_state;
+struct dvbmon;
+void vbi_create_window(struct vbi_state *vbi, struct dvbmon *dvbmon);

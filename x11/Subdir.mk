@@ -9,14 +9,15 @@ TARGETS-x11 += \
 	x11/xawtv-remote \
 	x11/rootv
 endif
-ifeq ($(FOUND_MOTIF),yes)
-TARGETS-x11 += \
-	x11/motv
-endif
-ifeq ($(FOUND_MOTIF)$(FOUND_ZVBI),yesyes)
-TARGETS-x11 += \
-	x11/mtt
-endif
+
+#ifeq ($(FOUND_MOTIF),yes)
+#TARGETS-x11 += \
+#	x11/motv
+#endif
+#ifeq ($(FOUND_MOTIF)$(FOUND_ZVBI),yesyes)
+#TARGETS-x11 += \
+#	x11/mtt
+#endif
 
 # objects for targets
 x11/xawtv: \
@@ -142,14 +143,14 @@ endif
 ifeq ($(FOUND_X11),yes)
 install::
 	$(INSTALL_PROGRAM) -s $(TARGETS-x11) $(bindir)
-	$(INSTALL_DIR) $(resdir)/app-defaults
-	$(INSTALL_DATA) $(srcdir)/x11/Xawtv4.ad $(resdir)/app-defaults/Xawtv4
+#	$(INSTALL_DIR) $(resdir)/app-defaults
+#	$(INSTALL_DATA) $(srcdir)/x11/Xawtv4.ad $(resdir)/app-defaults/Xawtv4
 endif
-ifeq ($(FOUND_MOTIF),yes)
-install::
-	$(INSTALL_DATA) $(srcdir)/x11/mtt4.ad $(resdir)/app-defaults/mtt4
-	$(INSTALL_DATA) $(srcdir)/x11/MoTV4.ad $(resdir)/app-defaults/MoTV4
-endif
+#ifeq ($(FOUND_MOTIF),yes)
+#install::
+#	$(INSTALL_DATA) $(srcdir)/x11/mtt4.ad $(resdir)/app-defaults/mtt4
+#	$(INSTALL_DATA) $(srcdir)/x11/MoTV4.ad $(resdir)/app-defaults/MoTV4
+#endif
 
 distclean::
 	rm -f $(TARGETS-x11)
@@ -159,4 +160,3 @@ distclean::
 x11/xawtv.o: x11/Xawtv4.h
 x11/motv.o: x11/MoTV4.h
 x11/mtt.o: x11/mtt4.h
-

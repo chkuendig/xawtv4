@@ -538,21 +538,48 @@ int mpeg_get_audio_rate(unsigned char *header)
 
 int mpeg_get_video_fmt(struct mpeg_handle *h, unsigned char *header)
 {
-    if (header[0] == 0x00 &&
-	header[1] == 0x00 &&
-	header[2] == 0x01 &&
-	header[3] == 0xb3) {
-	h->vfmt.fmtid  = VIDEO_MPEG;
-	h->vfmt.width  = (mpeg_getbits(header,32,12) + 15) & ~15;
-	h->vfmt.height = (mpeg_getbits(header,44,12) + 15) & ~15;
-        h->ratio  = mpeg_getbits(header,56,4);
-	h->rate   = mpeg_getbits(header,60,4);
-	if (ng_debug)
-	    fprintf(stderr,"mpeg: MPEG video, %dx%d [ratio=%s,rate=%s]\n",
-		    h->vfmt.width, h->vfmt.height,
-		    ratio_s[h->ratio], rate_s[h->rate]);
-    }
+    if (header[0] != 0x00  ||  header[1] != 0x00  ||
+	header[2] != 0x01  ||  header[3] != 0xb3)
+	return 0;
+    h->vfmt.fmtid  = VIDEO_MPEG;
+    h->vfmt.width  = (mpeg_getbits(header,32,12) + 15) & ~15;
+    h->vfmt.height = (mpeg_getbits(header,44,12) + 15) & ~15;
+    h->ratio  = mpeg_getbits(header,56,4);
+    h->rate   = mpeg_getbits(header,60,4);
+    if (1 /* ng_debug */)
+	fprintf(stderr,"mpeg: MPEG video, %dx%d [ratio=%s,rate=%s]\n",
+		h->vfmt.width, h->vfmt.height,
+		ratio_s[h->ratio], rate_s[h->rate]);
     return 0;
+}
+
+int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header)
+{
+    int width, height, ratio;
+    int change = 0;
+
+    if (header[0] != 0x00  ||  header[1] != 0x00  ||
+	header[2] != 0x01  ||  header[3] != 0xb3)
+	return 0;
+    width  = (mpeg_getbits(header,32,12) + 15) & ~15;
+    height = (mpeg_getbits(header,44,12) + 15) & ~15;
+    ratio  = mpeg_getbits(header,56,4);
+    if (width != h->vfmt.width || height != h->vfmt.height) {
+	if (1 /* ng_debug */)
+	    fprintf(stderr,"mpeg: size change: %dx%d => %dx%d\n",
+		    h->vfmt.width, h->vfmt.height, width, height);
+	change++;
+    }
+    if (ratio != h->ratio) {
+	if (1 /* ng_debug */)
+	    fprintf(stderr,"mpeg: ratio change: %s => %s\n",
+		    ratio_s[h->ratio], ratio_s[ratio]);
+	change++;
+    }
+    h->vfmt.height = height;
+    h->vfmt.width  = width;
+    h->ratio       = ratio;
+    return change;
 }
 
 /* ----------------------------------------------------------------------- */

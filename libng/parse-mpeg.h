@@ -181,6 +181,7 @@ size_t mpeg_parse_pes_packet(struct mpeg_handle *h, unsigned char *packet,
 			     uint64_t *ts, int *al);
 int mpeg_get_audio_rate(unsigned char *header);
 int mpeg_get_video_fmt(struct mpeg_handle *h, unsigned char *header);
+int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header);
 
 /* program stream */
 size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos);

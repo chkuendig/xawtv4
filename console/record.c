@@ -423,6 +423,9 @@ int       stop,verbose;
 char      *filename = "record";
 int       rate = 44100;
 
+size_t    tracksplits[100];
+size_t    tracks;
+
 static void
 ctrlc(int signal)
 {
@@ -433,27 +436,65 @@ ctrlc(int signal)
 }
 
 static int
-record_start(char *outfile, int *nr)
+write_toc(char *wavfile, char *tocfile)
+{
+    FILE *fp;
+    int i,fs,ff,fl;
+    
+    fp = fopen(tocfile,"w");
+    if (NULL == fp)
+	return -1;
+
+    fprintf(fp,
+	    "// written by record -- (c) Gerd Knorr <kraxel@bytesex.org>\n"
+	    "//   use gcdmaster to edit\n"
+	    "//   use cdrdao to burn\n"
+	    "\n"
+	    "CD_DA\n"
+	    "\n");
+    for (fs = 0, i = 0; i < tracks; fs = ff, i++) {
+	ff = tracksplits[i] / 2352;
+	fl = ff - fs;
+	fprintf(fp,
+		"TRACK AUDIO\n"
+		"AUDIOFILE \"%s\" %d:%02d:%02d %d:%02d:%02d\n"
+		"\n", wavfile,
+		fs/(75*60), (fs/75)%60, fs%75,
+		fl/(75*60), (fl/75)%60, fl%75);
+    }
+    fclose(fp);
+}
+
+static int
+record_start(char *wavfile, char *tocfile, int *nr)
 {
     int wav;
     
     do {
-	sprintf(outfile,"%s%03d.wav",filename,(*nr)++);
-	wav = open(outfile, O_WRONLY | O_EXCL | O_CREAT, 0666);
+	sprintf(wavfile,"%s%03d.wav",filename,(*nr));
+	sprintf(tocfile,"%s%03d.toc",filename,(*nr));
+	(*nr)++;
+	wav = open(wavfile, O_WRONLY | O_EXCL | O_CREAT, 0666);
     } while ((-1 == wav) && (EEXIST == errno));
     if (-1 == wav) {
 	perror("open");
 	exit(1);
     }
     wav_start_write(wav,rate);
+    memset(tracksplits,0,sizeof(tracksplits));
+    tracks = 0;
     return wav;
 }
 
 static void
-record_stop(int fd)
+record_stop(int wav, char *wavfile, char *tocfile)
 {
-    wav_stop_write(fd);
-    close(fd);
+    if (tracks) {
+	tracksplits[tracks++] = wav_size;
+	write_toc(wavfile,tocfile);
+    }
+    wav_stop_write(wav);
+    close(wav);
     switch (mode) {
     case CONSOLE:
 	if (verbose)
@@ -559,7 +600,8 @@ main(int argc, char *argv[])
 {
     int             c,key,vol,delay,auto_adjust;
     int             record,nr,wav=0;
-    char            *outfile;
+    char            *wavfile;
+    char            *tocfile;
     fd_set          s;
     int             sec,maxhour,maxmin,maxsec;
     int             maxfiles = 0;
@@ -642,7 +684,8 @@ main(int argc, char *argv[])
 
     mixer_open(mixer_dev,input);
     sound_open(rate);
-    outfile = malloc(strlen(filename)+16);
+    wavfile = malloc(strlen(filename)+16);
+    tocfile = malloc(strlen(filename)+16);
 
     if (mode == NCURSES) {
 	tty_raw();
@@ -661,7 +704,8 @@ main(int argc, char *argv[])
 	/* line 9 is printed later */
 	mvprintw(10,0,"            auto-adjust reduces the record level on overruns");
 	mvprintw(11,0,"'N'         next file (same as space twice, but without break)");
-	mvprintw(12,0,"'Q'         quit");
+	mvprintw(12,0,"'T'         tracksplit (writes toc file)");
+	mvprintw(13,0,"'Q'         quit");
 	mvprintw(LINES-3,0,"--");
 	mvprintw(LINES-2,0,"(c) 1999-2003 Gerd Knorr <kraxel@bytesex.org>");
 	
@@ -701,8 +745,13 @@ main(int argc, char *argv[])
 		if (record) {
 		    wav_write_audio(wav,sound_buffer,sound_blksize);
 		    sec = wav_size / (rate*4);
-		    mvprintw(3,0,"%s: %3d:%02d (%s) ",outfile,
+		    mvprintw(3,0,"%s: %3d:%02d (%s) ",wavfile,
 			     sec/60,sec%60,str_mb(wav_size));
+		    if (tracks) {
+			int f = tracksplits[tracks-1] / 2352;
+			printw(" |  %d @ %d:%02d:%02d ",
+			       tracks, f/(75*60), (f/75)%60, f%75);
+		    }
 		} else {
 		    mvprintw(3,0,"%c",ALIVE(sound_rcount));
 		}
@@ -722,21 +771,26 @@ main(int argc, char *argv[])
 		case 'N':
 		case 'n':
 		    if (record) {
-			record_stop(wav);
-			wav = record_start(outfile,&nr);
+			record_stop(wav,wavfile,tocfile);
+			wav = record_start(wavfile,tocfile,&nr);
 		    }
+		    break;
+		case 'T':
+		case 't':
+		    if (record && tracks < 98)
+			tracksplits[tracks++] = wav_size;
 		    break;
 		case ' ':
 		    if (!filename)
 			break;
 		    if (!record) {
 			/* start */
-			wav = record_start(outfile,&nr);
+			wav = record_start(wavfile,tocfile,&nr);
 			record=1;
 			auto_adjust=0;
 		    } else {
 			/* stop */
-			record_stop(wav);
+			record_stop(wav,wavfile,tocfile);
 			record=0;
 		    }
 		    break;
@@ -761,7 +815,7 @@ main(int argc, char *argv[])
 
     if (mode == CONSOLE) {
 	if (!level_trigger) {
-	    wav = record_start(outfile,&nr);
+	    wav = record_start(wavfile,tocfile,&nr);
 	    record=1;
 	}
 
@@ -772,13 +826,13 @@ main(int argc, char *argv[])
 		if (!record &&
 		    (maxl > level_trigger ||
 		     maxr > level_trigger)) {
-		    wav = record_start(outfile,&nr);
+		    wav = record_start(wavfile,tocfile,&nr);
 		    record=1;
 		}
 		if (record &&
 		    secl < level_trigger &&
 		    secr < level_trigger) {
-		    record_stop(wav);
+		    record_stop(wav,wavfile,tocfile);
 		    record=0;
 		    if (maxfiles && nr == maxfiles)
 			break;
@@ -795,8 +849,8 @@ main(int argc, char *argv[])
 	    if (maxsec && sec >= maxsec)
 		break;
 	    if (wav_size + sound_blksize + sizeof(WAVEHDR) > maxsize) {
-		record_stop(wav);
-		wav = record_start(outfile,&nr);
+		record_stop(wav,wavfile,tocfile);
+		wav = record_start(wavfile,tocfile,&nr);
 	    }
             wav_write_audio(wav,sound_buffer,sound_blksize);
 	    if (verbose) {
@@ -804,7 +858,7 @@ main(int argc, char *argv[])
 		int len   = (maxl+maxr)*total/32768/2;
 		printf("|%*.*s%*.*s|  %s  %d:%02d",
 		       len,len,full, total-len,total-len,empty,
-		       outfile,sec/60,sec%60);
+		       wavfile,sec/60,sec%60);
 		if (maxsec)
 		    printf("/%d:%02d",maxsec/60,maxsec%60);
 		printf(" (%s",str_mb(wav_size));
@@ -817,7 +871,7 @@ main(int argc, char *argv[])
     }
     
     if (record)
-	record_stop(wav);
+	record_stop(wav,wavfile,tocfile);
     mixer_close();
     exit(0);
 }

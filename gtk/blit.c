@@ -556,7 +556,23 @@ static void xv_blit(struct ng_video_buf *buf)
     int ww = h->width;
     int wh = h->height;
 
-    ng_ratio_fixup(&ww, &wh, &wx, &wy);
+    switch (buf->info.ratio) {
+    case NG_RATIO_UNSPEC:
+	ng_ratio_fixup(&ww, &wh, &wx, &wy);
+	break;
+    case NG_RATIO_SQUARE:
+	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 1, 1, 0);
+	break;
+    case NG_RATIO_3_4:
+	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 4, 3, 0);
+	break;
+    case NG_RATIO_9_16:
+	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 16, 9, 0);
+	break;
+    case NG_RATIO_2dot21:
+	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 221, 100, 0);
+	break;
+    }
     if (p->shm)
 	XvShmPutImage(h->dpy, im_port,
 		      h->win, h->gc, p->xvimage,

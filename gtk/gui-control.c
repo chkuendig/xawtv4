@@ -1031,7 +1031,6 @@ static GtkItemFactoryEntry menu_items[] = {
 	.item_type   = "<Item>",
     }
 };
-static gint nmenu_items = sizeof(menu_items)/sizeof (menu_items[0]);
 static GtkItemFactory *item_factory;
 
 /* ------------------------------------------------------------------------ */
@@ -1042,10 +1041,12 @@ GtkTargetEntry dnd_targets[] = {
     { "UTF8_STRING",  0,  0 },
     { "TSID",         0,  1 },
     { "PNR",          0,  2 },
+    { "VPID",         0,  3 },
+    { "APID",         0,  4 },
 };
 static int  dnd_pending;
-static char *dnd_data[3];
-static int  dnd_len[3];
+static char *dnd_data[5];
+static int  dnd_len[5];
 
 static void drag_data_received(GtkWidget *widget,
 			       GdkDragContext *dc,
@@ -1056,8 +1057,8 @@ static void drag_data_received(GtkWidget *widget,
     GtkTreeIter iter;
     GdkAtom *targets;
     char *atom,*name;
-    int pos[3];
-    int i,tsid,pnr;
+    int pos[5];
+    int i,tsid,pnr,audio,video;
     
     fprintf(stderr,"%s: %s %s %s fmt=%d ptr=%p len=%d id=%d\n",__FUNCTION__,
 	    gdk_atom_name(sd->selection),
@@ -1073,16 +1074,16 @@ static void drag_data_received(GtkWidget *widget,
 	    fprintf(stderr,"  %s\n",atom);
 	    if (0 == strcmp(atom,"UTF8_STRING")  ||
 		0 == strcmp(atom,"TSID")         ||
-		0 == strcmp(atom,"PNR")) {
+		0 == strcmp(atom,"PNR")          ||
+		0 == strcmp(atom,"VPID")         ||
+		0 == strcmp(atom,"APID")) {
 		dnd_pending++;
 		gtk_drag_get_data(widget, dc, targets[i], time);
 	    }
 	}
 	break;
-    case 0:
-    case 1:
-    case 2:
-	if (dnd_data[info])
+    case 0 ... 4:
+ 	if (dnd_data[info])
 	    free(dnd_data[info]);
 	dnd_data[info] = malloc(sd->length);
 	dnd_len[info] = sd->length;
@@ -1096,29 +1097,37 @@ static void drag_data_received(GtkWidget *widget,
     fprintf(stderr,"%s: all done\n",__FUNCTION__);
     gtk_drag_finish(dc, TRUE, FALSE, time);
 
-    pos[0] = 0;
-    pos[1] = 0;
-    pos[2] = 0;
-    while (pos[0] < dnd_len[0] &&
-	   pos[1] < dnd_len[1] &&
-	   pos[2] < dnd_len[2]) {
-	name = dnd_data[0]+pos[0];
-	tsid = atoi(dnd_data[1]+pos[1]);
-	pnr  = atoi(dnd_data[2]+pos[2]);
-	if (0 == tsid || 0 == pnr)
-	    continue;
+    for (i = 0; i < 5; i++)
+	pos[i] = 0;
+    for (;;) {
+	for (i = 0; i < 5; i++)
+	    if (pos[i] >= dnd_len[i]) {
+		fprintf(stderr,"pos %d %d %d\n",i,pos[i],dnd_len[i]);
+		return;
+	    }
 
-	if (debug)
-	    fprintf(stderr,"drop: %d-%d %s\n",tsid,pnr,name);
-	cfg_set_int("stations",name,"tsid",tsid);
-	cfg_set_int("stations",name,"pnr", pnr);
-	if (!x11_station_find(&iter,name))
-	    x11_station_add(&iter);
-	x11_station_apply(&iter,name);
-	
-	pos[0] += strlen(dnd_data[0]+pos[0])+1;
-	pos[1] += strlen(dnd_data[1]+pos[1])+1;
-	pos[2] += strlen(dnd_data[2]+pos[2])+1;
+	name  = dnd_data[0]+pos[0];
+	tsid  = atoi(dnd_data[1]+pos[1]);
+	pnr   = atoi(dnd_data[2]+pos[2]);
+	video = atoi(dnd_data[4]+pos[3]);
+	audio = atoi(dnd_data[3]+pos[4]);
+	if (0 == tsid || 0 == pnr || 0 == video || 0 == audio) {
+	    if (1 /* debug */)
+		fprintf(stderr,"ignore: %s tsid=%d pnr=%d video=%d audio=%d\n",
+			name, tsid, pnr, video, audio);
+	} else {
+	    if (1 /* debug */)
+		fprintf(stderr,"received: %s tsid=%d pnr=%d video=%d audio=%d\n",
+			name, tsid, pnr, video, audio);
+	    cfg_set_int("stations",name,"tsid",tsid);
+	    cfg_set_int("stations",name,"pnr", pnr);
+	    if (!x11_station_find(&iter,name))
+		x11_station_add(&iter);
+	    x11_station_apply(&iter,name);
+	}
+
+	for (i = 0; i < 5; i++)
+	    pos[i] += strlen(dnd_data[i]+pos[i])+1;
     }
 }
 
@@ -1186,13 +1195,7 @@ static void init_freqtab_list(void)
     }
 }
 
-static struct {
-    char           *text;
-    char           *tooltip;
-    char           *priv;
-    char           *stock;
-    GtkSignalFunc  callback;
-} toolbaritems[] = {
+static struct toolbarbutton toolbaritems[] = {
     {
 	.text     = "prev",
 	.tooltip  = "previous station",
@@ -1220,10 +1223,9 @@ static struct {
 void create_control(void)
 {
     GtkWidget *vbox,*hbox,*menubar,*scroll;
-    GtkWidget *handlebox,*toolbar,*icon;
+    GtkWidget *handlebox,*toolbar;
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *col;
-    int i;
 
     control_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(control_win),_("control window"));
@@ -1235,7 +1237,7 @@ void create_control(void)
     control_accel_group = gtk_accel_group_new ();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<control>",
 					control_accel_group);
-    gtk_item_factory_create_items(item_factory, nmenu_items,
+    gtk_item_factory_create_items(item_factory, DIMOF(menu_items),
 				  menu_items, NULL);
     gtk_window_add_accel_group(GTK_WINDOW(control_win), control_accel_group);
     menubar = gtk_item_factory_get_widget(item_factory, "<control>");
@@ -1250,23 +1252,7 @@ void create_control(void)
 	(item_factory,"<control>/Settings");
 
     /* toolbar */
-    toolbar = gtk_toolbar_new();
-    for (i = 0; i < DIMOF(toolbaritems); i++) {
-	icon = NULL;
-	if (toolbaritems[i].stock)
-	    icon = gtk_image_new_from_stock(toolbaritems[i].stock,
-					    GTK_ICON_SIZE_SMALL_TOOLBAR);
-	if (!toolbaritems[i].text)
-	    gtk_toolbar_append_space(GTK_TOOLBAR(toolbar));
-	else
-	    gtk_toolbar_append_item(GTK_TOOLBAR(toolbar),
-				    toolbaritems[i].text,
-				    toolbaritems[i].tooltip,
-				    toolbaritems[i].priv,
-				    icon,
-				    toolbaritems[i].callback,
-				    NULL /* user_data */);
-    }
+    toolbar = gtk_build_toolbar(toolbaritems, DIMOF(toolbaritems), NULL);
 
     /* station list */
     st_view  = gtk_tree_view_new();

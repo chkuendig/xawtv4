@@ -57,7 +57,7 @@ struct vbi_font vbi_fonts[] = {
 /* render teletext pages                                                 */
 
 static int vbi_render_try_font(Widget shell, struct vbi_window *vw,
-				struct vbi_font *fnt)
+			       struct vbi_font *fnt)
 {
     if (NULL == vw->xft_font  &&  NULL != fnt->xlfd1) {
 	vw->font1 = XLoadQueryFont(XtDisplay(shell), fnt->xlfd1);

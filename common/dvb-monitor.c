@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <inttypes.h>
 
+#include <linux/dvb/frontend.h>
+
 #include <glib.h>
 
 #include "grab-ng.h"
@@ -430,7 +432,8 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	    cfg_set_str("dvb-ts", section, "polarization",
 			stream->polarization);
 
-	cfg_set_int("dvb-ts", section, "inversion", dvb_inv);
+	if (INVERSION_AUTO != dvb_inv)
+	    cfg_set_int("dvb-ts", section, "inversion", dvb_inv);
 	if (dvb_src)
 	    cfg_set_str("dvb-ts", section, "source", dvb_src);
 	if (dvb_lnb)
@@ -458,10 +461,6 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	    cfg_set_int("dvb-pr", section, "teletext", pr->t_pid);
 	break;
     case DVBMON_EVENT_DESTROY:
-	write_config_file("dvb-ts");
-	write_config_file("dvb-pr");
-	write_config_file("vdr-channels");  // DEBUG
-	write_config_file("vdr-diseqc");    // DEBUG
 	break;
     }
 }

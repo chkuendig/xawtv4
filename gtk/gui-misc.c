@@ -47,6 +47,33 @@ GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text)
     return hbox;
 }
 
+GtkWidget *gtk_build_toolbar(struct toolbarbutton *btns, int count,
+			     void *user_data)
+{
+    GtkWidget *toolbar;
+    GtkWidget *icon;
+    int i;
+    
+    toolbar = gtk_toolbar_new();
+    for (i = 0; i < count; i++) {
+	icon = NULL;
+	if (btns[i].stock)
+	    icon = gtk_image_new_from_stock(btns[i].stock,
+					    GTK_ICON_SIZE_SMALL_TOOLBAR);
+	if (!btns[i].text)
+	    gtk_toolbar_append_space(GTK_TOOLBAR(toolbar));
+	else
+	    gtk_toolbar_append_item(GTK_TOOLBAR(toolbar),
+				    btns[i].text,
+				    btns[i].tooltip,
+				    btns[i].priv,
+				    icon,
+				    btns[i].callback,
+				    user_data);
+    }
+    return toolbar;
+}
+
 /* ---------------------------------------------------------------------------- */
 
 static void dialog_destroy(GtkDialog *dialog,

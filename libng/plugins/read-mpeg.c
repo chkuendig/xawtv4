@@ -152,6 +152,7 @@ static int put_video(struct mpeg_handle *h,
 
 		/* alloc a new buffer */
 		h->vbuf = ng_malloc_video_buf(NULL, &h->vfmt);
+		h->vbuf->info.ratio = h->ratio;
 		h->vbuf->size = 0;
 	    }
 	}
@@ -311,6 +312,7 @@ static void* mpeg_ps_open(char *moviename)
 
     /* init video fifo */
     h->vbuf = ng_malloc_video_buf(NULL, &h->vfmt);
+    h->vbuf->info.ratio = h->ratio;
     h->vbuf->size = 0;
     INIT_LIST_HEAD(&h->vfifo);
 
@@ -475,8 +477,15 @@ static void* mpeg_ts_open(char *moviename)
 		h->afmt.rate  = mpeg_get_audio_rate(h->ts.data+off);
 	    } else {
 		// must search for mpeg audio header
-		unsigned char *hdr;
-		hdr = memchr(h->ts.data+off, 0xff, h->ts.size-off);
+		char *hdr = NULL;
+		int i;
+		for (i = off; i < h->ts.size-1; i++) {
+		    if ((0xff == h->ts.data[i]) &&
+			(0xf0 == (h->ts.data[i] & 0xf0))) {
+			hdr = h->ts.data+i;
+			break;
+		    }
+		}
 		if (NULL == hdr)
 		    continue;
 		h->afmt.fmtid = AUDIO_MP3;
@@ -525,6 +534,7 @@ static void* mpeg_ts_open(char *moviename)
 
     /* init video fifo */
     h->vbuf = ng_malloc_video_buf(NULL, &h->vfmt);
+    h->vbuf->info.ratio = h->ratio;
     h->vbuf->size = 0;
     INIT_LIST_HEAD(&h->vfifo);
 
@@ -582,6 +592,7 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
 	    h->errors++;
 	    continue;
 	}
+	mpeg_check_video_fmt(h, h->ts.data+off);
 	put_video(h,h->ts.data+off,h->ts.size-off);
 	h->video_offset += TS_SIZE;
 

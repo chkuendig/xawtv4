@@ -172,6 +172,15 @@ enum ng_video_frame {
     NG_FRAME_B_FRAME  = 3,
 };
 
+enum ng_video_ratio {
+    // same numbers mpeg2 uses
+    NG_RATIO_UNSPEC = 0,
+    NG_RATIO_SQUARE = 1,
+    NG_RATIO_3_4    = 2,
+    NG_RATIO_9_16   = 3,
+    NG_RATIO_2dot21 = 4,
+};
+
 struct ng_video_buf {
     struct ng_video_fmt  fmt;
     size_t               size;
@@ -179,12 +188,13 @@ struct ng_video_buf {
 
     /* meta info for frame */
     struct {
-	int64_t             ts;      /* time stamp */
+	int64_t             ts;       /* time stamp */
 	int                 file_seq;
 	int                 play_seq;
 	int                 twice;
 	enum ng_video_frame frame;
 	int                 broken;
+	enum ng_video_ratio ratio;
     } info;
 
     /*
@@ -540,7 +550,7 @@ struct ng_audio_conv {
 /* --------------------------------------------------------------------- */
 
 /* must be changed if we break compatibility */
-#define NG_PLUGIN_MAGIC 0x20040317
+#define NG_PLUGIN_MAGIC 0x20040625
 #define __init __attribute__ ((constructor))
 #define __fini __attribute__ ((destructor))
 #define __used __attribute__ ((used))

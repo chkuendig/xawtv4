@@ -119,6 +119,45 @@ static void menu_cb_tune(void)
 	create_dvbtune(GTK_WINDOW(win));
 }
 
+static void scan_drop_stale()
+{
+    GtkTreeModel *model = GTK_TREE_MODEL(store);
+    GtkTreeIter ts,pr;
+    gboolean vts,vpr;
+    int tsid, pnr, stale, children;
+    char *name;
+
+    for (vts = gtk_tree_model_get_iter_first(model,&ts);
+	 vts;
+	 vts = gtk_tree_model_iter_next(model,&ts)) {
+	children = 0;
+	for (vpr = gtk_tree_model_iter_children(model,&pr,&ts);
+	     vpr;
+	     vpr = gtk_tree_model_iter_next(model,&pr)) {
+	    gtk_tree_model_get(model, &pr,
+			       ST_COL_NAME,    &name,
+			       ST_COL_TSID,    &tsid,
+			       ST_COL_PNR,     &pnr,
+			       ST_STATE_STALE, &stale,
+			       -1);
+	    if (stale) {
+		fprintf(stderr,"stale:   %s\n", name);
+		// TODO: remove it
+	    } else
+		children++;
+	}
+	gtk_tree_model_get(model, &ts,
+			   ST_COL_NAME,    &name,
+			   ST_COL_TSID,    &tsid,
+			   ST_STATE_STALE, &stale,
+			   -1);
+	if (stale && 0 == children) {
+	    fprintf(stderr, "stale: %s\n", name);
+	    // TODO: remove it
+	}
+    }
+}
+
 static void scan_do_next(int now)
 {
     for (;;) {
@@ -130,6 +169,8 @@ static void scan_do_next(int now)
 	if (0 == dvb_frontend_tune(devs.dvb, "dvb-ts", scan_tsid))
 	    break;
     }
+    if (NULL == scan_tsid)
+	scan_drop_stale();
 }
 
 static gboolean frontend_poll(gpointer data)
@@ -225,10 +266,12 @@ static void menu_cb_slow_scan(void)
 /* ------------------------------------------------------------------------ */
 
 GtkTargetEntry dnd_targets[] = {
-    { "UTF8_STRING",  0, 10 },
-    { "STRING",       0, 11 },
-    { "TSID",         0, 20 },
-    { "PNR",          0, 21 },
+    { "UTF8_STRING",  0, ST_COL_NAME  },
+    { "STRING",       0, ST_COL_NAME  },
+    { "TSID",         0, ST_COL_TSID  },
+    { "PNR",          0, ST_COL_PNR   },
+    { "VPID",         0, ST_COL_VIDEO },
+    { "APID",         0, ST_COL_AUDIO },
 };
 
 static void drag_data_get(GtkWidget *widget,
@@ -242,7 +285,7 @@ static void drag_data_get(GtkWidget *widget,
     GList *rows,*item;
     char **name;
     char *buf;
-    int i,len,col,val;
+    int i,len,val;
 
     if (debug)
 	fprintf(stderr,"dnd: %d: %s\n",info,gdk_atom_name(sd->target));
@@ -250,8 +293,7 @@ static void drag_data_get(GtkWidget *widget,
     rows = gtk_tree_selection_get_selected_rows(selection, &model);
 
     switch (info) {
-    case 10:
-    case 11:
+    case ST_COL_NAME:
 	name = malloc(g_list_length(rows)*sizeof(char*));
 	for (item = g_list_first(rows), i = 0, len = 0;
 	     NULL != item;
@@ -273,15 +315,16 @@ static void drag_data_get(GtkWidget *widget,
 	free(buf);
 	free(name);
 	break;
-    case 20:
-    case 21:
-	col = (info == 20) ? ST_COL_TSID : ST_COL_PNR;
+    case ST_COL_TSID:
+    case ST_COL_PNR:
+    case ST_COL_AUDIO:
+    case ST_COL_VIDEO:
 	buf = malloc(g_list_length(rows) * 16);
 	for (item = g_list_first(rows), i = 0, len = 0;
 	     NULL != item;
 	     item = g_list_next(item), i++) {
 	    gtk_tree_model_get_iter(model, &iter, item->data);
-	    gtk_tree_model_get(model, &iter, col, &val, -1);
+	    gtk_tree_model_get(model, &iter, info, &val, -1);
 	    if (debug)
 		fprintf(stderr,"  %d\n",val);
 	    len += sprintf(buf+len,"%d",val)+1;
@@ -317,17 +360,17 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = menu_cb_tune,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Fast _Rescan",
+	.path        = "/Commands/Fast _rescan",
 	.accelerator = "R",
 	.callback    = menu_cb_rescan,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Full _Scan",
+	.path        = "/Commands/Full _scan",
 	.accelerator = "S",
 	.callback    = menu_cb_full_scan,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Insane slow Scan",
+	.path        = "/Commands/Insane slow scan",
 	.callback    = menu_cb_slow_scan,
 	.item_type   = "<Item>",
     },{
@@ -805,6 +848,11 @@ main(int argc, char *argv[])
     gtk_main();
     fprintf(stderr,"bye...\n");
 
+    write_config_file("dvb-ts");
+    write_config_file("dvb-pr");
+    write_config_file("vdr-channels");  // DEBUG
+    write_config_file("vdr-diseqc");    // DEBUG
+    
     dvbmon_fini(dvbmon);
     device_fini();
     exit(0);

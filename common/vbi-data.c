@@ -13,8 +13,6 @@
 #include <assert.h>
 #include <pthread.h>
 
-#include <X11/Intrinsic.h>
-
 #include "vbi-data.h"
 #include "vbi-sim.c"
 #include "vbi-dvb.h"

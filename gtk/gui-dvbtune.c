@@ -319,9 +319,9 @@ void create_dvbtune(GtkWindow *parent)
 
     dvbtune_dialog =
 	gtk_dialog_new_with_buttons("Tune DVB frontend", parent, 0,
-				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
-				    GTK_STOCK_APPLY,  GTK_RESPONSE_APPLY,
 				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+				    GTK_STOCK_APPLY,  GTK_RESPONSE_APPLY,
+				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
 				    NULL);
     gtk_dialog_set_default_response(GTK_DIALOG(dvbtune_dialog),
 				    GTK_RESPONSE_OK);
