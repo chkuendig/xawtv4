@@ -348,6 +348,8 @@ oss_init(char *device, int record)
 {
     struct oss_handle *h;
 
+    if (device && 0 != strncmp(device,"/dev/",5))
+	return NULL;
     h = malloc(sizeof(*h));
     if (NULL == h)
 	return NULL;

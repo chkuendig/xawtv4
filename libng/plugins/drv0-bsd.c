@@ -421,6 +421,10 @@ bsd_init(char *filename)
     struct bsd_handle *h;
     int format,i;
 
+    if (NULL == filename)
+	return NULL;
+    if (0 != strncmp(filename,"/dev/",5))
+	return NULL;
     h = malloc(sizeof(*h));
     if (NULL == h)
 	return NULL;

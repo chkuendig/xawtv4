@@ -471,8 +471,8 @@ int dvb_frontend_get_biterr(struct dvb_state *h)
 
 int dvb_demux_station_filter(struct dvb_state *h, char *domain, char *section)
 {
-    ng_mpeg_vpid = cfg_get_int(domain, section, "video_pid",0);
-    ng_mpeg_apid = cfg_get_int(domain, section, "audio_pid",0);
+    ng_mpeg_vpid = cfg_get_int(domain, section, "video",0);
+    ng_mpeg_apid = cfg_get_int(domain, section, "audio",0);
     if (dvb_debug)
 	fprintf(stderr,"dvb mux: dvb ts pids for \"%s\": video=%d audio=%d\n",
 		section, ng_mpeg_vpid,ng_mpeg_apid);
@@ -642,8 +642,33 @@ struct dvb_state* dvb_init_nr(int adapter)
     return dvb_init(path);
 }
 
-int dvb_tune(struct dvb_state *h, char *domain, char *section)
+int dvb_tune(struct dvb_state *h, int tsid, int pnr)
 {
+    char ts[32];
+    char pr[32];
+
+    snprintf(ts,sizeof(ts),"%d",tsid);
+    snprintf(pr,sizeof(pr),"%d-%d",tsid,pnr);
+    
+    if (0 != dvb_frontend_tune(h,"dvb-ts",ts)) {
+	fprintf(stderr,"dvb: frontend tuning failed\n");
+	return -1;
+    }
+    if (0 != dvb_frontend_wait_lock(h,0)) {
+	fprintf(stderr,"dvb: frontend doesn't lock\n");
+	return -1;
+    }
+    if (0 != dvb_demux_station_filter(h,"dvb-pr",pr)) {
+	fprintf(stderr,"dvb: pid filter setup failed\n");
+	return -1;
+    }
+    return 0;
+}
+
+int dvb_tune_vdr(struct dvb_state *h, char *section)
+{
+    char *domain = "vdr-channels";
+    
     if (0 != dvb_frontend_tune(h,domain,section)) {
 	fprintf(stderr,"dvb: frontend tuning failed\n");
 	return -1;
@@ -804,7 +829,7 @@ static int parse_vdr_channels(char *domain, FILE *fp)
 {
     static char *names[13] = {
 	NULL, "frequency", NULL, "source", "symbol_rate",
-	"video_pid", "audio_pid", "teletext_pid", "conditional_access",
+	"video", "audio", "teletext", "conditional_access",
 	"service_id", "network_id", "ts_id", "radio_id"
     };
     static char *params[32] = {

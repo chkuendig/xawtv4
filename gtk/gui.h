@@ -23,6 +23,7 @@ extern gboolean gtk_wm_delete_quit(GtkWidget *widget, GdkEvent  *event,
 
 extern void gtk_about_box(GtkWindow *parent, char *name, char *version,
 			  char *text);
+extern void gtk_error_box(GtkWindow *parent, char *title, char *text);
 extern GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text);
 
 gint gtk_sort_iter_compare_int(GtkTreeModel *model,
@@ -54,6 +55,7 @@ extern void create_onscreen(void);
 extern void display_onscreen(char *title);
 
 extern void menu_cb_fullscreen(void);
+void x11_station_activate(char *current);
 
 
 /* ------------------------------------------------------------------- */

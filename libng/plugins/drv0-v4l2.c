@@ -503,6 +503,8 @@ v4l2_init(char *device)
     struct v4l2_handle *h;
     int i;
 
+    if (device && 0 != strncmp(device,"/dev/",5))
+	return NULL;
     h = malloc(sizeof(*h));
     if (NULL == h)
 	return NULL;

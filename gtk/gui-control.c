@@ -38,7 +38,7 @@ static GtkWidget     *station_group_e;
 static GtkWidget     *station_hotkey;
 static GtkWidget     *station_ch_omenu;
 static GtkWidget     *station_dvb_omenu;
-static GtkTreeIter   station_edit_iter;
+static GtkTreeRowReference *station_edit;
 
 static GtkWidget     *control_dev_menu;
 static GtkWidget     *control_freq_menu;
@@ -459,6 +459,24 @@ static void x11_station_add(GtkTreeIter *iter)
 		       -1);
 }
 
+void x11_station_activate(char *current)
+{
+    GtkTreeIter iter;
+    gboolean valid,active;
+    char *name;
+
+    for (valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(st_model),&iter);
+	 valid;
+	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(st_model),&iter)) {
+	gtk_tree_model_get(GTK_TREE_MODEL(st_model), &iter,
+			   ST_COL_NAME,  &name, -1);
+	active = FALSE;
+	if (current && 0 == strcasecmp(name,current))
+	    active = TRUE;
+	gtk_list_store_set(st_model, &iter, ST_STATE_ACTIVE, active, -1);
+    }
+}
+
 static void x11_station_apply(GtkTreeIter *iter, char *name)
 {
     char key[32], ctrl[16], accel[64];
@@ -517,33 +535,16 @@ static void x11_station_apply(GtkTreeIter *iter, char *name)
 		       -1);
 }
 
-#if 0
-static void x11_station_del(char *name)
+static void x11_station_del(GtkTreeIter *iter)
 {
-    struct list_head *item;
-    struct station   *st;
+    GtkWidget *menu;
 
-    list_for_each(item,&x11_stations) {
-	st = list_entry(item, struct station, global);
-	if (0 == strcmp(st->name,name))
-	    goto found;
-    }
-    return;
-
- found:
-    list_del(&st->global);
-    if (NULL != st->group.next)
-	list_del(&st->group);
-
-    XtDestroyWidget(st->menu1);
-    XtDestroyWidget(st->menu2);
-    XtVaSetValues(chan_cont, XmNselectedObjectCount,0, NULL);
-    XtUnmanageChild(st->button);
-    XtDestroyWidget(st->button);
-    free(st->name);
-    free(st);
+    gtk_tree_model_get(GTK_TREE_MODEL(st_model), iter,
+		       ST_DATA_MENU,  &menu, -1);
+    if (menu)
+	gtk_widget_destroy(menu);
+    gtk_list_store_remove(st_model,iter);
 }
-#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -552,10 +553,14 @@ static void station_response(GtkDialog *dialog,
 			    gpointer user_data)
 {
     GtkWidget *menu,*item;
-    char *name,*group,*hotkey,*channel,*dvb;
+    char *oname,*name,*group,*hotkey,*channel,*dvb;
+    GtkTreePath *path;
+    GtkTreeIter iter;
     int tsid,pnr;
 
     if (arg1 == GTK_RESPONSE_OK || arg1 == GTK_RESPONSE_APPLY) {
+
+	/* get user input */
         name   = (char*)gtk_entry_get_text(GTK_ENTRY(station_name));
 	group  = (char*)gtk_entry_get_text(GTK_ENTRY(station_group_e));
 	hotkey = (char*)gtk_entry_get_text(GTK_ENTRY(station_hotkey));
@@ -576,20 +581,48 @@ static void station_response(GtkDialog *dialog,
 	else
 	    tsid = 0, pnr = 0;
 
-	fprintf(stderr,"apply: name=\"%s\" group=\"%s\" hotkey=\"%s\""
-		" channel=%s tsid=%d pnr=%d\n",
-		name, group, hotkey, channel, tsid, pnr);
+	if (NULL != station_edit &&
+	    NULL != (path = gtk_tree_row_reference_get_path(station_edit)) &&
+	    gtk_tree_model_get_iter(GTK_TREE_MODEL(st_model),&iter,path)) {
+	    gtk_tree_model_get(GTK_TREE_MODEL(st_model), &iter,
+			       ST_COL_NAME,  &oname, -1);
+	} else {
+	    oname = NULL;
+	}
 
-	/* todo: sanity-check name against clashes, "", whatever ... */
+	if (debug)
+	    fprintf(stderr,"apply: oldname=\"%s\" name=\"%s\" group=\"%s\""
+		    " hotkey=\"%s\" channel=%s tsid=%d pnr=%d\n",
+		    oname, name, group, hotkey, channel, tsid, pnr);
+
+	/* sanity checks */
+	if (0 == strlen(name)) {
+	    gtk_error_box(GTK_WINDOW(station_dialog),
+			  "Error","no name specified for station");
+	    return;
+	}
+	if ((NULL == oname || 0 != strcasecmp(oname,name)) && 
+	    NULL != cfg_search("stations", name, NULL, NULL)) {
+	    gtk_error_box(GTK_WINDOW(station_dialog),
+			  "Error","station with specified name exists already");
+	    return;
+	}
+
+	/* apply changes */
+	if (oname && 0 != strcasecmp(oname,name))
+	    cfg_del_section("stations", oname);
 	cfg_set_str("stations", name, "group",   group);
 	cfg_set_str("stations", name, "key",     hotkey);
 	cfg_set_str("stations", name, "channel", channel);
 	cfg_set_int("stations", name, "tsid",    tsid);
 	cfg_set_int("stations", name, "pnr",     pnr);
 
-	if (0 == station_edit_iter.stamp)
-	    x11_station_add(&station_edit_iter);
-	x11_station_apply(&station_edit_iter, name);
+	if (NULL == station_edit ||
+	    NULL == (path = gtk_tree_row_reference_get_path(station_edit)) ||
+	    !gtk_tree_model_get_iter(GTK_TREE_MODEL(st_model),&iter,path)) {
+	    x11_station_add(&iter);
+	}
+	x11_station_apply(&iter, name);
     }
 
     if (arg1 != GTK_RESPONSE_APPLY)
@@ -623,10 +656,16 @@ static void update_station_prop(GtkTreeIter *iter)
 			   ST_COL_TSID,    &tsid,
 			   ST_COL_PNR,     &pnr,
 			   -1);
+    if (debug)
+	fprintf(stderr,"edit/add: name=\"%s\" group=\"%s\" hotkey=\"%s\""
+		" channel=%s tsid=%d pnr=%d\n",
+		sname, sgroup, shotkey, channel, tsid, pnr);
+
     snprintf(tsid_pnr,sizeof(tsid_pnr),"%d-%d",tsid,pnr);
     gtk_entry_set_text(GTK_ENTRY(station_name),    sname   ? sname   : "");
+    gtk_widget_grab_focus(station_name);
     gtk_entry_set_text(GTK_ENTRY(station_hotkey),  shotkey ? shotkey : "");
-
+    
     /* groups dropdown */
     groups = NULL;
     list_for_each(head, &ch_groups) {
@@ -696,6 +735,8 @@ static void create_station_prop(GtkWindow *parent)
 				    NULL);
     gtk_dialog_set_default_response(GTK_DIALOG(station_dialog),
 				    GTK_RESPONSE_OK);
+    g_signal_connect(station_dialog, "delete-event",
+		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
     vbox = GTK_BOX(GTK_DIALOG(station_dialog)->vbox);
 
     /* general */
@@ -753,7 +794,7 @@ static void create_station_prop(GtkWindow *parent)
 
 static void menu_cb_add_station(void)
 {
-    memset(&station_edit_iter,0,sizeof(station_edit_iter));
+    station_edit = NULL;
     if (!station_dialog)
 	create_station_prop(GTK_WINDOW(control_win));
     update_station_prop(NULL);
@@ -764,15 +805,34 @@ static void menu_cb_edit_station(void)
 {
     GtkTreeSelection *selection;
     GtkTreeModel *model;
+    GtkTreePath *path;
+    GtkTreeIter iter;
 
     selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(st_view));
-    if (!gtk_tree_selection_get_selected(selection, &model,
-					 &station_edit_iter))
+    if (!gtk_tree_selection_get_selected(selection, &model, &iter))
 	return;
     if (!station_dialog)
 	create_station_prop(GTK_WINDOW(control_win));
-    update_station_prop(&station_edit_iter);
+    update_station_prop(&iter);
+    path = gtk_tree_model_get_path(GTK_TREE_MODEL(st_model),&iter);
+    station_edit = gtk_tree_row_reference_new(GTK_TREE_MODEL(st_model),path);
     gtk_widget_show_all(station_dialog);
+}
+
+static void menu_cb_del_station(void)
+{
+    GtkTreeSelection *selection;
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+    char *name;
+
+    selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(st_view));
+    if (!gtk_tree_selection_get_selected(selection, &model, &iter))
+	return;
+    gtk_tree_model_get(GTK_TREE_MODEL(st_model), &iter,
+		       ST_COL_NAME,  &name, -1);
+    cfg_del_section("stations",name);
+    x11_station_del(&iter);
 }
 
 static void menu_cb_save_stations(void)
@@ -831,6 +891,13 @@ static GtkItemFactoryEntry menu_items[] = {
 	.accelerator = "E",
 	.callback    = menu_cb_edit_station,
 	.item_type   = "<Item>",
+    },{
+	.path        = "/Edit/_Delete Station ...",
+	.callback    = menu_cb_del_station,
+	.item_type   = "<Item>",
+    },{
+	.path        = "/Edit/sep1",
+	.item_type   = "<Separator>",
     },{
 	.path        = "/Edit/_Save Stations",
 	.callback    = menu_cb_save_stations,
@@ -1100,35 +1167,57 @@ void create_control(void)
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "Group", renderer,
-	 "text", ST_COL_GROUP,
+	 "text",        ST_COL_GROUP,
+	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "Key", renderer,
-	 "text", ST_COL_HOTKEY,
+	 "text",        ST_COL_HOTKEY,
+	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "Ch", renderer,
-	 "text", ST_COL_CHANNEL,
+	 "text",        ST_COL_CHANNEL,
+	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 "xalign",      1.0,
+		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "TSID", renderer,
-	 "text",    ST_COL_TSID,
-	 "visible", ST_COL_TSID,
+	 "text",        ST_COL_TSID,
+	 "visible",     ST_COL_TSID,
+	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 "xalign",      1.0,
+		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "PNR", renderer,
-	 "text",    ST_COL_PNR,
-	 "visible", ST_COL_PNR,
+	 "text",        ST_COL_PNR,
+	 "visible",     ST_COL_PNR,
+	 "weight-set",  ST_STATE_ACTIVE,
 	 NULL);
 
     renderer = gtk_cell_renderer_text_new();

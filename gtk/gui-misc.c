@@ -64,8 +64,7 @@ void gtk_about_box(GtkWindow *parent, char *name, char *version, char *text)
 
     snprintf(title, sizeof(title), "About %s version %s",
 	     name, version);
-    about = gtk_dialog_new_with_buttons(title,
-					parent, 0,
+    about = gtk_dialog_new_with_buttons(title, parent, 0,
 					GTK_STOCK_OK, GTK_RESPONSE_OK,
 					NULL);
     box = GTK_BOX(GTK_DIALOG(about)->vbox);
@@ -77,6 +76,25 @@ void gtk_about_box(GtkWindow *parent, char *name, char *version, char *text)
     g_signal_connect(about, "response",
 		     G_CALLBACK(dialog_destroy), NULL);
     gtk_widget_show_all(about);
+}
+
+void gtk_error_box(GtkWindow *parent, char *title, char *text)
+{
+    GtkWidget *errbox,*label;
+    GtkBox *box;
+
+    errbox = gtk_dialog_new_with_buttons(title, parent, 0,
+					 GTK_STOCK_OK, GTK_RESPONSE_OK,
+					 NULL);
+    box = GTK_BOX(GTK_DIALOG(errbox)->vbox);
+    gtk_box_set_spacing(box, SPACING);
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+
+    label = gtk_label_new (text);
+    gtk_box_pack_start(box, label, TRUE, TRUE, 0);
+    g_signal_connect(errbox, "response",
+		     G_CALLBACK(dialog_destroy), NULL);
+    gtk_widget_show_all(errbox);
 }
 
 /* ---------------------------------------------------------------------------- */

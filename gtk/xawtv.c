@@ -330,6 +330,7 @@ static void new_station(void)
 	     curr_station);
     gtk_label_set_text(GTK_LABEL(control_status), label);
     set_property();
+    x11_station_activate(curr_station);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -400,8 +401,15 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     struct media_stream mm;
     struct ng_audio_fmt *afmt;
     struct ng_video_fmt *vfmt;
+
+    if (0 == ng_mpeg_vpid || 0 == ng_mpeg_apid) {
+	fprintf(stderr,"no DVB station tuned\n");
+	return;
+    }
     
-    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: enter (%d/%d)\n",__FUNCTION__,
+		ng_mpeg_vpid, ng_mpeg_apid);
 
     memset(&mm,0,sizeof(mm));
     mm.blit = blit;
@@ -457,7 +465,9 @@ mpeg_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     int flags = 0;
     char *path;
     
-    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: enter (%d/%d)\n",__FUNCTION__,
+		ng_mpeg_vpid, ng_mpeg_apid);
 
     memset(&mm,0,sizeof(mm));
     mm.blit = blit;

@@ -234,7 +234,7 @@ static void play_file(char *filename)
 	dvb_debug = 1;
 	dvb = dvb_init_nr(0);
 	if (dvb) {
-	    if (-1 == dvb_tune(dvb, "vdr-channels", filename)) {
+	    if (-1 == dvb_tune_vdr(dvb, filename)) {
 		fprintf(stderr,"tuning failed\n");
 		exit(1);
 	    }

@@ -166,25 +166,35 @@ static int tune_dvb_station(char *station)
 #ifndef HAVE_DVB
     return -1;
 #else
-    char *vdrname;
-    int32_t freq;
-
     if (!devs.dvb)
 	return -1;
 
-    /* DVB tuning */
-    vdrname = cfg_get_str("stations", station, "vdr");
-    if (NULL == vdrname)
-	vdrname= station;
-    if (-1 == dvb_tune(devs.dvb, "vdr-channels", vdrname))
+    int tsid  = cfg_get_int("stations", station, "tsid", 0);
+    int pnr   = cfg_get_int("stations", station, "pnr",  0);
+    char *vdr = cfg_get_str("stations", station, "vdr");
+
+    if (0 != tsid  &&  0 != pnr) {
+	/* my own station DB */
+	if (-1 == dvb_tune(devs.dvb, tsid, pnr))
+	    return -1;
+	snprintf(curr_details, sizeof(curr_details),
+		 "TSID %d / PNR %d", tsid, pnr);
+
+    } else if (NULL != vdr) {
+	/* lookup in /etc/vdr/channels.conf */
+	if (-1 == dvb_tune_vdr(devs.dvb, vdr))
+	    return -1;
+	snprintf(curr_details, sizeof(curr_details),
+		 "vdr %s", vdr);
+
+    } else {
+	ng_mpeg_vpid = 0;
+	ng_mpeg_apid = 0;
 	return -1;
 
-    /* update info */
-    freq = cfg_get_int("vdr-channels", vdrname, "frequency", 0);
+    }
     new_station(station);
     new_channel(NULL);
-    snprintf(curr_details, sizeof(curr_details),
-	     "%.2f MHz", (float)freq/1000);
     return 0;
 #endif
 }

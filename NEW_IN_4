@@ -1,0 +1,134 @@
+
+Getting started and Overview about the changes in xawtv version 4.x
+===================================================================
+
+
+Changes/Status Overview
+-----------------------
+
+ New Features + Changes
+
+   * MPEG software decoding, and based on that:
+     - support for DVB cards, including Budget cards.
+     - support for MPEG Encoder cards (ivtv).
+   * reworked configuration framework.
+   * switch over to gtk as X11 GUI toolkit.
+
+ Dropped Features
+
+   * Overlay without Xvideo extention.
+   * Resolution switching for fullscreen.
+
+ Obsolete (likely will be dropped)
+
+   * motv application (gtk-ported xawtv will take over ;)
+
+ work needed (i.e. broken/untested right now)
+
+   * movie recording.
+   * lirc support.
+   * mixer device support.
+   * documentation is outdated.
+   * fbtv & ttv.
+
+
+Build it
+--------
+
+ Important compile time dependencies:
+
+   mpeg audio  -  mad (http://www.underbit.com/products/mad/).
+   mpeg video  -  libmpeg2 (http://libmpeg2.sf.net/).
+   teletext    -  libzvbi (http://zapping.sf.net).
+
+ The usual "./configure && make" should work.  You can start the apps
+ without "make install" from the directory they are build in,
+ i.e. using "cd gtk; ./xawtv".  Note that xawtv will prefeare the
+ installed plugins, so you should delete them or move them away in
+ case you have some older 4.x version installed.  3.x plugins will NOT
+ cause any trouble.
+
+
+The new configuration framework
+-------------------------------
+
+ Most important user visible change is that there isn't a single
+ ~/.xawtv configuration file any more.  Instead a bunch of files in the
+ ~/tv/ directory used.  Internally the configuration framework is also
+ used to store informations which can easily be preserved then by just
+ dumping it to a config file.
+
+ Here is a overview about the files in ~/.tv/:
+
+    devices.$HOSTNAME	device configuration.
+    options		global options.
+    stations		Configured TV stations, with Hotkeys and
+			other meta inforamtion.
+    dvb-ts		DVB channels: The transport streams with
+			tuning info.
+    dvb-pr		DVB channels: The programs with the pids
+			and transport stream IDs.
+    vdr-channels	The imported /etc/vdr/channels.conf file
+			dumped (for debug only).
+    vdr-diseqc		The imported /etc/vdr/diseqc.conf file
+			dumped (for debug only).
+
+
+Hints for using analog TV
+-------------------------
+
+ The scantv utility will scan for channels and create ~/.tv/options
+ and ~/.tv/stations config files.  Unlike the 3.x versions it will not
+ just dump a fresh file to stdout, but will read the old config,
+ update it and save it.  Means you can also use it to update the
+ configuration without loosing all the configuration like hotkeys you
+ did after the initial scan.
+
+ xawtv + mtt should work as usual.
+
+
+Hints for using digital TV aka DVB
+----------------------------------
+
+ The alexplore utility can be used to browse the available DVB
+ Channels and do a DVB channel scan.  It will save all found channels
+ to the ~/tv/dvb-ts and ~/tv/dvb-pr config files.  They will be
+ available to xawtv then for creating a station list (~/.tv/stations)
+ using xawtv's GUI.
+
+ TV Stations listed in ~/.tv/stations can have references to both
+ analog and digital tuning info btw.
+
+
+Hints for using teletext
+------------------------
+
+ mtt also supports both analog and digital TV.  In DVB mode it just
+ sits passively on the adapter and monitors the incoming data, putting
+ the teletext streams available from the current transport stream into
+ the station menu, i.e. you have to use some other utility to tune the
+ frontend.  mtt will happily run in parallel to a TV application
+ without disrupting it.
+
+
+Hints for using pia
+-------------------
+
+ pia is a simple movie player.  It can playback mpeg streams and any
+ movies recorded by xawtv and streamer.  It can playback audio files
+ (wav, mp3) as well.  It also works without X11, not playing video
+ then for obvious reasons ;) Usage: Just pass the movie file name as
+ argument.
+
+ pia also has a -dvb switch to put it into dvb playback mode.  This is
+ intented mainly for trouble-shooting / debugging purposes.  The -dvb
+ switch expects a station name as argument, and pia will lookup the
+ station in /etc/vdr/channels.conf.
+
+
+Enjoy,
+
+  Gerd
+
+--
+Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]

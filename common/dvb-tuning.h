@@ -12,7 +12,8 @@ char* dvb_devname(struct dvb_state *h);
 struct ng_devinfo* dvb_probe(int debug);
 
 /* high level interface */
-int  dvb_tune(struct dvb_state *h, char *domain, char *section);
+int dvb_tune(struct dvb_state *h, int tsid, int pnr);
+int dvb_tune_vdr(struct dvb_state *h, char *section);
 
 /* low level frontend interface */
 int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section);

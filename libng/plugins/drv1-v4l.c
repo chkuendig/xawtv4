@@ -362,6 +362,8 @@ v4l_init(char *device)
     unsigned int i;
     int rc;
 
+    if (device && 0 != strncmp(device,"/dev/",5))
+	return NULL;
     h = malloc(sizeof(*h));
     if (NULL == h)
 	return NULL;
