@@ -71,31 +71,15 @@ static XVisualInfo vinfo;
 
 /* ------------------------------------------------------------------------ */
 
-#define O_CMDLINE               "cmdline", "cmdline"
-
-#define O_CMD_HELP             	O_CMDLINE, "help"
-#define O_CMD_VERSION           O_CMDLINE, "version"
-#define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
-#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
-#define O_CMD_DEVICE	       	O_CMDLINE, "device"
 #define O_CMD_READCONF	       	O_CMDLINE, "readconf"
-#define O_CMD_GEOMETRY	       	O_CMDLINE, "geometry"
+#define O_CMD_HW_LS	       	O_CMDLINE, "hw-ls"
+#define O_CMD_HW_CONFIG	       	O_CMDLINE, "hw-config"
+#define O_CMD_HW_STORE	       	O_CMDLINE, "hw-store"
 #define O_CMD_DVB_S	       	O_CMDLINE, "dvbs"
 #define O_CMD_DVB_C	       	O_CMDLINE, "dvbc"
 #define O_CMD_DVB_T	       	O_CMDLINE, "dvbt"
 
-#define O_CMD_HW_LS	       	O_CMDLINE, "hw-ls"
-#define O_CMD_HW_CONFIG	       	O_CMDLINE, "hw-config"
-#define O_CMD_HW_STORE	       	O_CMDLINE, "hw-store"
-
-#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
-#define GET_CMD_VERSION()       cfg_get_bool(O_CMD_VERSION,   	0)
-#define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
-#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
-
 #define GET_CMD_READCONF()     	cfg_get_bool(O_CMD_READCONF,   	1)
-#define GET_CMD_WRITECONF()    	cfg_get_bool(O_CMD_WRITECONF,   0)
-
 #define GET_CMD_HW_LS()    	cfg_get_bool(O_CMD_HW_LS,       0)
 #define GET_CMD_HW_CONFIG()    	cfg_get_bool(O_CMD_HW_CONFIG,   0)
 #define GET_CMD_HW_STORE()    	cfg_get_bool(O_CMD_HW_STORE,    0)
@@ -659,17 +643,6 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     if (afmt)
 	av_media_setup_audio_reader(mm,afmt);
 
-#if 0
-    /* recording */
-    if (recording) {
-	struct ng_writer *wr = ng_find_writer_name("mpeg-ps");
-	char *station = curr_station ? curr_station : "unknown";
-	char *recfile = record_filename("television", station, "mpeg");
-	if (wr)
-	    av_media_start_recording(mm, wr, recfile);
-    }
-#endif
-
     /* go playback stuff */
     av_media_mainloop(context, mm);
 
@@ -999,26 +972,26 @@ hello_world(void)
 }
 
 static void
-usage(void)
+usage(FILE *out)
 {
-    fprintf(stderr,
+    fprintf(out,
 	    "\n"
 	    "usage: xawtv [ options ] [ station ]\n"
 	    "options:\n");
 
-    cfg_help_cmdline(cmd_opts_only,2,16,0);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_only,2,16,0);
+    fprintf(out,"\n");
 
-    cfg_help_cmdline(cmd_opts_devices,2,16,40);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_devices,2,16,40);
+    fprintf(out,"\n");
 
-    cfg_help_cmdline(cmd_opts_x11,2,16,40);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_x11,2,16,40);
+    fprintf(out,"\n");
 
-    cfg_help_cmdline(cmd_opts_record,2,16,40);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_record,2,16,40);
+    fprintf(out,"\n");
     
-    fprintf(stderr,
+    fprintf(out,
 #if 0
 	    "station:\n"
 	    "  this is one of the stations listed in $HOME/.tv/stations\n"
@@ -1046,7 +1019,7 @@ parse_args(int *argc, char **argv)
     cfg_parse_cmdline(argc,argv,cmd_opts_devices);
 
     if (GET_CMD_HELP())
-	usage();
+	usage(stdout);
     if (GET_CMD_VERSION())
 	exit(0);
 

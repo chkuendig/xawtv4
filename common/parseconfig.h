@@ -18,7 +18,7 @@ struct cfg_cmdline {
     int                yesno:1;
 };
 void   cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt);
-void   cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2, int w3);
+void   cfg_help_cmdline(FILE *fp, struct cfg_cmdline *opt, int w1, int w2, int w3);
 
 /* file I/O */
 int    cfg_parse_file(char *dname, char *filename);

@@ -1,0 +1,525 @@
+# Polish translations for PACKAGE package
+# Polish messages for PACKAGE.
+# Copyright (C) 2004 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2005-01-17 17:44+0100\n"
+"PO-Revision-Date: 2004-04-16 12:16+0200\n"
+"Last-Translator: Michał Pytasz <mpytasz@albatros.pl>\n"
+"Language-Team: Polish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: gtk/gui-dvbscan.c:597 gtk/gui-epg.c:232
+msgid " Search: "
+msgstr " Szukaj: "
+
+#: gtk/dvbradio.c:575 gtk/gui-control.c:1161
+msgid "/Commands/Decrease Volume"
+msgstr "Przycisz"
+
+#: gtk/gui-dvbscan.c:384
+msgid "/Commands/Fast _rescan"
+msgstr "Szybki Rescan"
+
+#: gtk/gui-dvbscan.c:389
+msgid "/Commands/Full _scan"
+msgstr "Pełny Scan"
+
+#: gtk/dvbradio.c:570 gtk/gui-control.c:1156
+msgid "/Commands/Increase Volume"
+msgstr "Pogłośnij"
+
+#: gtk/gui-dvbscan.c:394
+msgid "/Commands/Insane slow scan"
+msgstr "Bardzo wolny Scan"
+
+#: gtk/dvbradio.c:565 gtk/gui-control.c:1151
+msgid "/Commands/Mute"
+msgstr "Wyłącz dźwięk"
+
+#: gtk/dvbradio.c:545 gtk/gui-control.c:1169
+msgid "/Commands/Next station"
+msgstr "Następny program"
+
+#: gtk/dvbradio.c:551 gtk/gui-control.c:1175
+msgid "/Commands/Previous station"
+msgstr "Poprzedni program"
+
+#: gtk/gui-dvbscan.c:372
+msgid "/Commands/Satellite _config ..."
+msgstr "Konfiguracja satelity"
+
+#: gtk/dvbradio.c:557 gtk/gui-control.c:1143
+msgid "/Commands/Start or stop _recording"
+msgstr "Rozpocznij lub zakończ nagrywanie"
+
+#: gtk/gui-control.c:1181
+msgid "/Commands/Tuning"
+msgstr "Dostrajanie"
+
+#: gtk/gui-control.c:1192
+msgid "/Commands/Tuning/Channel down"
+msgstr "Poprzedni kanał"
+
+#: gtk/gui-control.c:1187
+msgid "/Commands/Tuning/Channel up"
+msgstr "Następny kanał"
+
+#: gtk/gui-control.c:1202
+msgid "/Commands/Tuning/Finetuning down"
+msgstr "Dostrajanie -"
+
+#: gtk/gui-control.c:1197
+msgid "/Commands/Tuning/Finetuning up"
+msgstr "Dostrajanie +"
+
+#: gtk/gui-control.c:1138
+msgid "/Commands/_Fullscreen"
+msgstr "Pełny ekran"
+
+#: gtk/gui-dvbscan.c:376
+msgid "/Commands/_Tune manually ..."
+msgstr "Dostrajanie ręczne"
+
+#: gtk/gui-control.c:1097
+msgid "/Edit/Scan DVB ..."
+msgstr "Skanuj _DVB ..."
+
+#: gtk/gui-control.c:1092
+msgid "/Edit/Scan analog ..."
+msgstr "Skanowanie _analogowe ..."
+
+#: gtk/gui-control.c:1069
+msgid "/Edit/_Add station ..."
+msgstr "Dodaj program"
+
+#: gtk/gui-teletext.c:1435
+msgid "/Edit/_Copy ..."
+msgstr "_Kopiuj"
+
+#: gtk/gui-control.c:1078
+msgid "/Edit/_Delete station"
+msgstr "Kasuj program"
+
+#: gtk/gui-control.c:1073
+msgid "/Edit/_Edit station ..."
+msgstr "_Edytuj program"
+
+#: gtk/gui-control.c:1085
+msgid "/Edit/_Save stations"
+msgstr "Zapisz program"
+
+#: gtk/gui-dvbscan.c:361 gtk/gui-epg.c:139
+msgid "/File/_Close"
+msgstr "Zamknij"
+
+#: gtk/gui-teletext.c:1423
+msgid "/File/_Close window"
+msgstr "Zamknij okno"
+
+#: gtk/gui-teletext.c:1406
+msgid "/File/_New window"
+msgstr "_Nowe okno"
+
+#: gtk/dvbradio.c:521 gtk/gui-control.c:1058
+msgid "/File/_Quit"
+msgstr "Wyjdź"
+
+#: gtk/gui-control.c:1049
+msgid "/File/_Record ..."
+msgstr "Nagrywaj ..."
+
+#: gtk/gui-teletext.c:1413
+msgid "/File/_Save as ..."
+msgstr "Zapisz jako ..."
+
+#: gtk/gui-teletext.c:1446
+msgid "/Go to/_Index"
+msgstr "_Index"
+
+#: gtk/gui-teletext.c:1460
+msgid "/Go to/_Next Page"
+msgstr "_Następna strona"
+
+#: gtk/gui-teletext.c:1453
+msgid "/Go to/_Previous Page"
+msgstr "_Poprzednia strona"
+
+#: gtk/dvbradio.c:585 gtk/gui-control.c:1212 gtk/gui-dvbscan.c:408
+#: gtk/gui-epg.c:151 gtk/gui-teletext.c:1537
+msgid "/Help/_About ..."
+msgstr "O ..."
+
+#: gtk/gui-control.c:1127
+msgid "/Settings/Device _Options"
+msgstr "Właściwości urządzenia"
+
+#: gtk/gui-control.c:1121
+msgid "/Settings/Frequency _Table"
+msgstr "Tabela częstotliwości"
+
+#: gtk/dvbradio.c:532
+msgid "/Stations/_Configure ..."
+msgstr "Konfiguracja ..."
+
+#: gtk/dvbradio.c:542 gtk/gui-control.c:1135 gtk/gui-dvbscan.c:369
+msgid "/_Commands"
+msgstr "_Polecenia"
+
+#: gtk/gui-dvbscan.c:400
+msgid "/_Database"
+msgstr "Baza _Danych"
+
+#: gtk/gui-control.c:1110
+msgid "/_Devices"
+msgstr "Urządzenia"
+
+#: gtk/gui-control.c:1066 gtk/gui-teletext.c:1432
+msgid "/_Edit"
+msgstr "_Edytuj"
+
+#: gtk/dvbradio.c:518 gtk/gui-control.c:1045 gtk/gui-dvbscan.c:358
+#: gtk/gui-epg.c:136 gtk/gui-teletext.c:1403
+msgid "/_File"
+msgstr "_Plik"
+
+#: gtk/gui-teletext.c:1529
+msgid "/_Font"
+msgstr "Czcionka"
+
+#: gtk/gui-teletext.c:1443
+msgid "/_Go to"
+msgstr "Idź do"
+
+#: gtk/dvbradio.c:582 gtk/gui-control.c:1209 gtk/gui-dvbscan.c:405
+#: gtk/gui-epg.c:148 gtk/gui-teletext.c:1534
+msgid "/_Help"
+msgstr "_Pomoc"
+
+#: gtk/gui-teletext.c:1469
+msgid "/_Region"
+msgstr "_Region"
+
+#: gtk/gui-teletext.c:1492
+msgid "/_Region/C_yrillic"
+msgstr "C_yrlica"
+
+#: gtk/gui-teletext.c:1487
+msgid "/_Region/Central and _Southeast Europe"
+msgstr "Europa środkowa i wschodnia"
+
+#: gtk/gui-teletext.c:1472
+msgid "/_Region/Western and _Central Europe"
+msgstr "Europa środkowa i zachodnia"
+
+#: gtk/gui-teletext.c:1504
+msgid "/_Region/_Arabic"
+msgstr "Arabski"
+
+#: gtk/gui-teletext.c:1477
+msgid "/_Region/_Eastern Europe"
+msgstr "Europa wschodnia"
+
+#: gtk/gui-teletext.c:1482
+msgid "/_Region/_Western Europe and Turkey"
+msgstr "Europa zachodnia i Turcja"
+
+#: gtk/gui-teletext.c:1498
+msgid "/_Region/unused5"
+msgstr ""
+
+#: gtk/gui-teletext.c:1510
+msgid "/_Region/unused7"
+msgstr ""
+
+#: gtk/gui-teletext.c:1515
+msgid "/_Region/unused8"
+msgstr ""
+
+#: gtk/gui-control.c:1118
+msgid "/_Settings"
+msgstr "U_stawienia"
+
+#: gtk/gui-teletext.c:1526
+msgid "/_Station"
+msgstr "_Sender"
+
+#: gtk/dvbradio.c:529 gtk/gui-control.c:1104
+msgid "/_Stations"
+msgstr "Programy"
+
+#: gtk/gui-teletext.c:1523
+msgid "/_Subpage"
+msgstr "Podstrona"
+
+#: gtk/gui-control.c:925
+msgid "Analog TV"
+msgstr "Analogowa TV"
+
+#: gtk/gui-epg.c:398
+msgid "Audio: "
+msgstr "Dźwięk:"
+
+#: gtk/gui-epg.c:299
+msgid "Begin"
+msgstr "Początek"
+
+#: gtk/gui-epg.c:392
+msgid "Category: "
+msgstr "Kategoria: "
+
+#: gtk/gui-control.c:1547
+msgid "Ch"
+msgstr ""
+
+#: gtk/gui-control.c:932
+msgid "Channel"
+msgstr "Kanał"
+
+#: gtk/gui-dvbscan.c:569
+msgid "DVB channels"
+msgstr "Kanały DVB"
+
+#: gtk/gui-epg.c:298
+msgid "Date"
+msgstr "Data"
+
+#: gtk/gui-epg.c:424
+msgid "Description:\n"
+msgstr "Opis:\n"
+
+#: gtk/gui-control.c:939
+msgid "Digital TV (DVB)"
+msgstr "Telewizja cyfrowa (DVB)"
+
+#: gtk/gui-epg.c:404
+msgid "Dual"
+msgstr "Powdójne"
+
+#: gtk/gui-epg.c:204
+msgid "EPG"
+msgstr "EPG"
+
+#: gtk/gui-epg.c:300
+msgid "End"
+msgstr "Koniec"
+
+#: gtk/gui-control.c:904
+msgid "General"
+msgstr "Ogólne"
+
+#: gtk/gui-control.c:915 gtk/gui-control.c:1527
+msgid "Group"
+msgstr "Grupa"
+
+#: gtk/gui-epg.c:419
+msgid "HDTV"
+msgstr "HDTV"
+
+#: gtk/gui-control.c:920
+msgid "Hotkey"
+msgstr ""
+
+#: gtk/gui-control.c:1537
+msgid "Key"
+msgstr "Przycisk"
+
+#: gtk/gui-epg.c:303
+msgid "Lang"
+msgstr "Język"
+
+#: gtk/gui-epg.c:384
+msgid "Language: "
+msgstr "Język: "
+
+#: gtk/gui-epg.c:400
+msgid "Mono"
+msgstr "Mono"
+
+#: gtk/gui-epg.c:406
+msgid "Multi"
+msgstr ""
+
+#: gtk/gui-control.c:911 gtk/gui-control.c:1517 gtk/gui-epg.c:302
+msgid "Name"
+msgstr "Nazwa"
+
+#: gtk/gui-epg.c:371
+msgid "Name: "
+msgstr "Name: "
+
+#: gtk/gui-epg.c:301
+msgid "Station"
+msgstr "Program"
+
+#: gtk/gui-epg.c:402
+msgid "Stereo"
+msgstr "Stereo"
+
+#: gtk/gui-epg.c:377
+msgid "Summary: "
+msgstr "Podsumowanie"
+
+#: gtk/gui-epg.c:408
+msgid "Surround"
+msgstr "Surround"
+
+#: gtk/gui-control.c:946
+msgid "TSID/PNR"
+msgstr ""
+
+#: gtk/gui-control.c:892
+msgid "TV Station Properties"
+msgstr "Właściwości programu"
+
+#: gtk/gui-epg.c:355
+msgid "Time: "
+msgstr "Czas: "
+
+#: gtk/gui-epg.c:413
+msgid "Video: "
+msgstr "Video: "
+
+#: gtk/gui-dvbscan.c:568
+msgid "alexplore: DVB channel browser & scanner"
+msgstr ""
+
+#: gtk/gui-analog.c:347
+msgid "analog channels"
+msgstr "Kanały analogowe"
+
+#: gtk/gui-analog.c:124
+msgid "channel scan finished"
+msgstr "Zakończono skanowanie kanałów"
+
+#: gtk/gui-dvbscan.c:541 gtk/gui-teletext.c:1563
+msgid "close"
+msgstr "zamknij"
+
+#: gtk/gui-dvbscan.c:542 gtk/gui-teletext.c:1564
+msgid "close window"
+msgstr "Zamknij okno"
+
+#: gtk/gui-control.c:1463
+msgid "control window"
+msgstr ""
+
+#: gtk/gui-epg.c:163
+msgid "current station"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:548
+msgid "fta"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:537
+msgid "full channel scan"
+msgstr "Pełne skanowanie kanałów"
+
+#: gtk/gui-teletext.c:1546
+msgid "index"
+msgstr "Indeks"
+
+#: gtk/gui-teletext.c:1547
+msgid "index page"
+msgstr ""
+
+#: gtk/gui-control.c:1413
+msgid "mute"
+msgstr "wycisz"
+
+#: gtk/gui-control.c:1414
+msgid "mute sound"
+msgstr "wycisz"
+
+#: gtk/gui-control.c:1408 gtk/gui-teletext.c:1556
+msgid "next"
+msgstr "następny"
+
+#: gtk/gui-teletext.c:1557
+msgid "next page"
+msgstr "Następna strona"
+
+#: gtk/gui-control.c:1409
+msgid "next station"
+msgstr "Następny program"
+
+#: gtk/gui-epg.c:167
+msgid "no filter"
+msgstr ""
+
+#: gtk/gui-control.c:1403 gtk/gui-teletext.c:1551
+msgid "prev"
+msgstr "poprzedni"
+
+#: gtk/gui-teletext.c:1552
+msgid "previous page"
+msgstr "poprzednia strona"
+
+#: gtk/gui-control.c:1404
+msgid "previous station"
+msgstr "Poprzedni program"
+
+#: gtk/gui-control.c:1424
+msgid "quit"
+msgstr ""
+
+#: gtk/gui-control.c:1425
+msgid "quit application"
+msgstr "Zakończ program"
+
+#: gtk/gui-control.c:456
+msgid "recording started"
+msgstr "Nagrywanie rozpoczęte"
+
+#: gtk/gui-control.c:453
+msgid "recording stopped"
+msgstr "Nagrywanie zatrzymane"
+
+#: gtk/gui-dvbscan.c:536
+msgid "scan"
+msgstr ""
+
+#: gtk/gui-analog.c:75
+#, c-format
+msgid "scanning %s ..."
+msgstr "Skanuję %s ..."
+
+#: gtk/dvbradio.c:317
+msgid "select stations"
+msgstr ""
+
+#: gtk/gui-epg.c:168
+msgid "show all entries"
+msgstr "Pokaż wszystkie"
+
+#: gtk/gui-dvbscan.c:549
+msgid "show only free to air channels"
+msgstr ""
+
+#: gtk/gui-epg.c:162
+msgid "station"
+msgstr "Program"
+
+#: gtk/gui-control.c:1418
+msgid "stop"
+msgstr ""
+
+#: gtk/gui-teletext.c:1579
+msgid "teletext"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:531
+msgid "tune"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:532
+msgid "tune manually"
+msgstr "Dostrojenie ręczne"

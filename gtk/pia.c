@@ -49,11 +49,6 @@ static XVisualInfo vinfo;
     
 /* ------------------------------------------------------------------------ */
 
-#define O_CMDLINE               "cmdline", "cmdline"
-
-#define O_CMD_HELP             	O_CMDLINE, "help"
-#define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
-#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_DVB	       	O_CMDLINE, "dvb"
 #define O_CMD_VDR	       	O_CMDLINE, "vdr"
 #define O_CMD_REC	       	O_CMDLINE, "rec"
@@ -67,9 +62,6 @@ static XVisualInfo vinfo;
 #define O_CMD_SPEED	       	O_CMDLINE, "speed"
 #define O_CMD_DSP	       	O_CMDLINE, "dsp"
 
-#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
-#define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
-#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 #define GET_CMD_DVB()		cfg_get_bool(O_CMD_DVB,   	0)
 #define GET_CMD_VDR()		cfg_get_bool(O_CMD_VDR,   	0)
 
@@ -438,13 +430,13 @@ static GtkWidget *create_menu(GtkWidget *window)
     return gtk_item_factory_get_widget(item_factory, "<menu>");
 }
 
-static void usage(char *prog)
+static void usage(FILE *out, char *prog)
 {
     char *h;
 
     if (NULL != (h = strrchr(prog,'/')))
 	prog = h+1;
-    fprintf(stderr,
+    fprintf(out,
 	    "\n"
 	    "%s is a simple audio + video player.  Works also without X11,\n"
 	    "will not play video then through for obvious reasons ;)\n"
@@ -452,8 +444,8 @@ static void usage(char *prog)
 	    "usage: %s [ options ] file ...\n"
 	    "options:\n",
 	    prog,prog);
-    cfg_help_cmdline(cmd_opts,4,16,0);
-    fprintf(stderr,
+    cfg_help_cmdline(out,cmd_opts,4,16,0);
+    fprintf(out,
 	    "\n"
 	    "-- \n"
 	    "(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n");
@@ -495,7 +487,7 @@ int main(int argc, char *argv[])
     ng_debug = GET_CMD_DEBUG();
     ng_log_bad_stream = GET_CMD_DEBUG();
     if (GET_CMD_HELP()) {
-	usage(argv[0]);
+	usage(stdout,argv[0]);
 	return 0;
     }
     ng_init();

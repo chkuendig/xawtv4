@@ -202,7 +202,10 @@ merge: $(patsubst %,po/%.pox,$(LANGUAGES))
 
 all:: $(patsubst %,po/%.mo,$(LANGUAGES))
 
-install:: $(patsubst %,install-mo-%,$(LANGUAGES))
+install:: install-lang
+
+.PHONY: install-lang
+install-lang: $(patsubst %,install-mo-%,$(LANGUAGES))
 
 install-mo-%: po/%.mo
 	$(INSTALL_DIR) $(localedir)/$*/LC_MESSAGES

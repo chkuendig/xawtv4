@@ -600,7 +600,8 @@ static int volume_handler(char *name, int argc, char **argv)
 static int attr_handler(char *name, int argc, char **argv)
 {
     struct ng_attribute *attr;
-    int val,newval,arg=0;
+    struct list_head    *item;
+    int i,val,newval,arg=0;
 
     if (0 == strcasecmp(name,"setnorm")) {
 	attr = find_attr_by_id(ATTR_ID_NORM);
@@ -617,14 +618,15 @@ static int attr_handler(char *name, int argc, char **argv)
     }
     
     if (NULL == attr) {
-#if 0
 	fprintf(stderr,"cmd: %s: attribute not found\nvalid choices are:",
 		(arg > 0) ? argv[0] : name);
-	for (attr = attrs; attr->name != NULL; attr++)
-	    fprintf(stderr,"%s \"%s\"",
-		    (attr != attrs) ? "," : "", attr->name);
+	i = 0;
+	list_for_each(item,&global_attrs) {
+	    attr = list_entry(item, struct ng_attribute, global_list);
+	    fprintf(stderr,"%s \"%s\"", i ? "," : "", attr->name);
+	    i++;
+	}
 	fprintf(stderr,"\n");
-#endif
 	return -1;
     }
 
@@ -674,25 +676,26 @@ static int attr_handler(char *name, int argc, char **argv)
 
 static int show_handler(char *name, int argc, char **argv)
 {
-#if 0 /* FIXME */
     struct ng_attribute *attr;
+    struct list_head    *item;
     char *n[2] = { NULL, NULL };
     int val;
 
     if (0 == argc) {
-	for (attr = attrs; attr->name != NULL; attr++) {
+	list_for_each(item,&global_attrs) {
+	    attr = list_entry(item, struct ng_attribute, global_list);
 	    n[0] = (char*)attr->name;
 	    show_handler("show", 1, n);
 	}
 	return 0;
     }
 
-    attr = ng_attr_byname(attrs,argv[0]);
+    attr = find_attr_by_name(argv[0]);
     if (NULL == attr) {
-	fprintf(stderr,"fixme: 404 %s\n",argv[0]);
+	fprintf(stderr,"404: %s\n",argv[0]);
 	return 0;
     }
-    val = cur_attrs[attr->id];
+    val = attr_read(attr);
     switch (attr->type) {
     case ATTR_TYPE_CHOICE:
 	printf("%s: %s\n", attr->name, ng_attr_getstr(attr,val));
@@ -704,22 +707,22 @@ static int show_handler(char *name, int argc, char **argv)
 	printf("%s: %s\n", attr->name, val ? "on" : "off");
 	break;
     }
-#endif
     return 0;
 }
 
 static int list_handler(char *name, int argc, char **argv)
 {
-#if 0 /* FIXME */
     struct ng_attribute *attr;
+    struct list_head    *item;
     int val,i;
 
     printf("%-10.10s | type   | %-7.7s | %-7.7s | %s\n",
 	   "attribute","current","default","comment");
     printf("-----------+--------+---------+--------"
 	   "-+-------------------------------------\n");
-    for (attr = attrs; attr->name != NULL; attr++) {
-	val = cur_attrs[attr->id];
+    list_for_each(item,&global_attrs) {
+	attr = list_entry(item, struct ng_attribute, global_list);
+	val = attr_read(attr);
 	switch (attr->type) {
 	case ATTR_TYPE_CHOICE:
 	    printf("%-10.10s | choice | %-7.7s | %-7.7s |",
@@ -743,7 +746,6 @@ static int list_handler(char *name, int argc, char **argv)
 	    break;
 	}
     }
-#endif
     return 0;
 }
 

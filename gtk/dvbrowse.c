@@ -45,16 +45,9 @@ static int tune_secs = 32;
 
 /* ------------------------------------------------------------------------ */
 
-#define O_CMDLINE               "cmdline", "cmdline"
-
-#define O_CMD_HELP             	O_CMDLINE, "help"
-#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_PASSIVE	       	O_CMDLINE, "passive"
-#define O_CMD_DEVICE	       	O_CMDLINE, "device"
 
-#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
 #define GET_CMD_PASSIVE()	cfg_get_bool(O_CMD_PASSIVE,   	0)
-#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 
 struct cfg_cmdline cmd_opts_only[] = {
     {
@@ -90,15 +83,15 @@ struct cfg_cmdline cmd_opts_only[] = {
 static int scan_percent,scan_pass;
 
 static void
-usage(void)
+usage(FILE *out)
 {
-    fprintf(stderr,
+    fprintf(out,
 	    "\n"
 	    "usage: dvbrowse [ options ]\n"
 	    "options:\n");
 
-    cfg_help_cmdline(cmd_opts_only,2,16,0);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_only,2,16,0);
+    fprintf(out,"\n");
 
     exit(0);
 }
@@ -196,7 +189,7 @@ main(int argc, char *argv[])
     /* options */
     cfg_parse_cmdline(&argc,argv,cmd_opts_only);
     if (GET_CMD_HELP())
-	usage();
+	usage(stdout);
     debug = GET_CMD_DEBUG();
 
     read_config_file("dvb-ts");

@@ -441,41 +441,41 @@ cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt)
 }
 
 void
-cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2, int w3)
+cfg_help_cmdline(FILE *fp, struct cfg_cmdline *opt, int w1, int w2, int w3)
 {
     char *val;
     int o,len;
     
     for (o = 0; opt[o].cmdline != NULL; o++) {
-	fprintf(stderr,"%*s",w1,"");
+	fprintf(fp,"%*s",w1,"");
 	if (opt[o].letter) {
-	    fprintf(stderr,"-%c  ",opt[o].letter);
+	    fprintf(fp,"-%c  ",opt[o].letter);
 	} else {
-	    fprintf(stderr,"    ");
+	    fprintf(fp,"    ");
 	}
 
 	if (opt[o].yesno) {
-	    len = fprintf(stderr,"-(no)%s ",opt[o].cmdline);
+	    len = fprintf(fp,"-(no)%s ",opt[o].cmdline);
 	} else if (opt[o].needsarg) {
-	    len = fprintf(stderr,"-%s <arg> ",opt[o].cmdline);
+	    len = fprintf(fp,"-%s <arg> ",opt[o].cmdline);
 	} else {
-	    len = fprintf(stderr,"-%s ",opt[o].cmdline);
+	    len = fprintf(fp,"-%s ",opt[o].cmdline);
 	}
 	if (len < w2)
-	    fprintf(stderr,"%*s",w2-len,"");
+	    fprintf(fp,"%*s",w2-len,"");
 
-	len = fprintf(stderr,"%s ",opt[o].desc);
+	len = fprintf(fp,"%s ",opt[o].desc);
 
 	if (w3) {
 	    if (len < w3)
-		fprintf(stderr,"%*s",w3-len,"");
+		fprintf(fp,"%*s",w3-len,"");
 	    val = cfg_get_str(opt[o].option.domain,
 			      opt[o].option.section,
 			      opt[o].option.entry);
 	    if (val)
-		fprintf(stderr,"[%s]",val);
+		fprintf(fp,"[%s]",val);
 	}
- 	fprintf(stderr,"\n");
+ 	fprintf(fp,"\n");
     }
 }
 

@@ -29,74 +29,84 @@
 
 int debug = 0;
 int have_dga = 0;
-#ifdef HAVE_LIBXV
 Display *dpy;
-#endif
 
 /*--- main ---------------------------------------------------------------*/
 
+struct cfg_cmdline cmd_opts_only[] = {
+    {
+	.letter   = 'h',
+	.cmdline  = "help",
+	.option   = { O_CMD_HELP },
+	.value    = "1",
+	.desc     = "print this text",
+    },{
+	.cmdline  = "debug",
+	.option   = { O_CMD_DEBUG },
+	.needsarg = 1,
+	.desc     = "set debug level",
+    },{
+	.cmdline  = "device",
+	.option   = { O_CMD_DEVICE },
+	.needsarg = 1,
+	.desc     = "pick device config",
+    },{
+	/* end of list */
+    }
+};
+
 static void
-usage(void)
+usage(FILE *out)
 {
-    fprintf(stderr,
+    fprintf(out,
 	    "\n"
 	    "usage: v4lctl [ options ] command\n"
-	    "options:\n"
-	    "  -v, --debug=n      debug level n, n = [0..2]\n"
-	    "  -c, --device=file  use <file> as video4linux device\n"
-	    "  -h, --help         print this text\n"
-	    "\n");
+	    "options:\n");
+
+    cfg_help_cmdline(out,cmd_opts_only,2,16,0);
+    fprintf(out,"\n");
+
+    cfg_help_cmdline(out,cmd_opts_devices,2,16,40);
+    fprintf(out,"\n");
+
+    exit(0);
+}
+
+static void
+parse_args(int *argc, char **argv)
+{
+    read_config();
+    cfg_parse_cmdline(argc,argv,cmd_opts_only);
+    cfg_parse_cmdline(argc,argv,cmd_opts_devices);
+
+    if (GET_CMD_HELP())
+	usage(stdout);
+
+    debug    = GET_CMD_DEBUG();
+    ng_debug = debug;
 }
 
 int main(int argc, char *argv[])
 {
-    int c;
-    int xvideo = 1;
-    char *devname = "default";
-
     ng_init();
-    for (;;) {
-	if (-1 == (c = getopt(argc, argv, "hv:c:")))
-	    break;
-	switch (c) {
-	case 'v':
-	    ng_debug = debug = atoi(optarg);
-	    break;
-	case 'c':
-	    cfg_set_str("devs", devname, "video", optarg);
-	    xvideo = 0;
-	    break;
-	case 'h':
-	default:
-	    usage();
-	    exit(1);
-	}
-    }
-    if (optind == argc) {
-	usage();
+    parse_args(&argc,argv);
+    if (1 == argc) {
+	usage(stderr);
 	exit(1);
     }
 
-#if 0 /* FIXME */
     if (NULL != getenv("DISPLAY"))
 	dpy = XOpenDisplay(NULL);
-    if (dpy) {
+    if (dpy)
 	init_atoms(dpy);
-	if (xvideo)
-	    xv_video_init(-1,0);
-    }
-#endif
 
-    read_config();
     devlist_init(1,0,0);
-    device_init(devname);
+    device_init(cfg_get_str(O_CMD_DEVICE));
     apply_config();
 
-    do_command(argc-optind,argv+optind);
+    do_command(argc-1,argv+1);
     device_fini();
-#ifdef HAVE_LIBXV
     if (dpy)
 	XCloseDisplay(dpy);
-#endif
     return 0;
 }

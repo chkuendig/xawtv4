@@ -277,8 +277,8 @@ usage(FILE *out, char *prog)
 	    group  ? group  : "none",
 	    timeout);
 
-    fprintf(stderr,"\n");
-    cfg_help_cmdline(cmd_opts_devices,6,16,40);
+    fprintf(out,"\n");
+    cfg_help_cmdline(out,cmd_opts_devices,6,16,40);
 }
 
 int
@@ -296,6 +296,7 @@ main(int argc, char **argv)
     ng_init();
     read_config();
     cfg_parse_cmdline(&argc,argv,cmd_opts_devices);
+
     for (;;) {
 	if (-1 == (c = getopt(argc, argv, "hsadg:t:")))
 	    break;

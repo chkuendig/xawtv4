@@ -42,9 +42,23 @@ const char* int_to_str(int n, struct STRTAB *tab);
 /* ----------------------------------------------------------------------- */
 
 /* sections */
+#define O_CMDLINE               "cmdline", "cmdline"
 #define O_OPTIONS		"options", "global"
 #define O_RECORD		"options", "record"
 #define O_EVENTS		"options", "eventmap"
+
+/* cmd line only */
+#define O_CMD_HELP             	O_CMDLINE, "help"
+#define O_CMD_VERSION           O_CMDLINE, "version"
+#define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
+#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
+#define O_CMD_DEVICE	       	O_CMDLINE, "device"
+#define O_CMD_GEOMETRY	       	O_CMDLINE, "geometry"
+
+#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
+#define GET_CMD_VERSION()       cfg_get_bool(O_CMD_VERSION,   	0)
+#define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
+#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 
 /* option bools */
 #define O_KEYPAD_PARTIAL       	O_OPTIONS, "keypad-partial"

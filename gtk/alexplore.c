@@ -42,15 +42,6 @@ Display *dpy;
 
 /* ------------------------------------------------------------------------ */
 
-#define O_CMDLINE               "cmdline", "cmdline"
-
-#define O_CMD_HELP             	O_CMDLINE, "help"
-#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
-#define O_CMD_DEVICE	       	O_CMDLINE, "device"
-
-#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
-#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
-
 struct cfg_cmdline cmd_opts_only[] = {
     {
 	.letter   = 'h',
@@ -68,7 +59,7 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.cmdline  = "device",
 	.option   = { O_CMD_DEVICE },
 	.needsarg = 1,
-	.desc     = "pick device config (use -hwconfig to list them)",
+	.desc     = "pick device config",
     },{
 	/* end of list */
     }
@@ -180,15 +171,15 @@ static void tty_scan()
 }
 
 static void
-usage(void)
+usage(FILE *out)
 {
-    fprintf(stderr,
+    fprintf(out,
 	    "\n"
 	    "usage: alexplore [ options ]\n"
 	    "options:\n");
 
-    cfg_help_cmdline(cmd_opts_only,2,16,0);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_only,2,16,0);
+    fprintf(out,"\n");
 
     exit(0);
 }
@@ -205,7 +196,7 @@ main(int argc, char *argv[])
     /* options */
     cfg_parse_cmdline(&argc,argv,cmd_opts_only);
     if (GET_CMD_HELP())
-	usage();
+	usage(stdout);
     debug = GET_CMD_DEBUG();
 
     have_x11 = gtk_init_check(&argc, &argv);

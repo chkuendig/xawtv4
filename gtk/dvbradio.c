@@ -70,18 +70,8 @@ static int init_channel_list(void);
 
 /* ------------------------------------------------------------------------ */
 
-#define O_CMDLINE               "cmdline", "cmdline"
-
-#define O_CMD_HELP             	O_CMDLINE, "help"
-#define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
-#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_TV	       	O_CMDLINE, "tv"
-#define O_CMD_DEVICE	       	O_CMDLINE, "device"
-#define O_CMD_GEOMETRY	       	O_CMDLINE, "geometry"
 
-#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
-#define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
-#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 #define GET_CMD_TV()		cfg_get_int(O_CMD_TV,   	0)
 
 struct cfg_cmdline cmd_opts_only[] = {
@@ -750,15 +740,15 @@ static void siginit(void)
 }
 
 static void
-usage(void)
+usage(FILE *out)
 {
-    fprintf(stderr,
+    fprintf(out,
 	    "\n"
 	    "usage: " APPNAME " [ options ] [ station ]\n"
 	    "options:\n");
 
-    cfg_help_cmdline(cmd_opts_only,2,16,0);
-    fprintf(stderr,"\n");
+    cfg_help_cmdline(out,cmd_opts_only,2,16,0);
+    fprintf(out,"\n");
 
     exit(0);
 }
@@ -772,7 +762,7 @@ parse_args(int *argc, char **argv)
     read_config_file("radio");
 
     if (GET_CMD_HELP())
-	usage();
+	usage(stdout);
 
     /* set debug variables */
     debug    = GET_CMD_DEBUG();

@@ -31,13 +31,12 @@
 #include "commands.h"
 #include "devs.h"
 #include "parseconfig.h"
+#include "tv-config.h"
 
 /* ---------------------------------------------------------------------- */
 
 static int       bufcount = 16;
 static int       parallel = 1;
-static char*     tvnorm = NULL;
-static char*     input  = NULL;
 static char*     moviename = NULL;
 static char*     audioname = NULL;
 static char*     vfmt_name;
@@ -79,7 +78,7 @@ list_formats(FILE *out)
 	if (NULL != wr->video) {
 	    fprintf(out,"    video formats:\n");
 	    for (j = 0; NULL != wr->video[j].name; j++) {
-		fprintf(out,"      %-7s %-28s [%s]\n",wr->video[j].name,
+		fprintf(out,"      %-7s %-36s [%s]\n",wr->video[j].name,
 			wr->video[j].desc ? wr->video[j].desc :
 			ng_vfmt_to_desc[wr->video[j].fmtid],
 			wr->video[j].ext);
@@ -88,7 +87,7 @@ list_formats(FILE *out)
 	if (NULL != wr->audio) {
 	    fprintf(out,"    audio formats:\n");
 	    for (j = 0; NULL != wr->audio[j].name; j++) {
-		fprintf(out,"      %-7s %-28s [%s]\n",wr->audio[j].name,
+		fprintf(out,"      %-7s %-36s [%s]\n",wr->audio[j].name,
 			wr->audio[j].desc ? wr->audio[j].desc :
 			ng_afmt_to_desc[wr->audio[j].fmtid],
 			wr->audio[j].ext ? wr->audio[j].ext : "-");
@@ -106,39 +105,41 @@ usage(FILE *out)
 	    "\n"
 	    "usage: streamer [ options ]\n"
 	    "\n"
+	    "device options:\n");
+
+    cfg_help_cmdline(out, cmd_opts_devices,2,16,40);
+
+    fprintf(out,
+	    "\n"
 	    "general options:\n"
-	    "  -h          print this help text\n"
-	    "  -q          quiet operation\n"
-	    "  -d          enable debug output\n"
-	    "  -p n        use n compression threads    [%d]\n"
-	    "  -w seconds  wait before grabbing         [%d]\n"
+	    "      -h              print this help text\n"
+	    "      -q              quiet operation\n"
+	    "      -d              enable debug output\n"
+	    "      -p n            use n compression threads    [%d]\n"
+	    "      -w seconds      wait before grabbing         [%d]\n"
 	    "\n"
 	    "video options:\n"
-	    "  -o file     video/movie file name\n"
-	    "  -f format   specify video format\n"
-	    "  -c device   specify video4linux device   [%s]\n"
-	    "  -r fps      frame rate                   [%d.%03d]\n"
-	    "  -s size     specify size                 [%dx%d]\n"
+	    "      -o file         video/movie file name\n"
+	    "      -f format       specify video format\n"
+	    "      -r fps          frame rate                   [%d.%03d]\n"
+	    "      -s size         specify size                 [%dx%d]\n"
 	    "\n"
-	    "  -t times    number of frames or hh:mm:ss [%d]\n"
-	    "  -b buffers  specify # of buffers         [%d]\n"
-	    "  -j quality  quality for mjpeg or jpeg    [%d]\n"
-	    "  -n tvnorm   set pal/ntsc/secam\n"
-	    "  -i input    set video source\n"
-	    "  -a          don't unmute/mute v4l device.\n"
+	    "      -t times        number of frames or hh:mm:ss [%d]\n"
+	    "      -b buffers      specify # of buffers         [%d]\n"
+	    "      -j quality      quality for mjpeg or jpeg    [%d]\n"
+	    "      -a              don't unmute/mute v4l device.\n"
 	    "\n"
 	    "audio options:\n"
-	    "  -O file     wav file name\n"
-	    "  -F format   specify audio format\n"
-	    "  -C device   specify dsp device           [%s]\n"
-	    "  -R rate     sample rate                  [%d]\n"
+	    "      -O file         wav file name\n"
+	    "      -F format       specify audio format\n"
+	    "      -R rate         sample rate                  [%d]\n"
 	    "\n",
 	    
 	    parallel,wait_seconds,
-	    ng_dev.video, fps/1000, fps%1000,
+	    fps/1000, fps%1000,
 	    video.width, video.height,
 	    absframes, bufcount, ng_jpeg_quality,
-	    ng_dev.dsp, audio.rate
+	    audio.rate
 	);
 
     list_formats(out);
@@ -330,13 +331,16 @@ main(int argc, char **argv)
 {
     int  c,queued=0,noaudio=0;
     char *raw_length=NULL;
-    char *devname = "default";
+    char *val;
 
     /* parse options */
     ng_init();
+    read_config();
+    cfg_parse_cmdline(&argc,argv,cmd_opts_devices);
+
     for (;;) {
 	if (-1 == (c = getopt(argc, argv, "haqdp:w:"
-			      "o:c:f:r:s:t:n:i:b:j:" "O:C:F:R:")))
+			      "o:f:r:s:t:b:j:" "O:F:R:")))
 	    break;
 	switch (c) {
 	    /* general options */
@@ -364,9 +368,6 @@ main(int argc, char **argv)
 	case 'f':
 	    vfmt_name = optarg;
 	    break;
-	case 'c':
-	    cfg_set_str("devs", devname, "video", optarg);
-	    break;
 	case 'r':
 	    fps = (int)(atof(optarg) * 1000 + 0.5);
 	    break;
@@ -384,12 +385,6 @@ main(int argc, char **argv)
 	case 'j':
 	    ng_jpeg_quality = atoi(optarg);
 	    break;
-	case 'n':
-	    tvnorm = optarg;
-	    break;
-	case 'i':
-	    input = optarg;
-	    break;
 
 	    /* audio options */
 	case 'O':
@@ -397,9 +392,6 @@ main(int argc, char **argv)
 	    break;
 	case 'F':
 	    afmt_name = optarg;
-	    break;
-	case 'C':
-	    cfg_set_str("devs", devname, "sndrec", optarg);
 	    break;
 	case 'R':
 	    audio.rate = atoi(optarg);
@@ -441,13 +433,14 @@ main(int argc, char **argv)
 		ng_vfmt_to_desc[video.fmtid],ng_afmt_to_desc[audio.fmtid]);
 
     devlist_init(1,0,0);
-    device_init(devname);
+    device_init(NULL);
 
     if (video.fmtid != VIDEO_NONE) {
-	if (!(NG_DEV_VIDEO != devs.video.type)) {
+	if (NG_DEV_VIDEO != devs.video.type) {
 	    fprintf(stderr,"no video capture device available\n");
 	    exit(1);
 	}
+	ng_dev_open(&devs.video);
 	if (!(devs.video.flags & CAN_CAPTURE)) {
 	    fprintf(stderr,"%s: capture not supported\n",devs.video.v->name);
 	    exit(1);
@@ -456,10 +449,12 @@ main(int argc, char **argv)
 	    audio_on();
 
 	/* modify settings */
-	if (input != NULL)
-	    do_va_cmd(2,"setinput",input);
-	if (tvnorm != NULL)
-	    do_va_cmd(2,"setnorm",tvnorm);
+	val = cfg_get_str(O_INPUT);
+	if (val)
+	    do_va_cmd(2,"setinput",val);
+	val = cfg_get_str(O_TVNORM);
+	if (val != NULL)
+	    do_va_cmd(2,"setnorm",val);
     }
 	
     /* init movie writer */
@@ -504,7 +499,7 @@ main(int argc, char **argv)
     if (video.fmtid != VIDEO_NONE) {
 	if (!noaudio)
 	    audio_off();
-	devs.video.v->close(devs.video.handle);
+	ng_dev_close(&devs.video);
     }
     return 0;
 }

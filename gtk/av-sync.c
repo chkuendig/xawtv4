@@ -585,6 +585,12 @@ void av_media_mainloop(GMainContext *context, struct media_stream *mm)
 	if (command_pending) {
 	    /* don't fetch new buffers */
 	    if (mm->as && NULL == mm->abuf) {
+#if 0
+		if (mm->abuf_next) {
+		    ng_free_audio_buf(mm->abuf_next);
+		    mm->abuf_next = NULL;
+		}
+#endif
 		av_audio_fini(mm->as);
 		mm->as = NULL;
 	    }
@@ -602,7 +608,8 @@ void av_media_mainloop(GMainContext *context, struct media_stream *mm)
 	    av_sync_audio(mm);
 	    if (NULL == mm->abuf) {
 		if (debug)
-		    fprintf(stderr,"media: audio: end-of-stream\n");
+		    fprintf(stderr,"media: audio: end-of-stream [%p,%p]\n",
+			    mm->abuf,mm->abuf_next);
 		av_audio_fini(mm->as);
 		mm->as = NULL;
 	    }
@@ -614,7 +621,8 @@ void av_media_mainloop(GMainContext *context, struct media_stream *mm)
 	    mm->vbuf_next = NULL;
 	    if (NULL == mm->vbuf) {
 		if (debug)
-		    fprintf(stderr,"media: video: end-of-stream\n");
+		    fprintf(stderr,"media: video: end-of-stream [%p,%p]\n",
+			    mm->abuf,mm->abuf_next);
 		av_video_fini(mm->vs);
 		mm->vs = NULL;
 	    }
