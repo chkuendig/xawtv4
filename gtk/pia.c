@@ -346,7 +346,7 @@ static void play_file(char *filename)
     /* recording */
     rec = cfg_get_str(O_CMD_REC);
     if (rec) {
-	struct ng_writer *wr = ng_find_writer_name("mpeg");
+	struct ng_writer *wr = ng_find_writer_name("mpeg-ps");
 	if (wr)
 	    av_media_start_recording(&mm, wr, rec);
     }

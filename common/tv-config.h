@@ -30,6 +30,7 @@ int write_config_file(char *name);
 
 void read_config(void);
 void apply_config(void);
+char* record_filename(char *base, char *station, char *ext);
 
 /* ----------------------------------------------------------------------- */
 

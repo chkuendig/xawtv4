@@ -547,17 +547,31 @@ void eit_del_watch(struct eit_state *eit)
     free(eit);
 }
 
-struct epgitem* eit_lookup(int tsid, int pnr, time_t when)
+struct epgitem* eit_lookup(int tsid, int pnr, time_t when, int debug)
 {
     struct epgitem   *epg;
     struct list_head *item;
+    char tw[16],t1[16],t2[16];
+    struct tm tm;
 
+    if (debug) {
+	localtime_r(&when,&tm);
+	strftime(tw,sizeof(tw),"%d.%m. %H:%M:%S",&tm);
+	fprintf(stderr,"\n!  %s\n",tw);
+    }
     list_for_each(item,&epg_list) {
 	epg = list_entry(item, struct epgitem, next);
 	if (epg->tsid  != tsid)
 	    continue;
 	if (epg->pnr   != pnr)
 	    continue;
+	if (debug) {
+	    localtime_r(&epg->start,&tm);
+	    strftime(t1,sizeof(tw),"%d.%m. %H:%M:%S",&tm);
+	    localtime_r(&epg->stop,&tm);
+	    strftime(t2,sizeof(tw),"%d.%m. %H:%M:%S",&tm);
+	    fprintf(stderr,"?  %s - %s  |  %s\n", t1, t2, epg->name);
+	}
 	if (epg->start > when)
 	    continue;
 	if (epg->stop  < when)

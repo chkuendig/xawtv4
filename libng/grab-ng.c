@@ -890,7 +890,7 @@ struct ng_reader* ng_find_reader_magic(char *filename)
 
     list_for_each(item,&ng_readers) {
 	reader = list_entry(item, struct ng_reader, list);
-	for (m = 0; m < 4 && reader->mlen[m] > 0; m++) {
+	for (m = 0; m < 8 && reader->mlen[m] > 0; m++) {
 	    if (0 == memcmp(blk+reader->moff[m],reader->magic[m],
 			    reader->mlen[m]))
 		return reader;

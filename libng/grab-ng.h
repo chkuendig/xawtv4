@@ -281,9 +281,9 @@ struct ng_reader {
     const char *name;
     const char *desc;
 
-    char  *magic[4];
-    int   moff[4];
-    int   mlen[4];
+    char  *magic[8];
+    int   moff[8];
+    int   mlen[8];
 
     void* (*rd_open)(char *moviename);
     struct ng_video_fmt* (*rd_vfmt)(void *handle, int *vfmt, int vn);

@@ -166,6 +166,26 @@ void apply_config(void)
     event_readconfig();
 }
 
+char* record_filename(char *base, char *station, char *ext)
+{
+    static char filename[256];
+    struct tm *tm;
+    time_t t;
+    char ts[32];
+    char *dest;
+    int len = 0;
+
+    dest = cfg_get_str(O_REC_DESTDIR);
+    time(&t);
+    tm = localtime(&t);
+    strftime(ts,sizeof(ts),"%Y%m%d-%H%M%S",tm);
+    if (dest)
+	len = snprintf(filename,sizeof(filename),"%s/",dest);
+    snprintf(filename+len, sizeof(filename)-len, "%s-%s-%s.%s",
+	     base, station, ts, ext);
+    return filename;
+}
+
 /* ----------------------------------------------------------------------- */
 
 int read_config_file(char *name)

@@ -467,7 +467,7 @@ int av_media_start_recording(struct media_stream *mm,
 			     struct ng_writer *wr,
 			     char *filename)
 {
-    int video = 0, audio = 0, fps;
+    int video = -1, audio = -1, fps = 0;
 
     /* audio */
     if (mm->as && mm->as->ifmt) {
@@ -495,16 +495,17 @@ int av_media_start_recording(struct media_stream *mm,
 	} else {
 	    mm->wvfmt = *(mm->vs->ifmt);
 	}
+	fps = 1000 / mm->frame;
     }
 
     if (mm->wafmt.fmtid == AUDIO_NONE  &&
 	mm->wvfmt.fmtid == VIDEO_NONE)
 	return -1;
 
-    fps = 1000 / mm->frame;
-    mm->whandle = wr->wr_open(filename, NULL,
-			      &mm->wvfmt, wr->video[video].priv, fps,
-			      &mm->wafmt, wr->audio[audio].priv);
+    mm->whandle = wr->wr_open
+	(filename, NULL,
+	 &mm->wvfmt, (-1 == video) ? NULL : wr->video[video].priv, fps,
+	 &mm->wafmt, (-1 == audio) ? NULL : wr->audio[audio].priv);
     if (NULL == mm->whandle) {
 	fprintf(stderr,"init movie writer failed\n");
 	return -1;

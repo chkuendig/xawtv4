@@ -333,7 +333,7 @@ void display_onscreen(char *title)
 /* ------------------------------------------------------------------------ */
 /* epg display                                                              */
 
-static GtkWidget *epg_win, *epg_time, *epg_name;
+static GtkWidget *epg_win, *epg_bar, *epg_time, *epg_name;
 static guint epg_timer;
 
 static void epg_colors(GtkWidget *widget)
@@ -361,6 +361,7 @@ void create_epg(void)
     
     epg_win  = gtk_window_new(GTK_WINDOW_POPUP);
     box = gtk_vbox_new(TRUE, 0);
+    epg_bar  = gtk_progress_bar_new();
     epg_time = gtk_widget_new(GTK_TYPE_LABEL,
 			      "xalign", 0.5,
 			      "xpad", SPACING,
@@ -373,8 +374,9 @@ void create_epg(void)
     epg_colors(epg_name);
 
     gtk_container_add(GTK_CONTAINER(epg_win), box);
-    gtk_box_pack_start(GTK_BOX(box), epg_time,  FALSE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(box), epg_name,  FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(box), epg_bar,  FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(box), epg_time, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(box), epg_name, FALSE, TRUE, 0);
 
     gtk_window_set_resizable(GTK_WINDOW(epg_win), TRUE);
     gtk_widget_set_sensitive(epg_win,   FALSE);
@@ -409,8 +411,10 @@ void display_epg(GtkWindow *win, struct epgitem *epg)
     len = strftime(buf,sizeof(buf),"%H:%M - ",&tm);
     localtime_r(&epg->stop,&tm);
     len += strftime(buf+len,sizeof(buf)-len,"%H:%M",&tm);
+#if 0
     len += snprintf(buf+len,sizeof(buf)-len," (%d%%)",
 		    (int)(passed*100/total));
+#endif
     gtk_label_set_text(GTK_LABEL(epg_time), buf);
 
     len = snprintf(buf,sizeof(buf),"%s",epg->name);
@@ -419,7 +423,9 @@ void display_epg(GtkWindow *win, struct epgitem *epg)
 	    buf[i] = ' ';
     gtk_label_set_text(GTK_LABEL(epg_name), buf);
 
-    gtk_window_resize(GTK_WINDOW(epg_win), 100, 20);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(epg_bar),
+				  (gdouble)passed/total);
+    gtk_window_resize(GTK_WINDOW(epg_win), 100, 30);
     gtk_window_get_size(GTK_WINDOW(epg_win), &ew, &eh);
     gtk_window_get_position(win, &vx, &vy);
     gtk_window_get_size(win, &vw, &vh);

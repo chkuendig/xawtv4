@@ -203,6 +203,73 @@ mpeg_close(void *handle)
 }
 
 /* ----------------------------------------------------------------------- */
+
+static void*
+mp3_open(char *filename, char *dummy,
+	 struct ng_video_fmt *video, const void *priv_video, int fps,
+	 struct ng_audio_fmt *audio, const void *priv_audio)
+{
+    struct mpeg_handle      *h;
+
+    if (NULL == filename)
+	return NULL;
+    if (NULL == (h = malloc(sizeof(*h))))
+	return NULL;
+
+    /* init */
+    memset(h, 0, sizeof(*h));
+    h->audio = *audio;
+
+    strcpy(h->file,filename);
+    if (-1 == (h->fd = open(h->file,O_CREAT | O_RDWR | O_TRUNC, 0666))) {
+	fprintf(stderr,"open %s: %s\n",h->file,strerror(errno));
+	free(h);
+	return NULL;
+    }
+
+    /* audio */
+    if (h->audio.fmtid != AUDIO_NONE) {
+    }
+
+    return h;
+}
+
+static int
+mp3_audio(void *handle, struct ng_audio_buf *buf)
+{
+    struct mpeg_handle *h = handle;
+    char *hdr = NULL;
+    int i,len = 0;
+
+    if (0 != h->afirst)
+	return write(h->fd, buf->data, buf->size);
+
+    /* first blk: look for mpeg frame start */
+    for (i = 0; i < buf->size-1; i++) {
+	if ((0xff == (unsigned char)buf->data[i]) &&
+	    (0xf0 == ((unsigned char)buf->data[i] & 0xf0))) {
+	    hdr = buf->data+i;
+	    len = buf->size-i;
+	    break;
+	}
+    }
+    if (NULL == hdr)
+	return 0;
+    h->afirst++;
+    return write(h->fd, hdr, len);
+}
+
+static int
+mp3_close(void *handle)
+{
+    struct mpeg_handle *h = handle;
+
+    close(h->fd);
+    free(h);
+    return 0;
+}
+
+/* ----------------------------------------------------------------------- */
 /* data structures describing our capabilities                             */
 
 static const struct ng_format_list mpeg_vformats[] = {
@@ -226,7 +293,7 @@ static const struct ng_format_list mpeg_aformats[] = {
 };
 
 struct ng_writer mpeg_writer = {
-    .name      = "mpeg",
+    .name      = "mpeg-ps",
     .desc      = "MPEG Programm Stream",
     .combined  = 1,
     .video     = mpeg_vformats,
@@ -237,7 +304,27 @@ struct ng_writer mpeg_writer = {
     .wr_close  = mpeg_close,
 };
 
+static const struct ng_format_list mp3_aformats[] = {
+    {
+	.name  = "mp3",
+	.ext   = "mp3",
+	.fmtid = AUDIO_MP3,
+    },{
+	/* EOF */
+    }
+};
+
+struct ng_writer mp3_writer = {
+    .name      = "mp3",
+    .desc      = "MPEG Audio",
+    .audio     = mp3_aformats,
+    .wr_open   = mp3_open,
+    .wr_audio  = mp3_audio,
+    .wr_close  = mp3_close,
+};
+
 static void __init plugin_init(void)
 {
     ng_writer_register(NG_PLUGIN_MAGIC,__FILE__,&mpeg_writer);
+    ng_writer_register(NG_PLUGIN_MAGIC,__FILE__,&mp3_writer);
 }

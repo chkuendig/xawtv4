@@ -35,4 +35,4 @@ struct eit_state;
 struct eit_state* eit_add_watch(struct dvb_state *dvb,
 				int section, int mask, int verbose, int alive);
 void eit_del_watch(struct eit_state *eit);
-struct epgitem* eit_lookup(int tsid, int pnr, time_t when);
+struct epgitem* eit_lookup(int tsid, int pnr, time_t when, int debug);

@@ -58,6 +58,8 @@ static GtkWidget  *label;
 static GtkWidget  *main_win;
 static char       *current;
 
+static struct media_stream *mm;
+
 /* ------------------------------------------------------------------------ */
 
 #define O_CMDLINE               "cmdline", "cmdline"
@@ -131,7 +133,6 @@ static void
 dvb_loop(GMainContext *context)
 {
     char path[64];
-    struct media_stream mm;
     struct ng_audio_fmt *afmt;
 
     if (0 == ng_mpeg_apid) {
@@ -142,36 +143,41 @@ dvb_loop(GMainContext *context)
     if (debug)
 	fprintf(stderr,"%s: enter (%d)\n",__FUNCTION__,ng_mpeg_apid);
 
-    memset(&mm,0,sizeof(mm));
-    mm.speed = 1;
+    mm = malloc(sizeof(*mm));
+    memset(mm,0,sizeof(*mm));
+    mm->speed = 1;
 
     if (!dvb_frontend_is_locked(devs.dvb))
 	return;
     
-    mm.reader = ng_find_reader_name("mpeg-ts");
-    if (NULL == mm.reader) {
+    mm->reader = ng_find_reader_name("mpeg-ts");
+    if (NULL == mm->reader) {
 	fprintf(stderr,"Oops: transport stream parser not found\n");
 	return;
     }
 
     snprintf(path,sizeof(path),"%s/dvr0",devs.dvbadapter);
-    mm.rhandle = mm.reader->rd_open(path);
-    if (NULL == mm.rhandle) {
+    mm->rhandle = mm->reader->rd_open(path);
+    if (NULL == mm->rhandle) {
 	fprintf(stderr,"can't open: %s\n",path);
 	return;
     }
 
     /* audio setup */
-    afmt = mm.reader->rd_afmt(mm.rhandle);
+    afmt = mm->reader->rd_afmt(mm->rhandle);
     if (afmt)
-	av_media_setup_audio_reader(&mm,afmt);
+	av_media_setup_audio_reader(mm,afmt);
 
     /* go playback stuff */
-    av_media_mainloop(context, &mm);
+    av_media_mainloop(context, mm);
 
     /* cleanup */
-    BUG_ON(NULL != mm.as,"mm.as isn't NULL");
-    mm.reader->rd_close(mm.rhandle);
+    BUG_ON(NULL != mm->as,"mm->as isn't NULL");
+    mm->reader->rd_close(mm->rhandle);
+    if (mm->writer)
+	av_media_stop_recording(mm);
+    free(mm);
+    mm = NULL;
 
     if (debug)
 	fprintf(stderr,"%s: exit\n",__FUNCTION__);
@@ -270,6 +276,33 @@ static void menu_cb_station_prev(void)
     command_pending++;
 }
 
+static void menu_cb_record_start(void)
+{
+    struct ng_writer *wr = ng_find_writer_name("mp3");
+    char *recfile = record_filename("radio",current,"mp3");
+
+    if (mm && wr) {
+	fprintf(stderr,"start recording to %s\n", recfile);
+	av_media_start_recording(mm, wr, recfile);
+    }
+}
+
+static void menu_cb_record_stop(void)
+{
+    if (mm && mm->writer) {
+	fprintf(stderr,"stop recording\n");
+	av_media_stop_recording(mm);
+    }
+}
+
+static void menu_cb_record_toggle(void)
+{
+    if (mm && mm->writer)
+	menu_cb_record_stop();
+    else
+	menu_cb_record_start();
+}
+    
 static void menu_cb_about(void)
 {
     static char *text =
@@ -304,17 +337,22 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/_Commands",
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Commands/Next Station",
+	.path        = "/Commands/Next station",
 	.accelerator = "space",  // Page_Up
 	.callback    = menu_cb_station_next,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_FORWARD,
     },{
-	.path        = "/Commands/Previous Station",
-	// .accelerator = "Page_Down",
+	.path        = "/Commands/Previous station",
+	.accelerator = "BackSpace",  // Page_Down
 	.callback    = menu_cb_station_prev,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_BACK,
+    },{
+	.path        = "/Commands/Start or stop _recording",
+	.accelerator = "r",
+	.callback    = menu_cb_record_toggle,
+	.item_type   = "<Item>",
     },{
 	.path        = "/Commands/sep1",
 	.item_type   = "<Separator>",

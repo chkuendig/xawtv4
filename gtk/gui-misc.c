@@ -296,6 +296,10 @@ void gtk_redirect_stderr_to_gui(GtkWindow *parent)
     gtk_box_set_spacing(box, SPACING);
     gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
     h->label = gtk_label_new("");
+    gtk_widget_set(h->label,
+		   "xpad", SPACING,
+		   "ypad", SPACING,
+		   NULL);
     gtk_box_pack_start(box, h->label, TRUE, TRUE, 0);
     g_signal_connect(h->win, "response", G_CALLBACK(stderr_hide), h);
 

@@ -309,32 +309,14 @@ set_property(void)
 			line, len);
 }
 
-static char* record_filename(char *ext)
-{
-    static char filename[256];
-    struct tm *tm;
-    time_t t;
-    char ts[32];
-    char *dest;
-    int len = 0;
-
-    dest = cfg_get_str(O_REC_DESTDIR);
-    time(&t);
-    tm = localtime(&t);
-    strftime(ts,sizeof(ts),"%Y%m%d-%H%M%S",tm);
-    if (dest)
-	len = snprintf(filename,sizeof(filename),"%s/",dest);
-    snprintf(filename+len, sizeof(filename)-len, "record-%s-%s.%s",
-	     curr_station ? curr_station : "unknown", ts, ext);
-    return filename;
-}
-
 /* ------------------------------------------------------------------------ */
 /* hooks                                                                    */
 
 static char default_title[256];
 static guint title_timer_id;
 static guint epg_timer_id;
+static struct epgitem *epg_last;
+static int epg_debug = 0;
 
 static gboolean title_timeout(gpointer data)
 {
@@ -403,12 +385,17 @@ static gboolean epg_timer_func(gpointer data)
     struct epgitem *epg;
 
     if (curr_tsid && curr_pnr) {
-	epg = eit_lookup(curr_tsid, curr_pnr, time(NULL));
+	epg = eit_lookup(curr_tsid, curr_pnr, time(NULL), epg_debug);
 	if (NULL == epg)
 	    return TRUE;
+	if (epg_last == epg)
+	    return TRUE;
+	epg_last = epg;
 	if (debug)
 	    print_epg(epg);
 	display_epg(GTK_WINDOW(main_win), epg);
+	epg_timer_id = g_timeout_add(3000, epg_timer_func, NULL);
+	return FALSE;
     }
     epg_timer_id = 0;
     return FALSE;
@@ -434,19 +421,20 @@ static void new_station(void)
     x11_station_activate(curr_station);
     analog_set_channel(curr_channel);
 
+    epg_last = NULL;
     if (epg_timer_id) {
 	g_source_destroy(g_main_context_find_source_by_id
 			 (g_main_context_default(),epg_timer_id));
 	epg_timer_id = 0;
     }
     if (curr_tsid && curr_pnr) {
-	epg = eit_lookup(curr_tsid, curr_pnr, time(NULL));
+	epg = eit_lookup(curr_tsid, curr_pnr, time(NULL), epg_debug);
 	if (NULL != epg) {
 	    if (debug)
 		print_epg(epg);
 	    display_epg(GTK_WINDOW(main_win), epg);
 	} else {
-	    epg_timer_id = g_timeout_add(250, epg_timer_func, NULL);
+	    epg_timer_id = g_timeout_add(300, epg_timer_func, NULL);
 	}
     }
 }
@@ -572,8 +560,9 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 
     /* recording */
     if (recording) {
-	struct ng_writer *wr = ng_find_writer_name("mpeg");
-	char *recfile = record_filename("mpeg");
+	struct ng_writer *wr = ng_find_writer_name("mpeg-ps");
+	char *station = curr_station ? curr_station : "unknown";
+	char *recfile = record_filename("television", station, "mpeg");
 	if (wr)
 	    av_media_start_recording(&mm, wr, recfile);
     }
