@@ -286,6 +286,8 @@ void create_onscreen(void)
     on_win   = gtk_window_new(GTK_WINDOW_POPUP);
     on_label = gtk_widget_new(GTK_TYPE_LABEL,
 			      "xalign", 0.0,
+			      "xpad",   20,
+			      "ypad",   5,
 			      NULL);
     onscreen_colors(on_win);
     onscreen_colors(on_label);
@@ -377,12 +379,12 @@ static void menu_cb_mute(void)
 
 static void menu_cb_vol_inc(void)
 {
-    do_va_cmd(3,"volume","inc");
+    do_va_cmd(2,"volume","inc");
 }
 
 static void menu_cb_vol_dec(void)
 {
-    do_va_cmd(3,"volume","dec");
+    do_va_cmd(2,"volume","dec");
 }
 
 static void menu_cb_station_next(void)

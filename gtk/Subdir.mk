@@ -7,7 +7,8 @@ TARGETS-gtk := \
 
 ifeq ($(FOUND_DVB),yes)
 TARGETS-gtk += \
-	gtk/alexplore
+	gtk/alexplore \
+	gtk/dvbradio
 OBJS-gtk-dvb := \
 	gtk/gui-dvbscan.o \
 	gtk/gui-dvbtune.o
@@ -35,6 +36,16 @@ gtk/xawtv: \
 	x11/atoms.o \
 	common/vbi-data.o \
 	common/vbi-dvb.o \
+	common/parseconfig.o \
+	$(OBJS-common-capture) \
+	$(OBJS-glib-dvb)
+
+gtk/dvbradio: \
+	gtk/dvbradio.o \
+	gtk/av-sync.o \
+	gtk/blit.o \
+	gtk/gui-misc.o \
+	gtk/xscreensaver.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture) \
 	$(OBJS-glib-dvb)

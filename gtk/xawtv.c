@@ -394,7 +394,8 @@ grabdisplay_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *b
 {
     struct media_stream mm;
 
-    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: enter\n",__FUNCTION__);
     
     memset(&mm,0,sizeof(mm));
     mm.blit = blit;
@@ -416,7 +417,8 @@ grabdisplay_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *b
     BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
     ng_dev_close(&devs.video);
 
-    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: exit\n",__FUNCTION__);
     return;
 }
 
@@ -426,7 +428,8 @@ overlay_loop(GMainContext *context, GtkWidget *widget)
     Window win = gdk_x11_drawable_get_xid(widget->window);
     int x,y, width, height, depth;
 
-    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: enter\n",__FUNCTION__);
 
     /* video setup */
     ng_dev_open(&devs.video);
@@ -441,7 +444,8 @@ overlay_loop(GMainContext *context, GtkWidget *widget)
     /* cleanup */
     ng_dev_close(&devs.video);
 
-    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: exit\n",__FUNCTION__);
     return;
 }
 
@@ -513,7 +517,8 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     if (mm.writer)
 	av_media_stop_recording(&mm);
 
-    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: exit\n",__FUNCTION__);
     return;
 }
 
