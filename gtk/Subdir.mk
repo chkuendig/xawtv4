@@ -101,7 +101,6 @@ all:: $(TARGETS-gtk)
 
 install::
 	$(INSTALL_PROGRAM) -s $(TARGETS-gtk) $(bindir)
-	$(INSTALL_PROGRAM) gtk/xawtv-epg.glade $(datadir)
 
 distclean::
 	rm -f $(TARGETS-gtk)
