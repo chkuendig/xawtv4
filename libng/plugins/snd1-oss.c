@@ -18,6 +18,13 @@
 
 #include "grab-ng.h"
 
+#ifdef __linux__
+# define OSS_MAJOR 14
+#endif
+#ifdef __FreeBSD__
+# define OSS_MAJOR 30
+#endif
+
 /* -------------------------------------------------------------------- */
 
 static const char *names[] = SOUND_DEVICE_NAMES;
@@ -73,7 +80,7 @@ mixer_open(char *device)
     h->mix    = -1;
     h->volctl = -1;
 
-    if (-1 == (h->mix = ng_chardev_open(device, O_RDONLY, 14, 1)))
+    if (-1 == (h->mix = ng_chardev_open(device, O_RDONLY, OSS_MAJOR, 1)))
 	goto err;
     return h;
 
@@ -169,7 +176,7 @@ mixer_write_attr(struct ng_attribute *attr, int val)
     }
 }
 
-static struct ng_devinfo* mixer_probe(void)
+static struct ng_devinfo* mixer_probe(int verbose)
 {
     struct ng_devinfo *info = NULL;
     int i,n,fd;
@@ -179,17 +186,16 @@ static struct ng_devinfo* mixer_probe(void)
 
     n = 0;
     for (i = 0; NULL != ng_dev.mixer_scan[i]; i++) {
-	fd = ng_chardev_open(ng_dev.mixer_scan[i],O_RDONLY,14,0);
+	fd = ng_chardev_open(ng_dev.mixer_scan[i], O_RDONLY, OSS_MAJOR, verbose);
 	if (-1 == fd)
 	    continue;
 	info = realloc(info,sizeof(*info) * (n+2));
 	memset(info+n,0,sizeof(*info)*2);
 	strcpy(info[n].device,ng_dev.mixer_scan[i]);
-#ifdef SOUND_MIXER_INFO
-	ioctl(fd,SOUND_MIXER_INFO,&minfo);
-	strcpy(info[n].name,minfo.name);
-#else
 	strcpy(info[n].name,ng_dev.mixer_scan[i]);
+#ifdef SOUND_MIXER_INFO
+	if (-1 != ioctl(fd,SOUND_MIXER_INFO,&minfo))
+	    strcpy(info[n].name,minfo.name);
 #endif
 	close(fd);
 	n++;
@@ -205,7 +211,7 @@ mixer_channels(char *device)
     static char *labels[] = SOUND_DEVICE_LABELS;
     int fd,i,n,devmask;
 
-    if (-1 == (fd = ng_chardev_open(device,O_RDONLY,14,1)))
+    if (-1 == (fd = ng_chardev_open(device, O_RDONLY, OSS_MAJOR, 1)))
 	return NULL;
     n = 0;
     ioctl(fd,MIXER_READ(SOUND_MIXER_DEVMASK),&devmask);
@@ -351,7 +357,7 @@ oss_init(char *device, int record)
     h->record = record;
     h->oflags = (h->record ? O_RDONLY : O_WRONLY) | O_NONBLOCK;
 
-    if (-1 == (h->fd = ng_chardev_open(h->device, h->oflags, 14, 1)))
+    if (-1 == (h->fd = ng_chardev_open(h->device, h->oflags, OSS_MAJOR, 1)))
 	goto err;
     close(h->fd);
     h->fd = -1;
@@ -369,7 +375,7 @@ oss_open(void *handle)
     struct oss_handle *h = handle;
 
     BUG_ON(-1 != h->fd, "stream already open");
-    if (-1 == (h->fd = ng_chardev_open(h->device, h->oflags, 14, 1)))
+    if (-1 == (h->fd = ng_chardev_open(h->device, h->oflags, OSS_MAJOR, 1)))
 	return -1;
     return 0;
 }
@@ -579,7 +585,7 @@ oss_fd(void *handle)
     return h->fd;
 }
 
-static struct ng_devinfo* oss_probe(int record)
+static struct ng_devinfo* oss_probe(int record, int verbose)
 {
     struct ng_devinfo *info = NULL;
     int i,n,fd;
@@ -588,7 +594,7 @@ static struct ng_devinfo* oss_probe(int record)
     for (i = 0; NULL != ng_dev.dsp_scan[i]; i++) {
 	fd = ng_chardev_open(ng_dev.dsp_scan[i],
 			     (record ? O_RDONLY : O_WRONLY) | O_NONBLOCK,
-			     14, 0);
+			     OSS_MAJOR, verbose);
 	if (-1 == fd)
 	    continue;
 	info = realloc(info,sizeof(*info) * (n+2));

@@ -390,6 +390,10 @@ resize_event(Widget widget, XtPointer client_data, XEvent *event, Boolean *d)
 	}
 	break;
     }
+#else
+    /* trigger reconfigure */
+    if (DISPLAY_GRAB == display_mode)
+	command_pending++;
 #endif
 }
 

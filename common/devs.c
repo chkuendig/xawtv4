@@ -13,6 +13,7 @@
 #include "grab-ng.h"
 #include "parseconfig.h"
 #include "devs.h"
+#include "dvb.h"
 
 /* ------------------------------------------------------------------------------ */
 
@@ -38,20 +39,24 @@ static void device_print_line(char *name, char *entry, int def)
     }
 }
 
-static void device_print(char *name)
+static void device_print(char *name, int add)
 {
     char *list;
     
-    fprintf(stderr,"   device configuration \"%s\":\n",name);
+    fprintf(stderr,"   device configuration \"%s\"%s:\n",
+	    name, add ? " (NEW)" : "");
     for (list  = cfg_entries_first("devs", name);
 	 list != NULL;
 	 list  = cfg_entries_next("devs", name, list)) {
 	device_print_line(name, "video",   0);
-#ifdef HAVE_LIBXV
-	device_print_line(name, "xvideo",  0);
-#endif
 #ifdef HAVE_ZVBI
 	device_print_line(name, "vbi",     0);
+#endif
+#ifdef HAVE_DVB
+	device_print_line(name, "dvb",  0);
+#endif
+#ifdef HAVE_LIBXV
+	device_print_line(name, "xvideo",  0);
 #endif
 	device_print_line(name, "sndrec",  1);
 	device_print_line(name, "sndplay", 1);
@@ -59,12 +64,12 @@ static void device_print(char *name)
     }
 }
 
-static int device_probe(char *device)
+static int device_probe_video(char *device)
 {
     char *name,*h;
     unsigned int flags;
     struct ng_devstate dev;
-    int err,i;
+    int err,i,add=0;
 
     name = cfg_search("devs", NULL, "video", device);
     if (name) {
@@ -90,6 +95,7 @@ static int device_probe(char *device)
     }
     if (NULL == name) {
 	/* create new entry */
+	add = 1;
 	h = dev.v->devname(dev.handle);
 	name = strdup(h);
 	i = 2;
@@ -101,7 +107,55 @@ static int device_probe(char *device)
 	cfg_set_str("devs", name, "video", device);
     }
     cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
-    device_print(name);
+    device_print(name,add);
+    return 0;
+}
+
+static int device_probe_dvb(char *device)
+{
+    char *name,*h;
+    unsigned int flags;
+    struct dvb_state *dvb;
+    int i,add = 0;
+
+    name = cfg_search("devs", NULL, "dvb", device);
+    if (name) {
+	flags = cfg_get_sflags("devs", name);
+	if (flags & DEVS_FLAG_SEEN) {
+	    if (debug)
+		fprintf(stderr,"%s: %s: seen, skipping\n",__FUNCTION__,device);
+	    return 0;
+	}
+    }
+    if (NULL == (dvb = dvb_init(device))) {
+	if (0 /* FIXME */) {
+	    /* device busy -- ignore failure and don't change anything */
+	    if (debug)
+		fprintf(stderr,"%s: %s: busy\n",__FUNCTION__,device);
+	} else {
+	    /* device seems to be gone */
+	    if (debug)
+		fprintf(stderr,"%s: %s: delete\n",__FUNCTION__,device);
+	    cfg_del_section("devs", name);
+	    return 0;
+	}
+    }
+    if (NULL == name) {
+	/* create new entry */
+	add = 1;
+	h = dvb_devname(dvb);
+	name = strdup(h);
+	i = 2;
+	while (NULL != cfg_search("devs",name,NULL,NULL)) {
+	    free(name);
+	    name = malloc(strlen(h) + 10);
+	    sprintf(name,"%s - #%d",h,i++);
+	}
+	cfg_set_str("devs", name, "dvb", device);
+    }
+    dvb_fini(dvb);
+    cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
+    device_print(name,add);
     return 0;
 }
 
@@ -110,7 +164,7 @@ int devlist_probe(void)
     struct list_head      *item;
     struct ng_vid_driver  *vid;
     struct ng_devinfo     *info;
-    char *list;
+    char *list,*dev;
     int i;
 
     fprintf(stderr,"==> probing devices ...\n");
@@ -118,19 +172,35 @@ int devlist_probe(void)
 	fprintf(stderr,"%s: checking existing entries ...\n",__FUNCTION__);
     for (list  = cfg_sections_first("devs");
 	 list != NULL;
-	 list  = cfg_sections_next("devs", list))
-	device_probe(cfg_get_str("devs", list, "video"));
+	 list  = cfg_sections_next("devs", list)) {
+	dev = cfg_get_str("devs", list, "video");
+	if (dev)
+	    device_probe_video(dev);
+#ifdef HAVE_DVB
+	dev = cfg_get_str("devs", list, "dvb");
+	if (dev)
+	    device_probe_dvb(dev);
+#endif
+    }
     
     list_for_each(item,&ng_vid_drivers) {
         vid = list_entry(item, struct ng_vid_driver, list);
 	if (debug)
 	    fprintf(stderr,"%s: probing %s devices ...\n",__FUNCTION__,vid->name);
-	info = vid->probe();
+	info = vid->probe(debug);
 	for (i = 0; info && 0 != strlen(info[i].name); i++)
-	    device_probe(info[i].device);
+	    device_probe_video(info[i].device);
     }
-    fprintf(stderr,"<== probing done.\n");
 
+#ifdef HAVE_DVB
+    if (debug)
+	fprintf(stderr,"%s: probing dvb devices ...\n",__FUNCTION__);
+    info = dvb_probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	device_probe_dvb(info[i].device);
+#endif
+
+    fprintf(stderr,"<== probing done.\n");
     return 0;
 }
 
@@ -339,6 +409,11 @@ int device_fini()
     ng_dev_fini(&devs.x11);
     ng_dev_fini(&devs.sndrec);
     ng_dev_fini(&devs.sndplay);
+
+    if (devs.dvb) {
+	dvb_fini(devs.dvb);
+	devs.dvb = NULL;
+    }
     return 0;
 }
 
@@ -353,7 +428,7 @@ int device_init(char *name)
 
     /* video4linux */
     device = cfg_get_str("devs", name, "video");
-    if (NULL == device || 0 != strcasecmp(device,"none")) {
+    if (NULL != device && 0 != strcasecmp(device,"none")) {
 	err = ng_vid_init(device, &devs.video);
 	if (err)
 	    goto oops;
@@ -362,6 +437,13 @@ int device_init(char *name)
     if (NULL != device && 0 != strcasecmp(device,"none"))
 	devs.vbidev = device;
 
+    /* dvb */
+    device = cfg_get_str("devs", name, "dvb");
+    if (NULL != device && 0 != strcasecmp(device,"none")) {
+	devs.dvbadapter = device;
+	devs.dvb = dvb_init(devs.dvbadapter);
+    }
+    
     /* xvideo */
     device = cfg_get_str("devs", name, "xvideo");
     if (NULL != device && 0 != strcasecmp(device,"none")) {
@@ -374,7 +456,7 @@ int device_init(char *name)
     device = cfg_get_str("devs", name, "sndrec");
     ng_dsp_init(device, &devs.sndrec, 1);
     device = cfg_get_str("devs", name, "sndplay");
-    ng_dsp_init(device, &devs.sndplay, 1);
+    ng_dsp_init(device, &devs.sndplay, 0);
 
     /* init attributes */
     device_attrs_add(&devs.video);

@@ -1,4 +1,5 @@
 /*
+ * handle dvb devices
  * import vdr channels.conf files
  */
 #include <stdio.h>
@@ -158,7 +159,8 @@ struct dvb_state {
     int                              fd;
     struct dvb_frontend_info         info;
     struct dvb_frontend_parameters   p;
-
+    struct dvb_frontend_parameters   last;
+    
     /* demux */
     struct demux_filter              audio;
     struct demux_filter              video;
@@ -166,6 +168,20 @@ struct dvb_state {
 
 /* ----------------------------------------------------------------------- */
 /* handle dvb frontend                                                     */
+
+static int dvb_frontend_open(struct dvb_state *h)
+{
+    if (-1 != h->fd)
+	return 0;
+
+    h->fd = open(h->frontend,O_RDWR);
+    if (-1 == h->fd) {
+	fprintf(stderr,"dvb fe: open %s: %s\n",
+		h->frontend,strerror(errno));
+	return -1;
+    }
+    return 0;
+}
 
 int dvb_frontend_tune(struct dvb_state *h, char *name)
 {
@@ -248,18 +264,22 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	break;
     }
 
-    if (-1 == h->fd) {
-	h->fd = open(h->frontend,O_RDWR);
-	if (-1 == h->fd) {
-	    fprintf(stderr,"dvb fe: open %s: %s\n",
-		    h->frontend,strerror(errno));
-	    return -1;
+    if (-1 == dvb_frontend_open(h))
+	return -1;
+    if (0 == memcmp(&h->p, &h->last, sizeof(h->last))) {
+	if (dvb_frontend_is_locked(h)) {
+	    /* same frequency and frontend still locked */
+	    if (debug)
+		fprintf(stderr,"dvb fe: skipped tuning\n");
+	    return 0;
 	}
     }
+
     if (-1 == ioctl(h->fd,FE_SET_FRONTEND,&h->p)) {
 	perror("dvb fe: ioctl FE_SET_FRONTEND");
 	return -1;
     }
+    memcpy(&h->last, &h->p, sizeof(h->last));
     return 0;
 }
 
@@ -278,6 +298,8 @@ void dvb_frontend_status_print(struct dvb_state *h)
     uint32_t     ublocks = 0;
     int i;
 
+    if (-1 == dvb_frontend_open(h))
+	return;
     ioctl(h->fd, FE_READ_STATUS,             &status);
     ioctl(h->fd, FE_READ_BER,                &ber);
     ioctl(h->fd, FE_READ_SNR,                &snr);
@@ -296,6 +318,8 @@ int dvb_frontend_is_locked(struct dvb_state *h)
 {
     fe_status_t  status  = 0;
 
+    if (-1 == dvb_frontend_open(h))
+	return 0;
     if (-1 == ioctl(h->fd, FE_READ_STATUS, &status)) {
 	perror("dvb fe: FE_READ_STATUS");
 	return 0;
@@ -309,7 +333,7 @@ int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
     struct timeval tv;
 
     if (0 == timeout)
-	timeout = 10;
+	timeout = 3;
 
     time(&start);
     time(&now);
@@ -472,7 +496,7 @@ void dvb_fini(struct dvb_state *h)
     free(h);
 }
 
-struct dvb_state* dvb_init(int adapter, int frontend, int demux)
+struct dvb_state* dvb_init(char *adapter)
 {
     struct dvb_state *h;
 
@@ -484,10 +508,8 @@ struct dvb_state* dvb_init(int adapter, int frontend, int demux)
     h->audio.fd = -1;
     h->video.fd = -1;
 
-    snprintf(h->frontend, sizeof(h->frontend),
-	     "/dev/dvb/adapter%d/frontend%d", adapter, frontend);
-    snprintf(h->demux, sizeof(h->demux),
-	     "/dev/dvb/adapter%d/demux%d", adapter, demux);
+    snprintf(h->frontend, sizeof(h->frontend),"%s/frontend0", adapter);
+    snprintf(h->demux,    sizeof(h->demux),   "%s/demux0",    adapter);
 
     h->fd = open(h->frontend,O_RDWR);
     if (-1 == h->fd) {
@@ -513,6 +535,14 @@ struct dvb_state* dvb_init(int adapter, int frontend, int demux)
     return NULL;
 }
 
+struct dvb_state* dvb_init_nr(int adapter)
+{
+    char path[32];
+
+    snprintf(path,sizeof(path),"/dev/dvb/adapter%d",adapter);
+    return dvb_init(path);
+}
+
 int dvb_tune(struct dvb_state *h, char *name)
 {
     if (0 != dvb_frontend_tune(h,name))
@@ -523,6 +553,41 @@ int dvb_tune(struct dvb_state *h, char *name)
 	return -1;
     dvb_frontend_release(h);
     return 0;
+}
+
+struct ng_devinfo* dvb_probe(int debug)
+{
+    struct dvb_frontend_info feinfo;
+    char device[32];
+    struct ng_devinfo *info = NULL;
+    int i,n,fd;
+
+    n = 0;
+    for (i = 0; i < 4; i++) {
+	snprintf(device,sizeof(device),"/dev/dvb/adapter%d/frontend0",i);
+	fd = ng_chardev_open(device, O_RDONLY | O_NONBLOCK, 250, debug);
+	if (-1 == fd)
+	    continue;
+	if (-1 == ioctl(fd, FE_GET_INFO, &feinfo)) {
+	    if (debug)
+		perror("ioctl FE_GET_INFO");
+	    close(fd);
+	    continue;
+	}
+	info = realloc(info,sizeof(*info) * (n+2));
+	memset(info+n,0,sizeof(*info)*2);
+	snprintf(info[n].device,sizeof(info[n].device),
+		 "/dev/dvb/adapter%d",i);
+	strcpy(info[n].name, feinfo.name);
+	close(fd);
+	n++;
+    }
+    return info;
+}
+
+char* dvb_devname(struct dvb_state *h)
+{
+    return h->info.name;
 }
 
 /* ----------------------------------------------------------------------- */

@@ -12,8 +12,12 @@ struct devs {
     struct ng_devstate sndrec;
     struct ng_devstate sndplay;
 
-    /* FIXME */
+    /* vbi don't use libng */
     char *vbidev;
+
+    /* ... and neither does dvb */
+    char *dvbadapter;
+    struct dvb_state *dvb;
 };
 
 extern struct devs devs;

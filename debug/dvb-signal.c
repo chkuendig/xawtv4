@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	exit(1);
     }
 
-    h = dvb_init(adapter,0,0);
+    h = dvb_init_nr(adapter);
     if (NULL == h) {
 	fprintf(stderr,"can't init dvb\n");
 	exit(1);

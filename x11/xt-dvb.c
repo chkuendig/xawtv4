@@ -223,7 +223,7 @@ dvbInitialize(Widget request, Widget w, ArgList args, Cardinal *num_args)
     dw->core.height = 1;
 
     //dw->dvb.verbose = 1;
-    dw->dvb.dvb = dvb_init(dw->dvb.adapter,0,0);
+    dw->dvb.dvb = dvb_init_nr(dw->dvb.adapter);
     if (dw->dvb.dvb) {
 	if (dw->dvb.verbose)
 	    fprintf(stderr,"dvbmon: hwinit ok\n");

@@ -1,15 +1,22 @@
 
 # variables
 TARGETS-debug := \
-	debug/dvb-signal \
-	debug/probe
+	debug/probe \
+	debug/sysfs
+
 ifeq ($(FOUND_X11),yes)
 TARGETS-debug += \
 	debug/xvideo
 endif
+ifeq ($(FOUND_DVB),yes)
+TARGETS-debug += \
+	debug/dvb-signal
+endif
 
 debug/probe: \
 	debug/probe.o \
+	$(OBJS-dvb) \
+	common/parseconfig.o \
 	libng/libng.a
 
 debug/dvb-signal: \

@@ -347,14 +347,14 @@ ng_alsa_latency(void *handle)
     return latency;
 }
 
-static struct ng_devinfo* ng_alsa_probe(int record)
+static struct ng_devinfo* ng_alsa_probe(int record, int verbose)
 {
     snd_ctl_t            *ctl;
     snd_ctl_card_info_t  *cardinfo;
     snd_pcm_info_t       *pcminfo;
     char                 name[32];
     struct ng_devinfo    *info = NULL;
-    int                  card, dev, n;
+    int                  card, dev, n, err;
 
     if (record)
 	return NULL;
@@ -368,8 +368,11 @@ static struct ng_devinfo* ng_alsa_probe(int record)
 	if (card < 0)
 	    break;
 	sprintf(name,"hw:%d",card);
-	if (0 != snd_ctl_open(&ctl,name,SND_CTL_NONBLOCK))
+	if (0 != (err = snd_ctl_open(&ctl,name,SND_CTL_NONBLOCK))) {
+	    if (verbose)
+		fprintf(stderr,"alsa: [%s]: %s\n", name, snd_strerror(err));
 	    continue;
+	}
 	snd_ctl_card_info(ctl,cardinfo);
 	for (dev = -1;;) {
 	    snd_ctl_pcm_next_device(ctl, &dev);
@@ -399,13 +402,13 @@ static struct ng_devinfo* ng_alsa_probe(int record)
 
 /* ------------------------------------------------------------------- */
 
-static struct ng_devinfo* mixer_probe(void)
+static struct ng_devinfo* mixer_probe(int verbose)
 {
     snd_ctl_t            *ctl;
     snd_ctl_card_info_t  *cardinfo;
     char                 name[32];
     struct ng_devinfo    *info = NULL;
-    int                  card, n;
+    int                  card, n, err;
 
     snd_ctl_card_info_alloca(&cardinfo);
 
@@ -415,8 +418,11 @@ static struct ng_devinfo* mixer_probe(void)
 	if (card < 0)
 	    break;
 	sprintf(name,"hw:%d",card);
-	if (0 != snd_ctl_open(&ctl,name,SND_CTL_NONBLOCK))
+	if (0 != (err = snd_ctl_open(&ctl,name,SND_CTL_NONBLOCK))) {
+	    if (verbose)
+		fprintf(stderr,"alsa: [%s]: %s\n", name, snd_strerror(err));
 	    continue;
+	}
 	snd_ctl_card_info(ctl,cardinfo);
 
 	info = realloc(info,sizeof(*info) * (n+2));

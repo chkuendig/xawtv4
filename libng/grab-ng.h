@@ -335,7 +335,7 @@ struct ng_vid_driver {
     const char *name;
 
     /* open/close */
-    struct ng_devinfo* (*probe)(void);
+    struct ng_devinfo* (*probe)(int debug);
     void*  (*init)(char *device);
     int    (*open)(void *handle);
     int    (*close)(void *handle);
@@ -370,7 +370,7 @@ struct ng_dsp_driver {
     const char            *name;
 
     /* open/close */
-    struct ng_devinfo*    (*probe)(int record);
+    struct ng_devinfo*    (*probe)(int record, int debug);
     void*                 (*init)(char *device, int record);
     int                   (*open)(void *handle);
     int                   (*close)(void *handle);
@@ -391,7 +391,7 @@ struct ng_dsp_driver {
 
 struct ng_mix_driver {
     const char            *name;
-    struct ng_devinfo*    (*probe)(void);
+    struct ng_devinfo*    (*probe)(int debug);
     struct ng_devinfo*    (*channels)(char *device);
     void*                 (*open)(char *device);
     struct ng_attribute*  (*volctl)(void *handle, char *channel);
@@ -402,7 +402,8 @@ struct ng_mix_driver {
 
 struct ng_devinfo {
     char  device[32];
-    char  name[64];
+    char  name[32];
+    char  bus[32];
     int   flags;
 };
 

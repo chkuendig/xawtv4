@@ -35,8 +35,10 @@
 /* global variables                                                       */
 
 struct bsd_handle {
-    int fd;
-    int tfd;
+    int                     fd;
+    int                     tfd;
+    char                    *device;
+    char                    *tdevice;
 
     /* formats */
     int                     pf_count;
@@ -69,8 +71,12 @@ struct bsd_handle {
 /* prototypes                                                             */
 
 /* open/close */
-static void*   bsd_open(char *device);
+static void*   bsd_init(char *device);
+static int     bsd_open(void *handle);
 static int     bsd_close(void *handle);
+static int     bsd_fini(void *handle);
+static char*   bsd_devname(void *handle);
+static struct ng_devinfo* bsd_probe(int verbose);
 
 /* attributes */
 static int     bsd_flags(void *handle);
@@ -98,9 +104,14 @@ static int bsd_tuned(void *handle);
 
 struct ng_vid_driver bsd_driver = {
     .name          = "bktr",
+
+    .init          = bsd_init,
     .open          = bsd_open,
     .close         = bsd_close,
-
+    .fini          = bsd_fini,
+    .devname       = bsd_devname,
+    .probe         = bsd_probe,
+    
     .capabilities  = bsd_flags,
     .list_attrs    = bsd_attrs,
 
@@ -332,8 +343,79 @@ bsd_print_format(struct meteor_pixfmt *pf, int format)
 
 /* ---------------------------------------------------------------------- */
 
+static int
+bsd_open(void *handle)
+{
+    struct bsd_handle *h = handle;
+
+    BUG_ON(h->fd != -1,"device is open");
+    if (ng_debug)
+	fprintf(stderr, "bktr: open\n");
+
+    if (-1 == (h->fd = open(h->device,O_RDONLY))) {
+	fprintf(stderr,"bktr: open %s: %s\n", h->device, strerror(errno));
+	goto err1;
+    }
+    if (-1 == (h->tfd = open(h->tdevice,O_RDONLY))) {
+	fprintf(stderr,"bktr: open %s: %s\n", h->tdevice, strerror(errno));
+	goto err2;
+    }
+    h->map = mmap(0,768*576*4, PROT_READ, MAP_SHARED, h->fd, 0);
+    if (MAP_FAILED == h->map) {
+	perror("bktr: mmap");
+	h->map = NULL;
+	goto err3;
+    }
+    return 0;
+
+ err3:
+    close(h->tfd);
+    h->tfd = -1;
+ err2:
+    close(h->fd);
+    h->fd = -1;
+ err1:
+    return -1;
+}
+
+static int
+bsd_close(void *handle)
+{
+    struct bsd_handle *h = handle;
+
+    BUG_ON(h->fd == -1,"device not open");
+    if (ng_debug)
+	fprintf(stderr, "bktr: close\n");
+    close(h->fd);
+    if (-1 != h->tfd)
+	close(h->tfd);
+    if (NULL != h->map)
+	munmap(h->map,768*576*4);
+    h->fd  = -1;
+    h->tfd = -1;
+    return 0;
+}
+
+static int
+bsd_fini(void *handle)
+{
+    struct bsd_handle *h = handle;
+
+    BUG_ON(h->fd != -1,"device is open");
+    if (ng_debug)
+	fprintf(stderr, "bktr: fini\n");
+    if (h->device)
+	free(h->device);
+    if (h->tdevice)
+	free(h->tdevice);
+    if (h->attr)
+	free(h->attr);
+    free(h);
+    return 0;
+}
+
 static void*
-bsd_open(char *filename)
+bsd_init(char *filename)
 {
     struct bsd_handle *h;
     int format,i;
@@ -342,11 +424,13 @@ bsd_open(char *filename)
     if (NULL == h)
 	return NULL;
     memset(h,0,sizeof(*h));
-    
-    if (-1 == (h->fd = open(filename,O_RDONLY))) {
-	fprintf(stderr,"bktr: open %s: %s\n", filename,strerror(errno));
-	goto err;
-    }
+    h->fd      = -1;
+    h->tfd     = -1;
+    h->device  = strdup(filename);
+    h->tdevice = strdup("/dev/tuner0");  // FIXME
+
+    if (-1 == bsd_open(h))
+	goto err1;
 
     /* video formats */
     for (format = 0; format < VIDEO_FMT_COUNT; format++)
@@ -358,7 +442,7 @@ bsd_open(char *filename)
 	    if (ng_debug)
 		perror("bktr: ioctl METEORGSUPPIXFMT");
 	    if (0 == h->pf_count)
-		goto err;
+		goto err2;
 	    break;
 	}
 	format = -1;
@@ -408,16 +492,7 @@ bsd_open(char *filename)
 	if (ng_debug)
 	  bsd_print_format(h->pf+h->pf_count,format);
     }
-
-    h->map = mmap(0,768*576*4, PROT_READ, MAP_SHARED, h->fd, 0);
-    if ((unsigned char*)-1 == h->map) {
-	perror("bktr: mmap");
-	h->map = NULL;
-    }
-
-    if (-1 == (h->tfd = open("/dev/tuner0",O_RDONLY))) {
-	fprintf(stderr,"bktr: open %s: %s\n", "/dev/tuner0",strerror(errno));
-    }
+    bsd_close(h);
     siginit();
 
     h->attr = malloc(sizeof(bsd_attr));
@@ -427,31 +502,41 @@ bsd_open(char *filename)
 
     return h;
 
- err:
-    if (-1 != h->fd)
-	close(h->fd);
-    if (-1 != h->tfd)
-	close(h->tfd);
-    if (h)
-	free(h);
+ err2:
+    bsd_close(h);
+ err1:
+    bsd_fini(h);
     return NULL;
 }
 
-static int
-bsd_close(void *handle)
+static char*
+bsd_devname(void *handle)
 {
-    struct bsd_handle *h = handle;
+    return "bsd bkdr device";
+}
 
-    if (ng_debug)
-	fprintf(stderr, "bktr: close\n");
-
-    close(h->fd);
-    if (-1 != h->tfd)
-	close(h->tfd);
-    if (NULL != h->map)
-	munmap(h->map,768*576*4);
-    free(h);
-    return 0;
+static struct ng_devinfo* bsd_probe(void)
+{
+    struct ng_devinfo *info = NULL;
+    int i,n,fd,status;
+    
+    n = 0;
+    for (i = 0; NULL != ng_dev.video_scan[i]; i++) {
+	fd = open(ng_dev.video_scan[i], O_RDONLY);
+	if (-1 == fd)
+	    continue;
+	if (-1 == ioctl(fd,BT848_GSTATUS,&status)) {
+	    close(fd);
+	    continue;
+	}
+	info = realloc(info,sizeof(*info) * (n+2));
+	memset(info+n,0,sizeof(*info)*2);
+	strcpy(info[n].device, ng_dev.video_scan[i]);
+	sprintf(info[n].name, ng_dev.video_scan[i]);
+	close(fd);
+	n++;
+    }
+    return info;
 }
 
 static int bsd_flags(void *handle)
@@ -505,6 +590,7 @@ static int bsd_read_attr(struct ng_attribute *attr)
     int arg, get, set, i;
     int value = -1;
 
+    BUG_ON(h->fd == -1,"device not open");
     switch (attr->id) {
     case ATTR_ID_NORM:
 	if (-1 != xioctl(h->fd,BT848GFMT,&arg))
@@ -547,6 +633,7 @@ static void bsd_write_attr(struct ng_attribute *attr, int value)
     struct bsd_handle *h = attr->handle;
     int arg, get, set;
 
+    BUG_ON(h->fd == -1,"device not open");
     switch (attr->id) {
     case ATTR_ID_NORM:
 	xioctl(h->fd,BT848SFMT,&norms_map[value]);
@@ -580,6 +667,7 @@ static unsigned long bsd_getfreq(void *handle)
     struct bsd_handle *h = handle;
     unsigned long freq = 0;
 
+    BUG_ON(h->fd == -1,"device not open");
     if (-1 == ioctl(h->tfd, TVTUNER_GETFREQ, &freq))
 	perror("bktr: ioctl TVTUNER_GETFREQ");
     if (ng_debug)
@@ -591,6 +679,7 @@ static void bsd_setfreq(void *handle, unsigned long freq)
 {
     struct bsd_handle *h = handle;
 
+    BUG_ON(h->fd == -1,"device not open");
     if (ng_debug)
 	fprintf(stderr,"bktr: set freq: %.3f\n",(float)freq/16);
     if (-1 == ioctl(h->tfd, TVTUNER_SETFREQ, &freq))
@@ -602,6 +691,7 @@ static int bsd_tuned(void *handle)
     struct bsd_handle *h = handle;
     int signal;
 
+    BUG_ON(h->fd == -1,"device not open");
     usleep(10000);
     if (-1 == xioctl(h->tfd, TVTUNER_GETSTATUS, &signal))
         return 0;
@@ -740,6 +830,7 @@ static int bsd_setformat(void *handle, struct ng_video_fmt *fmt)
 {
     struct bsd_handle *h = handle;
 
+    BUG_ON(h->fd == -1,"device not open");
     if (-1 == h->xawtv2pf[fmt->fmtid])
 	return -1;
 
@@ -779,6 +870,7 @@ static int bsd_startvideo(void *handle, int fps, unsigned int buffers)
 {
     struct bsd_handle *h = handle;
 
+    BUG_ON(h->fd == -1,"device not open");
     set_overlay(h,0);
     h->fps = fps;
     h->start = ng_get_timestamp();
@@ -792,6 +884,7 @@ static void bsd_stopvideo(void *handle)
 {
     struct bsd_handle *h = handle;
 
+    BUG_ON(h->fd == -1,"device not open");
     h->fps = 0;
     set_capture(h,0);
     xioctl(h->fd, METEORCAPTUR, &stop);
@@ -806,8 +899,9 @@ static struct ng_video_buf* bsd_nextframe(void *handle)
     int size;
     sigset_t sa_mask;
 
+    BUG_ON(h->fd == -1,"device not open");
     size = h->fmt.bytesperline * h->fmt.height;
-    buf = ng_malloc_video_buf(&h->fmt,size);
+    buf = ng_malloc_video_buf(NULL,&h->fmt);
 
     alarm(1);
     sigfillset(&sa_mask);
@@ -827,11 +921,12 @@ static struct ng_video_buf* bsd_getimage(void *handle)
     struct ng_video_buf *buf;
     int size;
 
+    BUG_ON(h->fd == -1,"device not open");
     set_overlay(h,0);
     set_capture(h,1);
 
     size = h->fmt.bytesperline * h->fmt.height;
-    buf = ng_malloc_video_buf(&h->fmt,size);
+    buf = ng_malloc_video_buf(NULL,&h->fmt);
     xioctl(h->fd, METEORCAPTUR, &single);
     memcpy(buf->data,h->map,size);
 

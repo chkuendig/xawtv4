@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -5,21 +7,47 @@
 #include <string.h>
 
 #include "grab-ng.h"
+#include "dvb.h"
+
+static int verbose;
+static int debug;
 
 /* ------------------------------------------------------------------ */
 
-static int verbose;
-
-static void
-usage(FILE *out)
+static void print_driver(const char *name)
 {
-    fprintf(out,
-	    "debug tool -- probe devices\n"
-	    "\n"
-	    "options:\n"
-	    "  -h          print this help text\n"
-	    "  -v          be verbose\n");
-};
+    // fprintf(stderr,"  [%s]\n",name);
+}
+
+static void print_devinfo(const char *driver, struct ng_devinfo *info)
+{
+    int spaces1 = 24 - strlen(driver) - strlen(info->device);
+    int spaces2 = 50 - strlen(info->name) - strlen(info->bus);
+
+    if (spaces1 < 0) spaces1 = 0;
+    if (spaces2 < 0) spaces2 = 0;
+    fprintf(stderr,"  %s:%s%*s %s%*s %s\n",
+	    driver, info->device,
+	    spaces1, "", info->name,
+	    spaces2, "", info->bus);
+}
+
+/* ------------------------------------------------------------------ */
+
+static int
+print_dvb(void)
+{
+#ifdef HAVE_DVB
+    struct ng_devinfo *info;
+    int i;
+
+    print_driver("dvb");
+    info = dvb_probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	print_devinfo("dvb",info+i);
+#endif
+    return 0;
+}
 
 static int
 print_video(struct ng_vid_driver *vid)
@@ -27,11 +55,10 @@ print_video(struct ng_vid_driver *vid)
     struct ng_devinfo    *info;
     int i;
 
-    fprintf(stderr,"  %s ...\n",vid->name);
-    info = vid->probe();
+    print_driver(vid->name);
+    info = vid->probe(debug);
     for (i = 0; info && 0 != strlen(info[i].name); i++)
-	fprintf(stderr,"    %-16s - %s\n",
-		info[i].device, info[i].name);
+	print_devinfo(vid->name,info+i);
     return 0;
 }
 
@@ -41,11 +68,10 @@ print_dsp(struct ng_dsp_driver *dsp, int record)
     struct ng_devinfo    *info;
     int i;
 
-    fprintf(stderr,"  %s ...\n",dsp->name);
-    info = dsp->probe(record);
+    print_driver(dsp->name);
+    info = dsp->probe(record,debug);
     for (i = 0; info && 0 != strlen(info[i].name); i++)
-	fprintf(stderr,"    %-16s - %s\n",
-		info[i].device, info[i].name);
+	print_devinfo(dsp->name,info+i);
     return 0;
 }
 
@@ -56,11 +82,10 @@ print_mix(struct ng_mix_driver *mix)
     struct ng_devinfo    *elem;
     int i,j;
 
-    fprintf(stderr,"  %s ...\n",mix->name);
-    info = mix->probe();
+    print_driver(mix->name);
+    info = mix->probe(debug);
     for (i = 0; info && 0 != strlen(info[i].name); i++) {
-	fprintf(stderr,"    %-16s - %s\n",
-		info[i].device, info[i].name);
+	print_devinfo(mix->name,info+i);
 	if (verbose) {
 	    elem = mix->channels(info[i].device);
 	    for (j = 0; elem && 0 != strlen(elem[j].name); j++)
@@ -70,6 +95,20 @@ print_mix(struct ng_mix_driver *mix)
     }
     return 0;
 }
+
+/* ------------------------------------------------------------------ */
+
+static void
+usage(FILE *out)
+{
+    fprintf(out,
+	    "debug tool -- probe devices\n"
+	    "\n"
+	    "options:\n"
+	    "  -h          print this help text\n"
+	    "  -v          be verbose\n"
+	    "  -d          debug messages\n");
+};
 
 int main(int argc, char *argv[])
 {
@@ -81,11 +120,14 @@ int main(int argc, char *argv[])
 
     ng_init();
     for (;;) {
-	if (-1 == (c = getopt(argc, argv, "hv")))
+	if (-1 == (c = getopt(argc, argv, "hvd")))
 	    break;
 	switch (c) {
 	case 'v':
 	    verbose = 1;
+	    break;
+	case 'd':
+	    debug = 1;
 	    break;
 	case 'h':
 	    usage(stdout);
@@ -96,6 +138,11 @@ int main(int argc, char *argv[])
 	}
     }
     
+    /* dvb devices */
+    fprintf(stderr,"probing dvb devices ...\n");
+    print_dvb();
+    fprintf(stderr,"\n");
+
     /* video devices */
     fprintf(stderr,"probing video devices ...\n");
     list_for_each(item,&ng_vid_drivers) {

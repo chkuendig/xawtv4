@@ -39,7 +39,7 @@ static int     v4l_close(void *handle);
 static int     v4l_fini(void *handle);
 
 static char*   v4l_devname(void *handle);
-static struct ng_devinfo* v4l_probe(void);
+static struct ng_devinfo* v4l_probe(int verbose);
 
 /* attributes */
 static int     v4l_flags(void *handle);
@@ -542,7 +542,7 @@ v4l_devname(void *handle)
     return h->capability.name;
 }
 
-static struct ng_devinfo* v4l_probe(void)
+static struct ng_devinfo* v4l_probe(int verbose)
 {
     struct ng_devinfo *info = NULL;
     struct video_capability cap;
@@ -550,10 +550,13 @@ static struct ng_devinfo* v4l_probe(void)
 
     n = 0;
     for (i = 0; NULL != ng_dev.video_scan[i]; i++) {
-	fd = ng_chardev_open(ng_dev.video_scan[i], O_RDONLY | O_NONBLOCK, 81, 0);
+	fd = ng_chardev_open(ng_dev.video_scan[i], O_RDONLY | O_NONBLOCK,
+			     81, verbose);
 	if (-1 == fd)
 	    continue;
 	if (-1 == xioctl(fd,VIDIOCGCAP,&cap)) {
+	    if (verbose)
+		perror("ioctl VIDIOCGCAP");
 	    close(fd);
 	    continue;
 	}

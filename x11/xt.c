@@ -59,6 +59,7 @@
 #include "tuning.h"
 #include "event.h"
 #include "av-sync.h"
+#include "dvb.h"
 
 /* jwz */
 #include "remote.h"
@@ -103,6 +104,7 @@ int                randr_evbase;
 static Widget on_label;
 static XtIntervalId title_timer, on_timer;
 static char default_title[256] = "???";
+static char *pick_device_new = NULL;
 
 #if 0
 static int zap_start,zap_fast;
@@ -1212,10 +1214,8 @@ void pick_device_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 {
     if (debug)
 	fprintf(stderr,"switch device: %s\n",XtName(widget));
-    grabber_fini();
-    grabber_init(XtName(widget));
-    if (NULL != curr_station)
-	tune_station(curr_station);
+    pick_device_new = XtName(widget);
+    command_pending = 1;
 }
 
 /*----------------------------------------------------------------------*/
@@ -1382,13 +1382,26 @@ grabber_init(char *dev)
     audio_on();
 
     if (devs.video.type != NG_DEV_NONE) {
+	/* init v4l device */
 	if (NULL != (val = cfg_get_str(O_TVNORM)))
 	    do_va_cmd(2,"setnorm",val);
 	if (NULL != (val = cfg_get_str(O_INPUT)))
 	    do_va_cmd(2,"setinput",val);
 	if (devs.video.flags & CAN_CAPTURE)
 	    display_mode = DISPLAY_GRAB;
+
+    } else if (NULL != devs.dvb) {
+	/* init dvb device */
+	display_mode = DISPLAY_DVB;
+
+    } else {
+	display_mode = DISPLAY_NONE;
+
     }
+
+    /* retune */
+    if (NULL != curr_station)
+	do_va_cmd(2,"setstation",curr_station);
 }
 
 void
@@ -1955,7 +1968,6 @@ grabdisplay_loop(Widget widget, struct blit_handle *blit)
     struct media_stream mm;
     
     memset(&mm,0,sizeof(mm));
-    
     mm.blit = blit;
     mm.speed = 0;
     
@@ -1976,6 +1988,59 @@ grabdisplay_loop(Widget widget, struct blit_handle *blit)
     ng_dev_close(&devs.video);
     return;
 }
+
+#ifdef HAVE_DVB
+
+static void
+dvb_loop(Widget widget, struct blit_handle *blit)
+{
+    char path[64];
+    struct media_stream mm;
+    struct ng_audio_fmt *afmt;
+    struct ng_video_fmt *vfmt;
+    
+    memset(&mm,0,sizeof(mm));
+    mm.blit = blit;
+    mm.speed = 1;
+
+    if (!dvb_frontend_is_locked(devs.dvb))
+	return;
+    
+    mm.reader = ng_find_reader_name("mpeg-ts");
+    if (NULL == mm.reader) {
+	fprintf(stderr,"Oops: transport stream parser not found\n");
+	return;
+    }
+
+    snprintf(path,sizeof(path),"%s/dvr0",devs.dvbadapter);
+    mm.rhandle = mm.reader->rd_open(path);
+    if (NULL == mm.rhandle) {
+	fprintf(stderr,"can't open: %s\n",path);
+	return;
+    }
+
+    /* audio + video setup */
+    vfmt = mm.reader->rd_vfmt(mm.rhandle,NULL,0);
+    if (vfmt && (0 == vfmt->width || 0 == vfmt->height))
+	vfmt = NULL;
+    afmt = mm.reader->rd_afmt(mm.rhandle);
+
+    if (vfmt)
+	av_media_reader_video(&mm);
+    if (afmt)
+	av_media_reader_audio(&mm,afmt);
+
+    /* go playback stuff */
+    av_media_mainloop(&mm);
+
+    /* cleanup */
+    BUG_ON(NULL != mm.as,"mm.as isn't NULL");
+    BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
+    mm.reader->rd_close(mm.rhandle);
+    return;
+}
+
+#endif
 
 int xt_main_loop()
 {
@@ -1999,11 +2064,19 @@ int xt_main_loop()
 	if (exit_application)
 	    break;
 
+	/* switch to another device */
+	if (pick_device_new) {
+	    grabber_fini();
+	    grabber_init(pick_device_new);
+	    pick_device_new = NULL;
+	}
+	
 	/* handle all outstanding events */
 	queue_run();
 	while (0 != (x11mask = XtAppPending(app_context)))
 	    XtAppProcessEvent(app_context,x11mask);
-	
+
+	/* media display */
 	switch (display_mode) {
 	case DISPLAY_NONE:
 	    if (debug)
@@ -2013,6 +2086,12 @@ int xt_main_loop()
 	    if (devs.video.type != NG_DEV_NONE)
 		grabdisplay_loop(tv,blit);
 	    break;
+#ifdef HAVE_DVB
+	case DISPLAY_DVB:
+	    if (devs.dvb)
+		dvb_loop(tv,blit);
+	    break;
+#endif
 	default:
 	    fprintf(stderr,"unknown/unimplemented display mode %d\n",display_mode);
 	    break;
@@ -2024,6 +2103,7 @@ int xt_main_loop()
 	    if (True == XtDispatchEvent(&event))
 		continue;
 	}
+
     }
 
     /* cleanup */

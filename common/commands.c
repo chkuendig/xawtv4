@@ -30,6 +30,7 @@
 #include "tuning.h"
 #include "sound.h"
 #include "parseconfig.h"
+#include "dvb.h"
 
 /* ----------------------------------------------------------------------- */
 
@@ -425,11 +426,6 @@ static int tuning_handler(char *name, int argc, char **argv)
     char *list;
     int i,c,isnum;
 
-    if (0 == argc) {
-	set_title();
-	return 0;
-    }
-    
     if (cur_movie) {
 	if (display_message)
 	    display_message("grabber busy");
@@ -501,6 +497,25 @@ static int tuning_handler(char *name, int argc, char **argv)
 	}
     }
 	    
+#ifdef HAVE_DVB
+    if (devs.dvb) {
+	/* DVB tuning */
+	if (newstation) {
+	    char *vdrstation;
+
+	    vdrstation = cfg_get_str("stations", newstation, "vdr");
+	    if (NULL == vdrstation)
+		vdrstation = newstation;
+	    if (-1 == dvb_tune(devs.dvb, vdrstation)) {
+		fprintf(stderr,"tuning failed\n");
+		return -1;
+	    }
+	    curr_station = newstation;
+	}
+	return 0;
+    }
+#endif
+
     /* preprocessing ... */
     mute = find_attr_by_id(ATTR_ID_MUTE);
     if (mute && attr_read(mute))

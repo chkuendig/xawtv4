@@ -321,7 +321,8 @@ resize_event(Widget widget, XtPointer client_data, XEvent *event, Boolean *d)
     }
 #else
     /* trigger reconfigure */
-    command_pending++;
+    if (DISPLAY_GRAB == display_mode)
+	command_pending++;
 #endif
 }
 

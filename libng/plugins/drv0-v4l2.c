@@ -36,7 +36,7 @@ static void*   v4l2_init(char *device);
 static int     v4l2_open(void *handle);
 static int     v4l2_close(void *handle);
 static int     v4l2_fini(void *handle);
-static struct ng_devinfo* v4l2_probe(void);
+static struct ng_devinfo* v4l2_probe(int verbose);
 
 /* attributes */
 static char*   v4l2_devname(void *handle);
@@ -554,7 +554,7 @@ v4l2_devname(void *handle)
     return h->cap.card;
 }
 
-static struct ng_devinfo* v4l2_probe(void)
+static struct ng_devinfo* v4l2_probe(int verbose)
 {
     struct ng_devinfo *info = NULL;
     struct v4l2_capability cap;
@@ -562,17 +562,21 @@ static struct ng_devinfo* v4l2_probe(void)
 
     n = 0;
     for (i = 0; NULL != ng_dev.video_scan[i]; i++) {
-	fd = ng_chardev_open(ng_dev.video_scan[i], O_RDONLY | O_NONBLOCK, 81, 0);
+	fd = ng_chardev_open(ng_dev.video_scan[i], O_RDONLY | O_NONBLOCK,
+			     81, verbose);
 	if (-1 == fd)
 	    continue;
 	if (-1 == xioctl(fd,VIDIOC_QUERYCAP,&cap,EINVAL)) {
+	    if (verbose)
+		perror("ioctl VIDIOC_QUERYCAP");
 	    close(fd);
 	    continue;
 	}
 	info = realloc(info,sizeof(*info) * (n+2));
 	memset(info+n,0,sizeof(*info)*2);
 	strcpy(info[n].device, ng_dev.video_scan[i]);
-	sprintf(info[n].name, "%.32s @ %.16s", cap.card, cap.bus_info);
+	snprintf(info[n].name, sizeof(info[n].name), "%s", cap.card);
+	snprintf(info[n].bus,  sizeof(info[n].bus),  "%s", cap.bus_info);
 	close(fd);
 	n++;
     }

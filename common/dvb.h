@@ -1,9 +1,12 @@
 #include "parse-mpeg.h"
 
-/* open/close */
+/* open/close/probe/... */
 struct dvb_state;
-struct dvb_state* dvb_init(int adapter, int frontend, int demux);
+struct dvb_state* dvb_init(char *adapter);
+struct dvb_state* dvb_init_nr(int adapter);
 void dvb_fini(struct dvb_state *h);
+char* dvb_devname(struct dvb_state *h);
+struct ng_devinfo* dvb_probe(int debug);
 
 /* high level interface */
 int  dvb_tune(struct dvb_state *h, char *name);
