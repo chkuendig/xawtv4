@@ -27,11 +27,14 @@ gtk/xawtv: \
 	gtk/av-sync.o \
 	gtk/blit.o \
 	gtk/gui-control.o \
+	gtk/gui-analog.o \
 	$(OBJS-gtk-dvb) \
 	gtk/gui-misc.o \
 	gtk/xscreensaver.o \
 	x11/xv.o \
 	x11/atoms.o \
+	common/vbi-data.o \
+	common/vbi-dvb.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture) \
 	$(OBJS-glib-dvb)
@@ -61,6 +64,7 @@ $(TARGETS-gtk) : CFLAGS  += $(GTK_CFLAGS)
 $(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) $(THREAD_LIBS) -ljpeg -lm
 $(TARGETS-gtk) : LDFLAGS += $(DLFLAGS)
 
+gtk/xawtv      : LDLIBS  += $(VBI_LIBS)
 gtk/mtt        : LDLIBS  += $(VBI_LIBS)
 
 ifeq ($(FOUND_GTK),yes)

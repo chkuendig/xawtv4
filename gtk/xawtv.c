@@ -274,6 +274,9 @@ grabber_fini(void)
 	write_config_file("dvb-pr");
     }
 #endif
+    if (NULL != analog_win)
+	gtk_widget_destroy(analog_win);
+    
     audio_off();
     device_fini();
 }
@@ -370,11 +373,13 @@ static void new_station(void)
     gtk_label_set_text(GTK_LABEL(control_status), label);
     set_property();
     x11_station_activate(curr_station);
+    analog_set_channel(curr_channel);
 }
 
 static void new_freqtab(void)
 {
     cfg_set_str(O_FREQTAB, freqtab_get());
+    analog_set_freqtab();
 }
 
 /* ------------------------------------------------------------------------ */

@@ -9,8 +9,9 @@ struct devs {
     struct ng_devstate sndplay;
     struct ng_devstate mixer;
 
-    /* vbi don't use libng */
+    /* vbi don't use libng ... */
     char *vbidev;
+    struct vbi_state *vbi;
 
     /* ... and neither does dvb */
     char *dvbadapter;

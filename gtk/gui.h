@@ -96,3 +96,12 @@ void create_dvbtune(GtkWindow *parent);
 struct vbi_state;
 struct dvbmon;
 void vbi_create_window(struct vbi_state *vbi, struct dvbmon *dvbmon);
+
+/* ------------------------------------------------------------------- */
+/* gui-analog.c                                                        */
+
+extern GtkWidget *analog_win;
+
+void analog_create_window(void);
+void analog_set_freqtab(void);
+void analog_set_channel(char *channel);

@@ -896,15 +896,20 @@ static void menu_cb_save_stations(void)
 
 static void menu_cb_scan_analog(void)
 {
-    fprintf(stderr,"%s\n",__FUNCTION__);
+    if (NULL == analog_win) {
+	analog_create_window();
+	analog_set_freqtab();
+	analog_set_channel(curr_channel);
+    }
+    gtk_widget_show_all(analog_win);
 }
 
 #ifdef HAVE_DVB
 extern struct dvbmon *dvbmon;
 static void menu_cb_scan_dvb(void)
 {
-    fprintf(stderr,"%s\n",__FUNCTION__);
-    dvbscan_create_window(0,dvbmon);
+    if (NULL == dvbscan_win)
+	dvbscan_create_window(0,dvbmon);
     gtk_widget_show_all(dvbscan_win);
 }
 #endif

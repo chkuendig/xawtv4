@@ -611,9 +611,6 @@ void dvb_demux_filter_setup(struct dvb_state *h, int video, int audio)
 
 int dvb_demux_filter_apply(struct dvb_state *h)
 {
-    if (0 == h->video.filter.pid || 0 == h->audio.filter.pid)
-	goto oops;
-
     if (-1 == h->video.fd) {
 	h->video.fd = open(h->demux,O_RDWR);
 	if (-1 == h->video.fd) {
@@ -678,7 +675,8 @@ void dvb_demux_filter_release(struct dvb_state *h)
     ng_mpeg_apid = 0;
 }
 
-int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot)
+int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot,
+			  int timeout)
 {
     struct dmx_sct_filter_params filter;
     int fd = -1;
@@ -687,7 +685,7 @@ int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot)
     filter.pid              = pid;
     filter.filter.filter[0] = sec;
     filter.filter.mask[0]   = 0xff;
-    filter.timeout          = 60 * 1000;
+    filter.timeout          = timeout * 1000;
     filter.flags            = DMX_IMMEDIATE_START | DMX_CHECK_CRC;
     if (oneshot)
 	filter.flags       |= DMX_ONESHOT;
@@ -812,6 +810,9 @@ int dvb_start_tune_vdr(struct dvb_state *h, char *section)
 
 int dvb_finish_tune(struct dvb_state *h, int timeout)
 {
+    if (0 == h->video.filter.pid || 0 == h->audio.filter.pid)
+	return -2;
+
     if (0 == timeout) {
 	if (!dvb_frontend_is_locked(h))
 	    return -1;
@@ -873,8 +874,8 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     int sdt, pat;
 
     if (names)
-	sdt = dvb_demux_req_section(dvb, 0x11, 0x42, 1);
-    pat = dvb_demux_req_section(dvb, 0x00, 0x00, 1);
+	sdt = dvb_demux_req_section(dvb, 0x11, 0x42, 1, 60);
+    pat = dvb_demux_req_section(dvb, 0x00, 0x00, 1, 20);
 
     /* program association table */
     if (dvb_demux_get_section(&pat, buf, sizeof(buf), 1) < 0)
@@ -884,7 +885,7 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     /* program maps */
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);
-	pr->fd = dvb_demux_req_section(dvb, pr->p_pid, 2, 1);
+	pr->fd = dvb_demux_req_section(dvb, pr->p_pid, 2, 1, 20);
     }
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);
