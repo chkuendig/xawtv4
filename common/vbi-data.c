@@ -67,7 +67,11 @@ vbi_open(char *dev, char *appname, int debug, int sim, int timeout)
 	};
     } else {
 	if (NULL == vbi->cap && 0 == strncmp(dev,"/dev/dvb/",9)) {
+#ifdef HAVE_VBI_DVB2
+	    vbi->cap = vbi_capture_dvb_new2(dev,0,&vbi->err,debug);
+#else
 	    vbi->cap = vbi_capture_dvb_new(dev,16,&services,-1,&vbi->err,debug);
+#endif
 	    if (NULL != vbi->cap)
 		vbi->dvb = 1;
 	}
@@ -98,6 +102,11 @@ vbi_open(char *dev, char *appname, int debug, int sim, int timeout)
     if (NULL == vbi->sliced)
 	goto oops;
     memset(vbi->sliced,0,vbi->lines * sizeof(vbi_sliced));
+
+    vbi->tv.tv_sec  = 0;
+    vbi->tv.tv_usec = 0;
+    vbi_hasdata(vbi);
+
     vbi->tv.tv_sec  = timeout;
     vbi->tv.tv_usec = 0;
     return vbi;

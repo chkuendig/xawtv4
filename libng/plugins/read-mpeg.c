@@ -361,6 +361,8 @@ static struct ng_video_buf* mpeg_ps_vdata(void *handle, unsigned int *drop)
 		ng_release_video_buf(buf);
 		continue;
 	    }
+	    buf->info.slowdown = h->slowdown;
+	    h->slowdown = 0;
 	    return buf;
 	}
 	size = mpeg_find_ps_packet(h,0xe0,&h->video_offset);
@@ -406,6 +408,8 @@ static struct ng_audio_buf* mpeg_ps_adata(void *handle)
     
     buf->info.ts = h->audio_pts * (uint64_t)1000000 / (uint64_t)90;
     h->audio_offset += size;
+    buf->info.slowdown = h->slowdown;
+    h->slowdown = 0;
     return buf;
 }
 
@@ -598,6 +602,8 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
 		ng_release_video_buf(buf);
 		continue;
 	    }
+	    buf->info.slowdown = h->slowdown;
+	    h->slowdown = 0;
 	    return buf;
 	}
 

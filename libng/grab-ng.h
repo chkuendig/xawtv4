@@ -192,8 +192,9 @@ struct ng_video_buf {
 	int                 play_seq;
 	int                 twice;
 	enum ng_video_frame frame;
-	int                 broken;
 	enum ng_video_ratio ratio;
+	int                 broken;
+	int                 slowdown;
     } info;
 
     /*
@@ -554,7 +555,7 @@ struct ng_audio_conv {
 /* --------------------------------------------------------------------- */
 
 /* must be changed if we break compatibility */
-#define NG_PLUGIN_MAGIC 0x20040625
+#define NG_PLUGIN_MAGIC 0x20041201
 
 #define __init __attribute__ ((constructor))
 #define __fini __attribute__ ((destructor))

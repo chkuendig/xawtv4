@@ -213,7 +213,6 @@ main(int argc, char **argv)
 	    dvbmon = dvbmon_init(dvb, debug, 0, 2);
 	}
 #endif
-	vbi_hasdata(vbi);
 	ch = g_io_channel_unix_new(vbi->fd);
 	id = g_io_add_watch(ch, G_IO_IN, vbi_data, vbi);
 	if (debug)

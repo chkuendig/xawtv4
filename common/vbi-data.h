@@ -9,6 +9,11 @@
 #else
 # define HAVE_VBI_PROXY 1
 #endif
+#if (VBI_VERSION_MAJOR == 0) && (VBI_VERSION_MINOR <= 2) && (VBI_VERSION_MICRO <= 9)
+# undef HAVE_VBI_DVB2
+#else
+# define HAVE_VBI_DVB2 1
+#endif
 
 #define VBI_MAX_SUBPAGES 64
 

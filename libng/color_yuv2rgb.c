@@ -388,6 +388,37 @@ ng_yuv422p_to_lut4(void *h, struct ng_video_buf *out, struct ng_video_buf *in)
 }
 
 /* ------------------------------------------------------------------- */
+/* planar -> packed pixel                                              */
+
+#if 0 /* untested */
+static void
+yuv422p_to_yuv422(void *h, struct ng_video_buf *out, struct ng_video_buf *in)
+{
+    uint8_t *restrict y, *restrict u, *restrict v;
+    uint8_t *dp;
+    uint8_t  *restrict d;
+    unsigned int i,j;
+
+    dp = out->data;
+    y  = in->data;
+    u  = y + in->fmt.width * in->fmt.height;
+    v  = u + in->fmt.width * in->fmt.height / 2;
+
+    for (i = 0; i < in->fmt.height; i++) {
+	d = dp;
+	for (j = 0; j < in->fmt.width; j+= 2) {
+	    *(d++) = *(y++);
+	    *(d++) = *(u++);
+	    *(d++) = *(y++);
+	    *(d++) = *(v++);
+	}
+	dp += out->fmt.bytesperline;
+    }
+    out->info = in->info;
+}
+#endif
+
+/* ------------------------------------------------------------------- */
 
 static struct ng_video_conv conv_list[] = {
     {
@@ -428,6 +459,15 @@ static struct ng_video_conv conv_list[] = {
 	.p.frame        = yuv42xp_to_gray,
 	.fmtid_in	= VIDEO_YUV420P,
 	.fmtid_out	= VIDEO_GRAY,
+#if 0 /* untested */
+    },{
+	.init           = ng_conv_nop_init,
+	.p.mode         = NG_MODE_TRIVIAL,
+	.p.fini         = ng_conv_nop_fini,
+	.p.frame        = yuv422p_to_yuv422,
+	.fmtid_in	= VIDEO_YUV422P,
+	.fmtid_out	= VIDEO_YUYV,
+#endif
     }
 };
 static const int nconv = sizeof(conv_list)/sizeof(struct ng_video_conv);

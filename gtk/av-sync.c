@@ -290,9 +290,17 @@ void av_sync_video(struct media_stream *mm)
 	return;
     }
 
-    if (NULL == mm->abuf && 1 == mm->vbuf->info.play_seq) {
-	/* initial sync with real if not synced with audio */
-	mm->drift = mm->vbuf->info.ts;
+    if (NULL == mm->abuf) {
+	if (1 == mm->vbuf->info.play_seq) {
+	    /* initial sync with real if not synced with audio */
+	    mm->drift = mm->vbuf->info.ts;
+	}
+	if (mm->vbuf->info.slowdown) {
+	    /* fine adjustments for buffering / latency */
+	    mm->drift -= 50 * 1000000;
+	    if (debug)
+		fprintf(stderr,"noaudio slowdown\n");
+	}
     }
 
     switch (mm->speed) {
