@@ -248,7 +248,7 @@ void create_onscreen(void)
     
     on_win   = gtk_window_new(GTK_WINDOW_POPUP);
     on_label = gtk_widget_new(GTK_TYPE_LABEL,
-			      "xalign", 0,
+			      "xalign", 0.0,
 			      NULL);
     gtk_container_add(GTK_CONTAINER(on_win), on_label);
     gtk_window_set_resizable(GTK_WINDOW(on_win), TRUE);
@@ -820,7 +820,7 @@ void create_control(void)
     /* other widgets */
     control_status = gtk_widget_new(GTK_TYPE_LABEL,
 				    "label",  "status line",
-				    "xalign", 0,
+				    "xalign", 0.0,
 				    NULL);
 
     /* Make a vbox and put stuff in */
