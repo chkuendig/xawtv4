@@ -144,7 +144,6 @@ struct mpeg_handle {
 
     /* parser state */
     int                   init;
-    uint64_t              start_pts;
     uint64_t              video_pts;
     uint64_t              video_pts_last;
     uint64_t              audio_pts;
@@ -186,6 +185,7 @@ size_t mpeg_parse_pes_packet(struct mpeg_handle *h, unsigned char *packet,
 int mpeg_get_audio_rate(unsigned char *header);
 int mpeg_get_video_fmt(struct mpeg_handle *h, unsigned char *header);
 int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header);
+unsigned char* mpeg_find_audio_hdr(unsigned char *buf, int off, int size);
 
 /* program stream */
 size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos);

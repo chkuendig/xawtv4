@@ -353,7 +353,9 @@ unsigned char* mpeg_get_data(struct mpeg_handle *h, off_t pos, size_t size)
 	    low = h->video_offset;
     }
     
-    if (low > h->boff + h->balloc*3/4  &&  !h->beof) {
+    if (low > h->boff + h->balloc*3/4  &&
+	low < h->boff + h->bsize       &&
+	!h->beof) {
 	/* move data window */
 	rdbytes = (low - h->boff) & ~(h->pgsize - 1);
 	memmove(h->buffer, h->buffer + rdbytes, h->balloc - rdbytes);
@@ -511,10 +513,8 @@ size_t mpeg_parse_pes_packet(struct mpeg_handle *h, unsigned char *packet,
     }
     if (pts) {
 	if (ng_debug > 1)
-	    fprintf(stderr,"pts: 0x%09" PRIx64 " | id 0x%02x %s\n",
-		    pts,id,pes_s[id]);
-	if (0 == h->start_pts)
-	    h->start_pts = pts;
+	    fprintf(stderr,"pts: %8.3f | id 0x%02x %s\n",
+		    pts/90000.0,id,pes_s[id]);
 	if (ts)
 	    *ts = pts;
     }
@@ -547,11 +547,24 @@ int mpeg_get_audio_rate(unsigned char *header)
     return rate;
 }
 
+unsigned char* mpeg_find_audio_hdr(unsigned char *buf, int off, int size)
+{
+    int i;
+    
+    for (i = off; i < size-1; i++) {
+	if (0xff != buf[i])
+	    continue;
+	if (0xf0 == (buf[i+1] & 0xf0))
+	    return buf+i;
+    }
+    return NULL;
+}
+
 int mpeg_get_video_fmt(struct mpeg_handle *h, unsigned char *header)
 {
     if (header[0] != 0x00  ||  header[1] != 0x00  ||
 	header[2] != 0x01  ||  header[3] != 0xb3)
-	return 0;
+	return -1;
     h->vfmt.fmtid  = VIDEO_MPEG;
     h->vfmt.width  = (mpeg_getbits(header,32,12) + 15) & ~15;
     h->vfmt.height = (mpeg_getbits(header,44,12) + 15) & ~15;

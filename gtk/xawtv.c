@@ -448,33 +448,99 @@ static void new_freqtab(void)
 /* ------------------------------------------------------------------------ */
 /* main loop                                                                */
 
+static struct media_stream *mm;
+int recording = 0;
+
+static int mm_init(struct blit_handle *blit, int speed)
+{
+    mm = malloc(sizeof(*mm));
+    if (NULL == mm)
+	return -1;
+    memset(mm,0,sizeof(*mm));
+    mm->blit  = blit;
+    mm->speed = speed;
+    return 0;
+}
+
+static void mm_fini(void)
+{
+    BUG_ON(NULL != mm->as,"mm->as isn't NULL");
+    BUG_ON(NULL != mm->vs,"mm->vs isn't NULL");
+    mm_rec_stop();
+    if (mm->reader && mm->rhandle)
+	mm->reader->rd_close(mm->rhandle);
+    free(mm);
+    mm = NULL;
+}
+
+int mm_rec_start(void)
+{
+    struct epgitem *epg = NULL;
+    struct ng_writer *wr;
+    char *recfile;
+
+    if (NULL == mm)
+	return -1;
+    if (mm->writer)
+	return -1;
+    
+    switch (display_mode) {
+    case DISPLAY_DVB:
+	if (curr_tsid && curr_pnr)
+	    epg = eit_lookup(curr_tsid, curr_pnr, time(NULL), epg_debug);
+	recfile = record_filename("tv", curr_station,
+				  epg ? epg->name : NULL, "mpeg");
+	wr = ng_find_writer_name("mpeg-ps");
+	break;
+    default:
+	recfile = NULL;
+	wr = NULL;
+    }
+    if (!wr)
+	return -1;
+    
+    if (0 != av_media_start_recording(mm, wr, recfile))
+	return -1;
+    recording = 1;
+    return 0;
+}
+
+int mm_rec_stop(void)
+{
+    if (NULL == mm)
+	return -1;
+    if (NULL == mm->writer)
+	return -1;
+
+    av_media_stop_recording(mm);
+    mm->writer = NULL;
+    recording = 0;
+    return 0;
+}
+
 static void
 grabdisplay_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 {
-    struct media_stream mm;
-
     if (debug)
 	fprintf(stderr,"%s: enter\n",__FUNCTION__);
-    
-    memset(&mm,0,sizeof(mm));
-    mm.blit = blit;
-    mm.speed = 0;
+
+    if (0 != mm_init(blit,0))
+	return;
     
     /* video setup */
     ng_dev_open(&devs.video);
-    av_media_setup_video_grab(&mm,widget);
+    av_media_setup_video_grab(mm,widget);
     
     /* go playback stuff */
-    if (mm.vs) {
+    if (mm->vs) {
 	devs.video.v->startvideo(devs.video.handle,-1,2);
-	av_media_mainloop(context, &mm);
+	av_media_mainloop(context, mm);
 	devs.video.v->stopvideo(devs.video.handle);
     }
 
     /* cleanup */
-    BUG_ON(NULL != mm.as,"mm.as isn't NULL");
-    BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
     ng_dev_close(&devs.video);
+    mm_fini();
 
     if (debug)
 	fprintf(stderr,"%s: exit\n",__FUNCTION__);
@@ -514,7 +580,6 @@ static void
 dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 {
     char path[64];
-    struct media_stream mm;
     struct ng_audio_fmt *afmt;
     struct ng_video_fmt *vfmt;
 
@@ -527,55 +592,53 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 	fprintf(stderr,"%s: enter (%d/%d)\n",__FUNCTION__,
 		ng_mpeg_vpid, ng_mpeg_apid);
 
-    memset(&mm,0,sizeof(mm));
-    mm.blit = blit;
-    mm.speed = 1;
-
     if (!dvb_frontend_is_locked(devs.dvb))
 	return;
-    
-    mm.reader = ng_find_reader_name("mpeg-ts");
-    if (NULL == mm.reader) {
+
+    if (0 != mm_init(blit,1))
+	return;
+    mm->reader = ng_find_reader_name("mpeg-ts");
+    if (NULL == mm->reader) {
 	fprintf(stderr,"Oops: transport stream parser not found\n");
+	mm_fini();
 	return;
     }
 
     snprintf(path,sizeof(path),"%s/dvr0",devs.dvbadapter);
-    mm.rhandle = mm.reader->rd_open(path);
-    if (NULL == mm.rhandle) {
+    mm->rhandle = mm->reader->rd_open(path);
+    if (NULL == mm->rhandle) {
 	fprintf(stderr,"can't open: %s\n",path);
+	mm_fini();
 	return;
     }
 
     /* audio + video setup */
-    vfmt = mm.reader->rd_vfmt(mm.rhandle,NULL,0);
+    vfmt = mm->reader->rd_vfmt(mm->rhandle,NULL,0);
     if (vfmt && (0 == vfmt->width || 0 == vfmt->height))
 	vfmt = NULL;
-    afmt = mm.reader->rd_afmt(mm.rhandle);
+    afmt = mm->reader->rd_afmt(mm->rhandle);
 
     if (vfmt)
-	av_media_setup_video_reader(&mm);
+	av_media_setup_video_reader(mm);
     if (afmt)
-	av_media_setup_audio_reader(&mm,afmt);
+	av_media_setup_audio_reader(mm,afmt);
 
+#if 0
     /* recording */
     if (recording) {
 	struct ng_writer *wr = ng_find_writer_name("mpeg-ps");
 	char *station = curr_station ? curr_station : "unknown";
 	char *recfile = record_filename("television", station, "mpeg");
 	if (wr)
-	    av_media_start_recording(&mm, wr, recfile);
+	    av_media_start_recording(mm, wr, recfile);
     }
+#endif
 
     /* go playback stuff */
-    av_media_mainloop(context, &mm);
+    av_media_mainloop(context, mm);
 
     /* cleanup */
-    BUG_ON(NULL != mm.as,"mm.as isn't NULL");
-    BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
-    mm.reader->rd_close(mm.rhandle);
-    if (mm.writer)
-	av_media_stop_recording(&mm);
+    mm_fini();
 
     if (debug)
 	fprintf(stderr,"%s: exit\n",__FUNCTION__);
@@ -587,7 +650,6 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 static void
 mpeg_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 {
-    struct media_stream mm;
     struct ng_audio_fmt *afmt;
     struct ng_video_fmt *vfmt;
     int flags = 0;
@@ -597,21 +659,21 @@ mpeg_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 	fprintf(stderr,"%s: enter (%d/%d)\n",__FUNCTION__,
 		ng_mpeg_vpid, ng_mpeg_apid);
 
-    memset(&mm,0,sizeof(mm));
-    mm.blit = blit;
-    mm.speed = 1;
+    if (0 != mm_init(blit,1))
+	return;
 
     /* find mpeg parser */
     if (devs.video.flags & CAN_MPEG_PS) {
-	mm.reader = ng_find_reader_name("mpeg-ps");
+	mm->reader = ng_find_reader_name("mpeg-ps");
 	flags     = MPEG_FLAGS_PS;
     }
     else if (devs.video.flags & CAN_MPEG_TS) {
-	mm.reader = ng_find_reader_name("mpeg-ts");
+	mm->reader = ng_find_reader_name("mpeg-ts");
 	flags     = MPEG_FLAGS_TS;
     }
-    if (NULL == mm.reader) {
+    if (NULL == mm->reader) {
 	fprintf(stderr,"Oops: mpeg stream parser not found\n");
+	mm_fini();
 	return;
     }
 
@@ -621,36 +683,37 @@ mpeg_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     if (NULL == path) {
 	fprintf(stderr,"Oops: driver mpeg setup failed\n");
 	ng_dev_close(&devs.video);
+	mm_fini();
 	return;
     }
     ng_dev_close(&devs.video);
 
-    mm.rhandle = mm.reader->rd_open(path);
-    if (NULL == mm.rhandle) {
+    mm->rhandle = mm->reader->rd_open(path);
+    if (NULL == mm->rhandle) {
 	fprintf(stderr,"can't open: %s\n",path);
+	mm_fini();
 	return;
     }
 
     /* audio + video setup */
-    vfmt = mm.reader->rd_vfmt(mm.rhandle,NULL,0);
+    vfmt = mm->reader->rd_vfmt(mm->rhandle,NULL,0);
     if (vfmt && (0 == vfmt->width || 0 == vfmt->height))
 	vfmt = NULL;
-    afmt = mm.reader->rd_afmt(mm.rhandle);
+    afmt = mm->reader->rd_afmt(mm->rhandle);
 
     if (vfmt)
-	av_media_setup_video_reader(&mm);
+	av_media_setup_video_reader(mm);
     if (afmt)
-	av_media_setup_audio_reader(&mm,afmt);
+	av_media_setup_audio_reader(mm,afmt);
 
     /* go playback stuff */
-    av_media_mainloop(context, &mm);
+    av_media_mainloop(context, mm);
 
     /* cleanup */
-    BUG_ON(NULL != mm.as,"mm.as isn't NULL");
-    BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
-    mm.reader->rd_close(mm.rhandle);
+    mm_fini();
 
-    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: exit\n",__FUNCTION__);
     return;
 }
 

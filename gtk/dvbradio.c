@@ -279,10 +279,11 @@ static void menu_cb_station_prev(void)
 static void menu_cb_record_start(void)
 {
     struct ng_writer *wr = ng_find_writer_name("mp3");
-    char *recfile = record_filename("radio",current,"mp3");
+    char *recfile = record_filename("radio",current,NULL,"mp3");
 
     if (mm && wr) {
-	fprintf(stderr,"start recording to %s\n", recfile);
+	if (debug)
+	    fprintf(stderr,"start recording to %s\n", recfile);
 	av_media_start_recording(mm, wr, recfile);
     }
 }
@@ -290,7 +291,8 @@ static void menu_cb_record_start(void)
 static void menu_cb_record_stop(void)
 {
     if (mm && mm->writer) {
-	fprintf(stderr,"stop recording\n");
+	if (debug)
+	    fprintf(stderr,"stop recording\n");
 	av_media_stop_recording(mm);
     }
 }
@@ -457,7 +459,7 @@ static void create_window(void)
     main_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(main_win),_(APPNAME));
     g_signal_connect(main_win, "delete-event",
-		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+		     G_CALLBACK(gtk_wm_delete_quit), NULL);
 
     /* build menus */
     accel_group = gtk_accel_group_new ();

@@ -166,14 +166,14 @@ void apply_config(void)
     event_readconfig();
 }
 
-char* record_filename(char *base, char *station, char *ext)
+char* record_filename(char *base, char *station, char *epgname, char *ext)
 {
     static char filename[256];
     struct tm *tm;
     time_t t;
     char ts[32];
     char *dest;
-    int len = 0;
+    int i, fstart, len = 0;
 
     dest = cfg_get_str(O_REC_DESTDIR);
     time(&t);
@@ -181,8 +181,21 @@ char* record_filename(char *base, char *station, char *ext)
     strftime(ts,sizeof(ts),"%Y%m%d-%H%M%S",tm);
     if (dest)
 	len = snprintf(filename,sizeof(filename),"%s/",dest);
-    snprintf(filename+len, sizeof(filename)-len, "%s-%s-%s.%s",
-	     base, station, ts, ext);
+    fstart  = len;
+
+    len += snprintf(filename+len, sizeof(filename)-len, "%s-%s",
+		    base, ts);
+    if (station)
+	len += snprintf(filename+len, sizeof(filename)-len, "-%s", station);
+    if (epgname)
+	len += snprintf(filename+len, sizeof(filename)-len, "-%s", epgname);
+    len += snprintf(filename+len, sizeof(filename)-len, ".%s",ext);
+
+    /* fixup filename */
+    for (i = fstart; filename[i] != '\0'; i++) {
+	if (filename[i] == '/')
+	    filename[i] = '_';
+    }
     return filename;
 }
 

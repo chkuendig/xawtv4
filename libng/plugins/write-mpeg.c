@@ -15,10 +15,11 @@
 #include <sys/uio.h>
 
 #include "grab-ng.h"
+#include "parse-mpeg.h"
 
 /* ----------------------------------------------------------------------- */
 
-struct mpeg_handle {
+struct mpeg_wr_handle {
     /* file name+handle */
     char   file[MAXPATHLEN];
     int    fd;
@@ -111,7 +112,7 @@ mpeg_open(char *filename, char *dummy,
 	  struct ng_video_fmt *video, const void *priv_video, int fps,
 	  struct ng_audio_fmt *audio, const void *priv_audio)
 {
-    struct mpeg_handle      *h;
+    struct mpeg_wr_handle      *h;
 
     if (NULL == filename)
 	return NULL;
@@ -144,7 +145,7 @@ mpeg_open(char *filename, char *dummy,
 static int
 mpeg_video(void *handle, struct ng_video_buf *buf)
 {
-    struct mpeg_handle *h = handle;
+    struct mpeg_wr_handle *h = handle;
     int off,size,len = 0;
     char hdr[256];
     
@@ -168,7 +169,7 @@ mpeg_video(void *handle, struct ng_video_buf *buf)
 static int
 mpeg_audio(void *handle, struct ng_audio_buf *buf)
 {
-    struct mpeg_handle *h = handle;
+    struct mpeg_wr_handle *h = handle;
     int off,size,len = 0;
     char hdr[256];
 
@@ -194,7 +195,7 @@ static int
 mpeg_close(void *handle)
 {
     static unsigned char end_code[4] = { 0x00, 0x00, 0x01, 0xb9 };
-    struct mpeg_handle *h = handle;
+    struct mpeg_wr_handle *h = handle;
 
     write(h->fd, end_code, 4);
     close(h->fd);
@@ -209,7 +210,7 @@ mp3_open(char *filename, char *dummy,
 	 struct ng_video_fmt *video, const void *priv_video, int fps,
 	 struct ng_audio_fmt *audio, const void *priv_audio)
 {
-    struct mpeg_handle      *h;
+    struct mpeg_wr_handle      *h;
 
     if (NULL == filename)
 	return NULL;
@@ -237,32 +238,26 @@ mp3_open(char *filename, char *dummy,
 static int
 mp3_audio(void *handle, struct ng_audio_buf *buf)
 {
-    struct mpeg_handle *h = handle;
+    struct mpeg_wr_handle *h = handle;
     char *hdr = NULL;
-    int i,len = 0;
+    int off;
 
     if (0 != h->afirst)
 	return write(h->fd, buf->data, buf->size);
 
     /* first blk: look for mpeg frame start */
-    for (i = 0; i < buf->size-1; i++) {
-	if ((0xff == (unsigned char)buf->data[i]) &&
-	    (0xf0 == ((unsigned char)buf->data[i] & 0xf0))) {
-	    hdr = buf->data+i;
-	    len = buf->size-i;
-	    break;
-	}
-    }
+    hdr = mpeg_find_audio_hdr(buf->data, 0, buf->size);
     if (NULL == hdr)
 	return 0;
     h->afirst++;
-    return write(h->fd, hdr, len);
+    off = hdr - buf->data;
+    return write(h->fd, hdr, buf->size - off);
 }
 
 static int
 mp3_close(void *handle)
 {
-    struct mpeg_handle *h = handle;
+    struct mpeg_wr_handle *h = handle;
 
     close(h->fd);
     free(h);

@@ -53,7 +53,6 @@ static int set_video_seq_ts(struct mpeg_handle *h, struct psc_info *psc)
 	pts    = h->pts_ref.pts + (int64_t)90000 * frames *
 	    mpeg_rate_d[h->rate] / mpeg_rate_n[h->rate];
     }
-    pts -= h->start_pts;
 
     /* set buffer */
     h->vbuf->info.ts        = pts * (uint64_t)1000000 / (uint64_t)90;
@@ -279,7 +278,7 @@ static int mpeg_close(void *handle)
 static void* mpeg_ps_open(char *moviename)
 {
     struct mpeg_handle *h;
-    unsigned char *buffer;
+    unsigned char *buffer,*hdr;
     off_t  pos,off;
     size_t size;
     int aligned;
@@ -294,23 +293,36 @@ static void* mpeg_ps_open(char *moviename)
 
     /* audio */
     pos  = 0;
-    size = mpeg_find_ps_packet(h,0xc0,&pos);
-    if (size) {
+    for (;;) {
+	size = mpeg_find_ps_packet(h,0xc0,&pos);
+	if (!size)
+	    break;
 	off = mpeg_parse_pes_packet(h, mpeg_get_data(h,pos,32),
 				    &h->audio_pts, &aligned);
 	buffer = mpeg_get_data(h,pos+off,32);
-	h->afmt.fmtid = AUDIO_MP3;
-	h->afmt.rate  = mpeg_get_audio_rate(buffer);
+	hdr = mpeg_find_audio_hdr(buffer,0,32);
+	if (hdr) {
+	    h->afmt.fmtid = AUDIO_MP3;
+	    h->afmt.rate  = mpeg_get_audio_rate(hdr);
+	    break;
+	}
+	pos += size;
     }
 
     /* video */
     pos  = 0;
-    size = mpeg_find_ps_packet(h,0xe0,&pos);
-    if (size) {
+    for (;;) {
+	size = mpeg_find_ps_packet(h,0xe0,&pos);
+	if (!size)
+	    break;
 	off = mpeg_parse_pes_packet(h, mpeg_get_data(h,pos,32),
 				    &h->video_pts, &aligned);
 	buffer = mpeg_get_data(h,pos+off,32);
-	mpeg_get_video_fmt(h,buffer);
+	if (0 == mpeg_get_video_fmt(h,buffer)) {
+	    h->video_offset = pos;
+	    break;
+	}
+	pos += size;
     }
 
     /* init video fifo */
@@ -391,7 +403,7 @@ static struct ng_audio_buf* mpeg_ps_adata(void *handle)
 		" / size 0x%" PRIx64 " / off 0x%" PRIx64 "\n",
 		(int64_t)h->audio_offset,(int64_t)size,(int64_t)off);
     
-    buf->info.ts = (h->audio_pts - h->start_pts) * (uint64_t)1000000 / (uint64_t)90;
+    buf->info.ts = h->audio_pts * (uint64_t)1000000 / (uint64_t)90;
     h->audio_offset += size;
     return buf;
 }
@@ -480,15 +492,8 @@ static void* mpeg_ts_open(char *moviename)
 		h->afmt.rate  = mpeg_get_audio_rate(h->ts.data+off);
 	    } else {
 		// must search for mpeg audio header
-		char *hdr = NULL;
-		int i;
-		for (i = off; i < h->ts.size-1; i++) {
-		    if ((0xff == h->ts.data[i]) &&
-			(0xf0 == (h->ts.data[i] & 0xf0))) {
-			hdr = h->ts.data+i;
-			break;
-		    }
-		}
+		char *hdr;
+		hdr = mpeg_find_audio_hdr(h->ts.data, off, h->ts.size);
 		if (NULL == hdr)
 		    continue;
 		h->afmt.fmtid = AUDIO_MP3;
@@ -767,7 +772,7 @@ static struct ng_audio_buf* mpeg_ts_adata(void *handle)
     fprintf(stderr,"--\n");
 #endif
     
-    buf->info.ts = (h->audio_pts - h->start_pts) * (uint64_t)1000000 / (uint64_t)90;
+    buf->info.ts = h->audio_pts * (uint64_t)1000000 / (uint64_t)90;
     buf->info.slowdown = h->slowdown;
     h->slowdown = 0;
     return buf;

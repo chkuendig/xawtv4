@@ -29,7 +29,6 @@ int           fs;
 
 char          *curr_station;
 char          *pick_device_new;
-int           recording;
 
 GtkWidget     *main_win;
 GtkWidget     *control_win;
@@ -454,13 +453,12 @@ static void menu_cb_start_stop_record()
 {
     if (debug)
 	fprintf(stderr,"%s\n", __FUNCTION__);
-    command_pending++;
     if (recording) {
-	recording = 0;
-	display_message("recording stopped");
+	if (0 == mm_rec_stop())
+	    display_message("recording stopped");
     } else {
-	recording = 1;
-	display_message("recording started");
+	if (0 == mm_rec_start())
+	    display_message("recording started");
     }
 }
 

@@ -62,7 +62,6 @@ extern int           fs;
 
 extern char          *curr_station;
 extern char          *pick_device_new;
-extern int           recording;
 
 extern GtkWidget     *control_win;
 extern GtkWidget     *main_win;
@@ -109,3 +108,11 @@ extern GtkWidget *analog_win;
 void analog_create_window(void);
 void analog_set_freqtab(void);
 void analog_set_channel(char *channel);
+
+/* ------------------------------------------------------------------- */
+/* xawtv.c                                                             */
+
+extern int           recording;
+
+int mm_rec_start(void);
+int mm_rec_stop(void);
