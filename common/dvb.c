@@ -154,7 +154,6 @@ struct dvb_state {
     /* device file names */
     char                             frontend[32];
     char                             demux[32];
-    char                             sec[32];
 
     /* frontend */
     int                              fd;
@@ -170,17 +169,11 @@ struct dvb_state {
 /* ----------------------------------------------------------------------- */
 /* handle diseqc                                                           */
 
-static int exec_diseqc(struct dvb_state *dvb, char *action)
+static int exec_diseqc(int fd, char *action)
 {
     struct dvb_diseqc_master_cmd cmd;
-    int fd,wait,len,done;
+    int wait,len,done;
     int c0,c1,c2,c3;
-
-    fd = open(dvb->sec,O_RDONLY);
-    if (-1 == fd) {
-	fprintf(stderr,"open %s: %s\n", dvb->sec, strerror(errno));
-	return -1;
-    }
 
     if (dvb_debug)
 	fprintf(stderr,"diseqc:");
@@ -266,7 +259,6 @@ static int exec_diseqc(struct dvb_state *dvb, char *action)
     
     if (dvb_debug)
 	fprintf(stderr,"\n");
-    close(fd);
     return 0;
 }
 
@@ -316,6 +308,9 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
     int lof;
     int val;
 
+    if (-1 == dvb_frontend_open(h))
+	return -1;
+
     switch (h->info.type) {
     case FE_QPSK:
 	diseqc = find_diseqc(name);
@@ -323,7 +318,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	    fprintf(stderr,"no diseqc info for \"%s\"\n",name);
 	    return -1;
 	}
-	exec_diseqc(h,cfg_get_str("diseqc", diseqc, "action"));
+	exec_diseqc(h->fd,cfg_get_str("diseqc", diseqc, "action"));
 
 	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
@@ -402,8 +397,6 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	break;
     }
 
-    if (-1 == dvb_frontend_open(h))
-	return -1;
     if (0 == memcmp(&h->p, &h->plast, sizeof(h->plast))) {
 	if (dvb_frontend_is_locked(h)) {
 	    /* same frequency and frontend still locked */
@@ -647,7 +640,6 @@ struct dvb_state* dvb_init(char *adapter)
 
     snprintf(h->frontend, sizeof(h->frontend),"%s/frontend0", adapter);
     snprintf(h->demux,    sizeof(h->demux),   "%s/demux0",    adapter);
-    snprintf(h->sec,      sizeof(h->sec),     "%s/sec0",      adapter);
 
     h->fd = open(h->frontend,O_RDWR);
     if (-1 == h->fd) {
