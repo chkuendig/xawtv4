@@ -4,6 +4,10 @@ some dvb support notes
 
 It starts working these days, don't expect to much yet ...
 
+Many features from the xawtv 3.x series are not available (yet) right
+now.  They have been simply disabled because the major restruction of
+the codebase broke them and are not fixed and/or reimplemented yet.
+
 compile time dependencies:
 	mpeg audio  -  mad (http://www.underbit.com/products/mad/).
 	mpeg video  -  libmpeg2 (http://libmpeg2.sf.net/).
@@ -13,18 +17,37 @@ compile time dependencies:
 watch tv
 --------
 
-Right now only the movie player utility "pia" can handle dvb.  It does
-software MPEG-2 playback, i.e. supports budget cards.  No hardware
-decoder support (yet?).  No fancy GUI yet, no integration into
-xawtv/motv yet.
+The applications have a mpeg2 decoder builtin, i.e. they work just
+fine with budget cards.  In fact they can't even use the hardware
+decoder of full-featured cards yet, but with these you likely want to
+use vdr anyway ...
 
-pia expects a /etc/vdr/channels.conf file with all the tuning
-information in there.  If you already have one -- fine.  Otherwise use
-the scan utility from the dvb package to create one.
+The applications expect a /etc/vdr/channels.conf file with all the
+tuning information in there.  If you already have one -- fine.
+Otherwise use the scan utility from the dvb package to create one.
 
-Then start "pia -dvb <station>", where <station> is the name in the
-first column of the channels.conf file.  That should "just work" in
-theory.
+using pia
+  pia is a movie simple player, but can also handle dvb.  Just start
+  it this way: "pia -dvb <station>", where <station> is the name in
+  the first column of the /etc/vdr/channels.conf file.  There isn't
+  much you can do then beside resizing the window and quitting the
+  application and just watching tv ...
+
+using xawtv/motv
+  xawtv/motv save the informations about found devices in the
+  $HOME/.tv/devs.$HOSTNAME config file.  The first entry there is the
+  default device, so you might want to reorder the entries.  A new
+  file will created automagically if there isn't one yet.
+
+  The tv stations (both analog and dvb btw.) are read from the
+  $HOME/.tv/stations config file.  Same syntax like the 3.x ~/.xawtv
+  file.  For there is a new entry for dvb: "vdr = <name>".  That will
+  be used to lookup the tuning information in /etc/vdr/channels.conf.
+  If it isn't present xawtv/motv will just try the section name
+  directly.
+
+motv works better right now, xawtv still lacks a few useful GUI
+elements, a menu to switch to another device for example ...
 
 
 watch teletext

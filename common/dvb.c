@@ -19,7 +19,7 @@
 #include "parseconfig.h"
 #include "dvb.h"
 
-static int debug = 1;
+int dvb_debug = 1;
 
 /* ----------------------------------------------------------------------- */
 /* map vdr config file numbers to enums                                    */
@@ -198,7 +198,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	h->p.u.qpsk.symbol_rate = val;
 	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
 
-	if (debug) {
+	if (dvb_debug) {
 	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
 		    "symbol_rate=%d fec_inner=%s\n",
 		    h->p.frequency, h->p.inversion, h->p.u.qpsk.symbol_rate,
@@ -218,7 +218,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	val = cfg_get_int("dvb", name, "modulation", 0);
 	h->p.u.qam.modulation = fe_vdr_modulation [ val ];
 
-	if (debug) {
+	if (dvb_debug) {
 	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
 		    "symbol_rate=%d fec_inner=%s modulation=%s\n",
 		    h->p.frequency, h->p.inversion, h->p.u.qam.symbol_rate,
@@ -248,7 +248,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	val = cfg_get_int("dvb", name, "hierarchy", HIERARCHY_AUTO);
 	h->p.u.ofdm.hierarchy_information = fe_vdr_hierarchy [ val ];
 
-	if (debug) {
+	if (dvb_debug) {
 	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
 		    "bandwidth=%s code_rate=[%s-%s] constellation=%s "
 		    "transmission=%s guard=%s hierarchy=%s\n",
@@ -269,7 +269,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
     if (0 == memcmp(&h->p, &h->last, sizeof(h->last))) {
 	if (dvb_frontend_is_locked(h)) {
 	    /* same frequency and frontend still locked */
-	    if (debug)
+	    if (dvb_debug)
 		fprintf(stderr,"dvb fe: skipped tuning\n");
 	    return 0;
 	}
@@ -285,8 +285,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 
 void dvb_frontend_status_title(void)
 {
-    if (debug)
-	fprintf(stderr,"dvb fe:  biterr      snr signal  blkerr | status\n");
+    fprintf(stderr,"dvb fe:  biterr      snr signal  blkerr | status\n");
 }
 
 void dvb_frontend_status_print(struct dvb_state *h)
@@ -337,10 +336,10 @@ int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
 
     time(&start);
     time(&now);
-    if (debug)
+    if (dvb_debug)
 	dvb_frontend_status_title();
     while (start + timeout > now) {
-	if (debug)
+	if (dvb_debug)
 	    dvb_frontend_status_print(h);
 	if (dvb_frontend_is_locked(h))
 	    return 0;
@@ -367,7 +366,7 @@ int dvb_demux_station_filter(struct dvb_state *h, char *name)
 {
     ng_mpeg_vpid = cfg_get_int("dvb",name,"video_pid",0);
     ng_mpeg_apid = cfg_get_int("dvb",name,"audio_pid",0);
-    if (debug)
+    if (dvb_debug)
 	fprintf(stderr,"dvb mux: dvb ts pids for \"%s\": video=%d audio=%d\n",
 		name,ng_mpeg_vpid,ng_mpeg_apid);
     
@@ -522,7 +521,7 @@ struct dvb_state* dvb_init(char *adapter)
 	perror("dvb fe: ioctl FE_GET_INFO");
 	goto oops;
     }
-    if (debug)
+    if (dvb_debug)
 	fprintf(stderr,"dvb fe: %s: %s\n",
 		fe_type[h->info.type], h->info.name);
 

@@ -1,5 +1,8 @@
 #include "parse-mpeg.h"
 
+/* print debug info? */
+extern int dvb_debug;
+
 /* open/close/probe/... */
 struct dvb_state;
 struct dvb_state* dvb_init(char *adapter);
