@@ -183,6 +183,7 @@ static int device_probe_video(char *device)
     return 0;
 }
 
+#ifdef HAVE_DVB
 static int device_probe_dvb(char *device)
 {
     char *name,*h;
@@ -231,6 +232,7 @@ static int device_probe_dvb(char *device)
     cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
     return 0;
 }
+#endif
 
 int devlist_probe(void)
 {
