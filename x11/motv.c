@@ -72,6 +72,7 @@
 #include "vbi-x11.h"
 #include "blit.h"
 #include "av-sync.h"
+#include "dvb.h"
 
 /*----------------------------------------------------------------------*/
 
@@ -136,7 +137,9 @@ static struct vbi_window *vtx;
 static Widget attr_shell, attr_rc1;
 
 /* properties */
-static Widget prop_dlg,prop_name,prop_key,prop_channel,prop_vdr;
+static Widget prop_dlg,prop_name,prop_key;
+static Widget prop_channel,prop_channelL;
+static Widget prop_vdr,prop_vdrL;
 static Widget prop_group;
 
 /* preferences */
@@ -509,13 +512,17 @@ new_freqtab(void)
 	 NULL != channel;
 	 i++, channel = cfg_sections_next(freqtab,channel)) {
 	if (debug)
-	    fprintf(stderr,"  %d - %s\n",i,channel);
+	    fprintf(stderr,"  freqtab: %d - %s\n",i,channel);
 	tab[i] = XmStringGenerate(channel, NULL, XmMULTIBYTE_TEXT, NULL);
     }
     XtVaSetValues(prop_channel,
 		  XmNitemCount,i,
 		  XmNitems,tab,
 		  XmNselectedItem,tab[0],
+		  XmNsensitive,True,
+		  NULL);
+    XtVaSetValues(prop_channelL,
+		  XmNsensitive,True,
 		  NULL);
     while (i > 0)
 	XmStringFree(tab[--i]);
@@ -875,14 +882,20 @@ static void x11_station_add(char *name)
 
     /* ... icon */
     val = cfg_get_str("stations", name, "channel");
-    st->details[0] = XmStringGenerate(val ? val : "-",
-				      NULL, XmMULTIBYTE_TEXT, NULL);
+    if (NULL == val || 0 == strlen(val))
+	val = "-";
+    st->details[0] = XmStringGenerate(val, NULL, XmMULTIBYTE_TEXT, NULL);
+
     val = cfg_get_str("stations", name, "key");
-    st->details[1] = XmStringGenerate(val ? val : "-",
-				      NULL, XmMULTIBYTE_TEXT, NULL);
+    if (NULL == val || 0 == strlen(val))
+	val = "-";
+    st->details[1] = XmStringGenerate(val, NULL, XmMULTIBYTE_TEXT, NULL);
+
     val = cfg_get_str("stations", name, "group");
-    st->details[2] = XmStringGenerate(val ? val : "-",
-				      NULL, XmMULTIBYTE_TEXT, NULL);
+    if (NULL == val || 0 == strlen(val))
+	val = "-";
+    st->details[2] = XmStringGenerate(val, NULL, XmMULTIBYTE_TEXT, NULL);
+
     XtSetArg(args[n], XmNdetail,          st->details);   n++;
     XtSetArg(args[n], XmNdetailCount,     3);             n++;
     st->button = XmCreateIconGadget(chan_cont, st->name, args, n);
@@ -912,6 +925,8 @@ static void x11_station_del(char *name)
 
     XtDestroyWidget(st->menu1);
     XtDestroyWidget(st->menu2);
+    XtVaSetValues(chan_cont, XmNselectedObjectCount,0, NULL);
+    XtUnmanageChild(st->button);
     XtDestroyWidget(st->button);
     free(st->name);
     free(st);
@@ -980,7 +995,7 @@ station_edit_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     WidgetList children;
     Cardinal nchildren;
     XmString str;
-    char *station;
+    char *station,*channel,*vdr;
 
     /* get station */
     XtVaGetValues(chan_cont,
@@ -996,10 +1011,19 @@ station_edit_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     XmTextSetString(prop_name,station);
     XmTextSetString(prop_key,cfg_get_str("stations",station,"key"));
     XmTextSetString(prop_group,cfg_get_str("stations",station,"group"));
-    str = XmStringGenerate(cfg_get_str("stations",station,"channel"),
-			   NULL, XmMULTIBYTE_TEXT, NULL);
-    XtVaSetValues(prop_channel,XmNselectedItem,str,NULL);
-    XmStringFree(str);
+
+    channel = cfg_get_str("stations",station,"channel");
+    vdr     = cfg_get_str("stations",station,"vdr");
+    if (channel) {
+	str = XmStringGenerate(channel, NULL, XmMULTIBYTE_TEXT, NULL);
+	XtVaSetValues(prop_channel,XmNselectedItem,str,NULL);
+	XmStringFree(str);
+    }
+    if (vdr) {
+	str = XmStringGenerate(vdr, NULL, XmMULTIBYTE_TEXT, NULL);
+	XtVaSetValues(prop_vdr,XmNselectedItem,str,NULL);
+	XmStringFree(str);
+    }
 
     XtManageChild(prop_dlg);
 }
@@ -1049,7 +1073,7 @@ station_key_eh(Widget widget, XtPointer client_data, XEvent *event, Boolean *con
 static void
 station_apply_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 {
-    char *station, *key, *group, *channel;
+    char *station, *key, *group, *channel, *vdr;
     XmString str;
     Widget msgbox;
     
@@ -1060,6 +1084,9 @@ station_apply_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     XtVaGetValues(prop_channel,XmNselectedItem,&str,NULL);
     channel = XmStringUnparse(str,NULL,XmMULTIBYTE_TEXT,XmMULTIBYTE_TEXT,
 			      NULL,0,0);
+    XtVaGetValues(prop_vdr,XmNselectedItem,&str,NULL);
+    vdr = XmStringUnparse(str,NULL,XmMULTIBYTE_TEXT,XmMULTIBYTE_TEXT,
+			  NULL,0,0);
 
     if (0 == strlen(station)) {
 	msgbox = XmCreateErrorDialog(prop_dlg,"no_name",NULL,0);
@@ -1080,7 +1107,10 @@ station_apply_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     /* add new */
     fprintf(stderr,"add: \"%s\" ch=\"%s\" key=\"%s\" group=\"%s\"\n",
 	    station,channel,key,group);
-    cfg_set_str("stations",station,"channel",channel);
+    if (strlen(channel) > 0)
+	cfg_set_str("stations",station,"channel",channel);
+    if (strlen(vdr) > 0)
+	cfg_set_str("stations",station,"vdr",vdr);
     if (strlen(key) > 0)
 	cfg_set_str("stations",station,"key",key);
     if (strlen(group) > 0)
@@ -1130,19 +1160,51 @@ create_station_prop(void)
     prop_group = XtVaCreateManagedWidget("group", xmTextWidgetClass, rowcol,
 					 NULL);
 
-    label = XtVaCreateManagedWidget("channelL", xmLabelWidgetClass, rowcol,
-				    NULL);
+    prop_channelL = XtVaCreateManagedWidget("channelL", xmLabelWidgetClass,
+					    rowcol,
+					    XmNsensitive, False,
+					    NULL);
     prop_channel = XtVaCreateManagedWidget("channel",xmComboBoxWidgetClass,
-					   rowcol,NULL);
+					   rowcol,
+#if 0 /* FIXME, set to "True" later seems not to work ... */
+					   XmNsensitive, False,
+#endif
+					   NULL);
     XtAddCallback(prop_channel,XmNselectionCallback, station_tune_cb, NULL);
 
-    label = XtVaCreateManagedWidget("vdrL", xmLabelWidgetClass, rowcol,
-				    NULL);
+    prop_vdrL = XtVaCreateManagedWidget("vdrL", xmLabelWidgetClass,
+					rowcol,
+					NULL);
     prop_vdr = XtVaCreateManagedWidget("vdr",xmComboBoxWidgetClass,
-				       rowcol,NULL);
+				       rowcol,
+				       NULL);
     XtAddCallback(prop_channel,XmNselectionCallback, station_tune_cb, NULL);
 
     XtAddCallback(prop_dlg,XmNokCallback, station_apply_cb, NULL);
+
+    if (0 != cfg_sections_count("dvb")) {
+	/* fill vdr list */
+	XmStringTable tab;
+	char *vdr;
+	int i;
+
+	i = 0;
+	tab = malloc(cfg_sections_count("dvb")*sizeof(*tab));
+	cfg_sections_for_each("dvb",vdr)
+	    tab[i++] = XmStringGenerate(vdr, NULL, XmMULTIBYTE_TEXT, NULL);
+
+	XtVaSetValues(prop_vdr,
+		      XmNitemCount,i,
+		      XmNitems,tab,
+		      XmNselectedItem,tab[0],
+		      NULL);
+	while (i > 0)
+	    XmStringFree(tab[--i]);
+	free(tab);
+    } else {
+	XtVaSetValues(prop_vdrL, XmNsensitive,False, NULL);
+	XtVaSetValues(prop_vdr,  XmNsensitive,False, NULL);
+    }
 }
 
 /*----------------------------------------------------------------------*/
@@ -3128,10 +3190,7 @@ main(int argc, char *argv[])
 	0 != cfg_sections_count("dvb") &&
 	NULL != cfg_get_str("devs",cfg_sections_first("devs"),"dvb")) {
 	/* easy start for dvb users, import vdr's list ... */
-	char *list;
-	cfg_sections_for_each("dvb",list)
-	    cfg_set_str("stations",list,"vdr",list);
-	write_config_file("stations");
+	vdr_import_stations();
     }
 #endif
 

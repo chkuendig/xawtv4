@@ -808,6 +808,36 @@ void dvb_print_transponder_info(struct psi_info *info)
 /* ----------------------------------------------------------------------- */
 /* parse /etc/vdr/channels.conf                                            */
   
+void vdr_import_stations(void)
+{
+    char line[256],station[64],group[64];
+    int number;
+    FILE *fp;
+
+    fp = fopen("/etc/vdr/channels.conf","r");
+    if (NULL == fp)
+	return;
+
+    group[0] = 0;
+    while (NULL != (fgets(line,sizeof(line),fp))) {
+	switch (line[0]) {
+	case ':':
+	    /* group */
+	    if (2 != sscanf(line,":@%d %64[^:\n]",&number,group))
+		sscanf(line,":%64[^:\n]",group);
+	    break;
+	default:
+	    /* station */
+	    if (1 == sscanf(line,"%64[^:\n]:",station)) {
+		cfg_set_str("stations",station,"vdr",station);
+		if (0 != group[0])
+		    cfg_set_str("stations",station,"group",group);
+	    }
+	    break;
+	}
+    }
+}
+
 static int parse_vdr_channels(char *domain, FILE *fp)
 {
     static char *names[13] = {
@@ -895,6 +925,7 @@ static int parse_vdr_diseqc(char *domain, FILE *fp)
 	cfg_set_str(domain, section, "lof",          lof);
 	cfg_set_str(domain, section, "action",       action);
     }
+    return 0;
 }
 
 static void __init vdr_init(void)

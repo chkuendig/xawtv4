@@ -215,6 +215,12 @@ struct ng_video_buf *av_video_get_frame(struct video_stream *v)
 	if (NULL == v->ibuf)
 	    return NULL;
 	buf = blit_get_buf(v->blit,v->ifmt);
+	if (NULL == buf) {
+	    fprintf(stderr,"Huh? blit_get_buf() failed\n");
+	    ng_release_video_buf(v->ibuf);
+	    v->ibuf = NULL;
+	    return NULL;
+	}
 	ng_copy_video_buf(buf,v->ibuf);
 	ng_release_video_buf(v->ibuf);
 	v->ibuf = NULL;
@@ -305,7 +311,7 @@ void av_media_reader_video(struct media_stream *mm)
     unsigned int fmtids[2*VIDEO_FMT_COUNT],i;
     struct ng_video_fmt *vfmt;
     struct ng_video_conv *vconv1,*vconv2;
-    
+
     blit_get_formats(mm->blit,fmtids,DIMOF(fmtids));
     vfmt = mm->reader->rd_vfmt(mm->rhandle,fmtids,sizeof(fmtids)/sizeof(int));
     if (0 == vfmt->width || 0 == vfmt->height || VIDEO_NONE == vfmt->fmtid)

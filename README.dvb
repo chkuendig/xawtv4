@@ -31,7 +31,8 @@ using pia
   it this way: "pia -dvb <station>", where <station> is the name in
   the first column of the /etc/vdr/channels.conf file.  There isn't
   much you can do then beside resizing the window and quitting the
-  application and just watching tv ...
+  application and just watching tv.  Neverless it's nice for getting
+  started and trouble shooting.
 
 using xawtv/motv
   xawtv/motv save the informations about found devices in the

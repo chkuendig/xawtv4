@@ -980,6 +980,7 @@ void blit_get_formats(struct blit_handle *h, int *fmtids, int max)
     int i, n=0;
 
     BUG_ON(NULL == h, "blit handle is NULL");
+    memset(fmtids,0,sizeof(*fmtids)*max);
 
     /* Xvideo extension */
 #ifdef HAVE_LIBXV

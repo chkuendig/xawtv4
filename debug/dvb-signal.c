@@ -17,6 +17,7 @@ static int watch_signal(struct dvb_state *h, int loop)
 	dvb_frontend_status_print(h);
 	sleep(1);
     }
+    return 0;
 }
 
 static int dump_info(struct dvb_state *dvb, int verbose)
@@ -25,6 +26,7 @@ static int dump_info(struct dvb_state *dvb, int verbose)
 
     dvb_get_transponder_info(dvb,&info,1,verbose);
     dvb_print_transponder_info(&info);
+    return 0;
 }
 
 /* ----------------------------------------------------------------------- */

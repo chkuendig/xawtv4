@@ -34,3 +34,6 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
 			     int names, int verbose);
 void dvb_print_program_info(char *prefix, struct psi_program *pr);
 void dvb_print_transponder_info(struct psi_info *info);
+
+/* vdr config data */
+void vdr_import_stations(void);
