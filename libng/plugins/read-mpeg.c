@@ -27,7 +27,7 @@
 #define TS_AUDIO_BUF        (32*1026)
 
 #define DROP_FRAMES                 1
-#define ERROR_LIMIT               256
+#define ERROR_LIMIT                64
 
 /* ----------------------------------------------------------------------- */
 /* common MPEG demux code                                                  */
@@ -453,6 +453,7 @@ static void* mpeg_ts_open(char *moviename)
 
 	    if (h->errors > ERROR_LIMIT) {
 		fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+		h->error_out = 1;
 		goto fail;
 	    }
 	    if (h->ts.tei) {
@@ -500,6 +501,7 @@ static void* mpeg_ts_open(char *moviename)
 
 	    if (h->errors > ERROR_LIMIT) {
 		fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+		h->error_out = 1;
 		goto fail;
 	    }
 	    if (h->ts.tei) {
@@ -543,7 +545,10 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
     off_t off;
     enum ng_video_frame seek = dropper(*drop);
 
+    if (h->error_out)
+	return NULL;
     errors = h->errors;
+
     for (;;) {
 	if (!list_empty(&h->vfifo)) {
 	    fifo = list_entry(h->vfifo.next, struct ng_video_fifo, next);
@@ -589,6 +594,7 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
 
 	    if (h->errors - errors > ERROR_LIMIT) {
 		fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+		h->error_out = 1;
 		return NULL;
 	    }
 	    if (h->ts.tei) {
@@ -626,7 +632,10 @@ static struct ng_audio_buf* mpeg_ts_adata(void *handle)
     off_t off;
     int cont,errors;
 
+    if (h->error_out)
+	return NULL;
     errors = h->errors;
+
     buf = ng_malloc_audio_buf(&h->afmt, TS_AUDIO_BUF);
     buf->size = 0;
 
@@ -688,6 +697,7 @@ static struct ng_audio_buf* mpeg_ts_adata(void *handle)
 
 	if (h->errors - errors > ERROR_LIMIT) {
 	    fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+	    h->error_out = 1;
 	    return NULL;
 	}
 	if (h->ts.tei) {

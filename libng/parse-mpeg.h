@@ -87,7 +87,10 @@ struct mpeg_handle {
     size_t                balloc;
     int                   beof;
     int                   slowdown;
+
+    /* error stats */
     int                   errors;
+    int                   error_out;
 
     /* libng format info */
     struct ng_video_fmt   vfmt;

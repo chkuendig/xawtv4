@@ -10,7 +10,7 @@
 
 #define FILE_BUF_MIN       (512*1024)
 #define FILE_BUF_MAX    (8*1024*1024)
-#define READ_TIMEOUT                2
+#define READ_TIMEOUT                1   /* second */
 
 int  ng_mpeg_vpid  = 0;
 int  ng_mpeg_apid  = 0;

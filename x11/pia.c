@@ -338,6 +338,7 @@ static void play_file(char *filename)
 	    fprintf(stderr,"can't handle dvb\n");
 	    exit(1);
 	}
+	dvb_debug = 1;
 	dvb = dvb_init_nr(0);
 	if (dvb) {
 	    if (-1 == dvb_tune(dvb,filename)) {

@@ -19,7 +19,7 @@
 #include "parseconfig.h"
 #include "dvb.h"
 
-int dvb_debug = 1;
+int dvb_debug = 0;
 
 /* ----------------------------------------------------------------------- */
 /* map vdr config file numbers to enums                                    */
@@ -154,17 +154,145 @@ struct dvb_state {
     /* device file names */
     char                             frontend[32];
     char                             demux[32];
+    char                             sec[32];
 
     /* frontend */
     int                              fd;
     struct dvb_frontend_info         info;
     struct dvb_frontend_parameters   p;
-    struct dvb_frontend_parameters   last;
+    struct dvb_frontend_parameters   plast;
     
     /* demux */
     struct demux_filter              audio;
     struct demux_filter              video;
 };
+
+/* ----------------------------------------------------------------------- */
+/* handle diseqc                                                           */
+
+#define SEC_DELAY (15 * 1000)
+
+static int exec_diseqc(struct dvb_state *dvb, char *action)
+{
+    struct dvb_diseqc_master_cmd cmd;
+    int fd,wait,len,done;
+    int c0,c1,c2,c3;
+
+    fd = open(dvb->sec,O_RDONLY);
+    if (-1 == fd) {
+	fprintf(stderr,"open %s: %s\n", dvb->sec, strerror(errno));
+	return -1;
+    }
+
+    if (dvb_debug)
+	fprintf(stderr,"diseqc:");
+    
+    for (done = 0; !done;) {
+	switch (*action) {
+	case '\0':
+	    done = 1;
+	    break;
+	case ' ':
+	case '\t':
+	    /* ignore */
+	    break;
+	case 't':
+	    if (dvb_debug)
+		fprintf(stderr, " tone-off");
+	    if (ioctl(fd, FE_SET_TONE, SEC_TONE_OFF) == -1)
+		perror("dvb sat: ioctl FE_SET_TONE");
+	    break;
+	case 'T':
+	    if (dvb_debug)
+		fprintf(stderr, " tone-on");
+	    if (ioctl(fd, FE_SET_TONE, SEC_TONE_ON) == -1)
+		perror("dvb sat: ioctl FE_SET_TONE");
+	    break;
+	case 'v':
+	    if (dvb_debug)
+		fprintf(stderr, " 13V");
+	    if (ioctl(fd, FE_SET_VOLTAGE, SEC_VOLTAGE_13) == -1)
+		perror("dvb sat: ioctl FE_SET_VOLTAGE");
+	    break;
+	case 'V':
+	    if (dvb_debug)
+		fprintf(stderr, " 18V");
+	    if (ioctl(fd, FE_SET_VOLTAGE, SEC_VOLTAGE_18) == -1)
+		perror("dvb sat: ioctl FE_SET_VOLTAGE");
+	    break;
+	case 'a':
+	case 'A':
+	    if (dvb_debug)
+		fprintf(stderr, " mini-a");
+	    if (ioctl(fd, FE_DISEQC_SEND_BURST, SEC_MINI_A) == -1)
+		perror("dvb sat: ioctl FE_DISEQC_SEND_BURST");
+	    break;
+	case 'b':
+	case 'B':
+	    if (dvb_debug)
+		fprintf(stderr, " mini-b");
+	    if (ioctl(fd, FE_DISEQC_SEND_BURST, SEC_MINI_B) == -1)
+		perror("dvb sat: ioctl FE_DISEQC_SEND_BURST");
+	    break;
+	case '[':
+	    if (4 == sscanf(action+1,"%x %x %x %x%n",
+			    &c0, &c1, &c2, &c3, &len)) {
+		cmd.msg[0] = c0;
+		cmd.msg[1] = c1;
+		cmd.msg[2] = c2;
+		cmd.msg[3] = c3;
+		cmd.msg_len = 4;
+		if (dvb_debug)
+		    fprintf(stderr, " cmd-%x-%x-%x-%x", c0, c1, c2, c3);
+		if (ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd) == -1)
+		    perror("dvb sat: ioctl FE_DISEQC_SEND_MASTER_CMD");
+		action += len+1;
+	    }
+	    break;
+	case 'w':
+	case 'W':
+	    if (1 == sscanf(action+1,"%d%n",&wait,&len)) {
+		if (dvb_debug)
+		    fprintf(stderr, " wait-%d",wait);
+		usleep(wait*1000);
+		action += len;
+	    }
+	    break;
+	default:
+	    fprintf(stderr,"  *** Huh? '%c'?",*action);
+	    done=1;
+	    break;
+	}
+	action++;
+    }
+    
+    if (dvb_debug)
+	fprintf(stderr,"\n");
+    close(fd);
+    return 0;
+}
+
+static char *find_diseqc(char *name)
+{
+    char *source = cfg_get_str("dvb", name, "source");
+    char *pol    = cfg_get_str("dvb", name, "polarization");
+    int  freq    = cfg_get_int("dvb", name, "frequency",0);
+    char *list,*check;
+
+    for (list  = cfg_sections_first("diseqc");
+	 list != NULL;
+	 list  = cfg_sections_next("diseqc",list)) {
+	check = cfg_get_str("diseq", name, "source");
+	if (!check || !source || 0 != (strcasecmp(check,source)))
+	    continue;
+	check = cfg_get_str("diseq", name, "polarization");
+	if (!check || !pol || 0 != (strcasecmp(check,pol)))
+	    continue;
+	if (freq < cfg_get_int("diseq", name, "lsof", 0))
+	    return list;
+    }
+    return NULL;
+}
 
 /* ----------------------------------------------------------------------- */
 /* handle dvb frontend                                                     */
@@ -185,12 +313,22 @@ static int dvb_frontend_open(struct dvb_state *h)
 
 int dvb_frontend_tune(struct dvb_state *h, char *name)
 {
+    char *diseqc;
+    int lof;
     int val;
 
     switch (h->info.type) {
     case FE_QPSK:
+	diseqc = find_diseqc(name);
+	if (!diseqc) {
+	    fprintf(stderr,"no diseqc info for \"%s\"\n",name);
+	    return -1;
+	}
+	exec_diseqc(h,cfg_get_str("diseq", diseqc, "action"));
+
+	lof = cfg_get_int("diseq", diseqc, "lsof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
-	h->p.frequency = val;
+	h->p.frequency = val - lof;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
 
@@ -266,7 +404,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 
     if (-1 == dvb_frontend_open(h))
 	return -1;
-    if (0 == memcmp(&h->p, &h->last, sizeof(h->last))) {
+    if (0 == memcmp(&h->p, &h->plast, sizeof(h->plast))) {
 	if (dvb_frontend_is_locked(h)) {
 	    /* same frequency and frontend still locked */
 	    if (dvb_debug)
@@ -279,7 +417,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	perror("dvb fe: ioctl FE_SET_FRONTEND");
 	return -1;
     }
-    memcpy(&h->last, &h->p, sizeof(h->last));
+    memcpy(&h->plast, &h->p, sizeof(h->plast));
     return 0;
 }
 
@@ -509,6 +647,7 @@ struct dvb_state* dvb_init(char *adapter)
 
     snprintf(h->frontend, sizeof(h->frontend),"%s/frontend0", adapter);
     snprintf(h->demux,    sizeof(h->demux),   "%s/demux0",    adapter);
+    snprintf(h->sec,      sizeof(h->sec),     "%s/sec0",      adapter);
 
     h->fd = open(h->frontend,O_RDWR);
     if (-1 == h->fd) {
@@ -544,12 +683,18 @@ struct dvb_state* dvb_init_nr(int adapter)
 
 int dvb_tune(struct dvb_state *h, char *name)
 {
-    if (0 != dvb_frontend_tune(h,name))
+    if (0 != dvb_frontend_tune(h,name)) {
+	fprintf(stderr,"dvb: frontend tuning failed\n");
 	return -1;
-    if (0 != dvb_frontend_wait_lock(h,0))
+    }
+    if (0 != dvb_frontend_wait_lock(h,0)) {
+	fprintf(stderr,"dvb: frontend doesn't lock\n");
 	return -1;
-    if (0 != dvb_demux_station_filter(h,name))
+    }
+    if (0 != dvb_demux_station_filter(h,name)) {
+	fprintf(stderr,"dvb: pid filter setup failed\n");
 	return -1;
+    }
     dvb_frontend_release(h);
     return 0;
 }
@@ -671,7 +816,7 @@ void dvb_print_transponder_info(struct psi_info *info)
 /* ----------------------------------------------------------------------- */
 /* parse /etc/vdr/channels.conf                                            */
   
-static int vdr_parse(char *domain, FILE *fp)
+static int parse_vdr_channels(char *domain, FILE *fp)
 {
     static char *names[13] = {
 	NULL, "frequency", NULL, "source", "symbol_rate",
@@ -734,6 +879,32 @@ static int vdr_parse(char *domain, FILE *fp)
     return 0;
 }
 
+static int parse_vdr_diseqc(char *domain, FILE *fp)
+{
+    char line[256];
+    char source[16];
+    char lsof[16];
+    char pol[2];
+    char lof[16];
+    char action[128];
+    char section[16];
+    int i = 0;
+    
+    while (NULL != fgets(line,sizeof(line),fp)) {
+	if (line[0] == '#')
+	    continue;
+	if (5 != sscanf(line,"%15s %15[0-9] %1s %15[0-9] %[][ a-fA-F0-9tTvVtTwW]\n",
+			source, lsof, pol, lof, action))
+	    continue;
+	sprintf(section,"diseqc-%d",i);
+	cfg_set_str(domain, section, "source",       source);
+	cfg_set_str(domain, section, "polarization", pol);
+	cfg_set_str(domain, section, "lsof",         lsof);
+	cfg_set_str(domain, section, "lof",          lof);
+	cfg_set_str(domain, section, "action",       action);
+    }
+}
+
 static void __init vdr_init(void)
 {
     FILE *fp;
@@ -741,6 +912,14 @@ static void __init vdr_init(void)
     fp = fopen("/etc/vdr/channels.conf","r");
     if (NULL == fp)
 	return;
-    vdr_parse("dvb",fp);
+    parse_vdr_channels("dvb",fp);
+    fclose(fp);
+
+    dvb_debug = 1;
+    
+    fp = fopen("/etc/vdr/diseqc.conf","r");
+    if (NULL == fp)
+	return;
+    parse_vdr_diseqc("diseqc",fp);
     fclose(fp);
 }

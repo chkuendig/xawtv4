@@ -175,10 +175,8 @@ static int tune_dvb_station(char *station)
     vdrname = cfg_get_str("stations", station, "vdr");
     if (NULL == vdrname)
 	vdrname= station;
-    if (-1 == dvb_tune(devs.dvb, vdrname)) {
-	fprintf(stderr,"tuning failed\n");
+    if (-1 == dvb_tune(devs.dvb, vdrname))
 	return -1;
-    }
 
     /* update info */
     freq = cfg_get_int("dvb", vdrname, "frequency", 0);

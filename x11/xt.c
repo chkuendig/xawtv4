@@ -1640,6 +1640,9 @@ handle_cmdline_args(void)
     snapbase = args.basename;
     debug    = args.debug;
     ng_debug = args.debug;
+    ng_log_bad_stream = args.debug;
+    ng_log_resync = args.debug;
+    dvb_debug = args.debug;
 }
 
 int

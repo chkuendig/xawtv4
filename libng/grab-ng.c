@@ -19,7 +19,6 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <fcntl.h>
-#include <execinfo.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -32,8 +31,9 @@
 #include "grab-ng.h"
 
 int  ng_debug          = 0;
-int  ng_log_bad_stream = 1;
-int  ng_log_resync     = 1;
+int  ng_log_bad_stream = 0;
+int  ng_log_resync     = 0;
+
 int  ng_chromakey      = 0x00ff00ff;
 int  ng_ratio_x        = 4;
 int  ng_ratio_y        = 3;
