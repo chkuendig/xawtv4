@@ -175,6 +175,7 @@ struct v4l_handle {
 
 struct ng_vid_driver v4l_driver = {
     .name          = "v4l",
+    .priority      = 2,
     
     .init          = v4l_init,
     .open          = v4l_open,

@@ -164,8 +164,9 @@ static struct ng_devinfo* ng_arts_probe(int record)
 
 static struct ng_dsp_driver arts_dsp = {
     .name      = "arts",
-    .probe     = ng_arts_probe,
+    .priority  = 1,
 
+    .probe     = ng_arts_probe,
     .init      = ng_arts_init,
     .open      = ng_arts_open,
     .close     = ng_arts_close,

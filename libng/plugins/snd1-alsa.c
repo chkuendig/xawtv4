@@ -500,8 +500,9 @@ struct ng_mix_driver alsa_mixer = {
 
 static struct ng_dsp_driver alsa_dsp = {
     .name      = "alsa",
-    .probe     = ng_alsa_probe,
+    .priority  = 2,
 
+    .probe     = ng_alsa_probe,
     .init      = ng_alsa_init,
     .open      = ng_alsa_open,
     .close     = ng_alsa_close,

@@ -611,8 +611,9 @@ static struct ng_devinfo* oss_probe(int record, int verbose)
 
 static struct ng_dsp_driver oss_dsp = {
     .name      = "oss",
-    .probe     = oss_probe,
+    .priority  = 3,
 
+    .probe     = oss_probe,
     .init      = oss_init,
     .open      = oss_open,
     .close     = oss_close,

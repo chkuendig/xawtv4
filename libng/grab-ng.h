@@ -333,6 +333,7 @@ void ng_ratio_fixup2(int *width, int *height, int *xoff, int *yoff,
 
 struct ng_vid_driver {
     const char *name;
+    int priority;
 
     /* open/close */
     struct ng_devinfo* (*probe)(int debug);
@@ -374,6 +375,7 @@ struct ng_vid_driver {
 
 struct ng_dsp_driver {
     const char            *name;
+    int priority;
 
     /* open/close */
     struct ng_devinfo*    (*probe)(int record, int debug);
@@ -530,7 +532,7 @@ struct ng_audio_conv {
 /* --------------------------------------------------------------------- */
 
 /* must be changed if we break compatibility */
-#define NG_PLUGIN_MAGIC 0x20040303
+#define NG_PLUGIN_MAGIC 0x20040317
 #define __init __attribute__ ((constructor))
 #define __fini __attribute__ ((destructor))
 #define __used __attribute__ ((used))

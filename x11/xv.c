@@ -324,9 +324,9 @@ static int xv_check(void)
     return 0;
 }
 
-static void xv_mkname(XvAdaptorInfo *ai, char *dest, int len)
+static void xv_mkname(XvAdaptorInfo *ai, int port, char *dest, int len)
 {
-    snprintf(dest,len,"Xvideo: %s",ai->name);
+    snprintf(dest,len,"xv port: %d (%s)",port,ai->name);
 }
 
 static void*
@@ -359,7 +359,7 @@ xv_init(char *device)
 	    (ai[i].type & XvVideoMask) &&
 	    port >= ai[i].base_id      &&
 	    port <  ai[i].base_id+ai[i].num_ports) {
-	    xv_mkname(ai+i, h->name, sizeof(h->name));
+	    xv_mkname(ai+i, port, h->name, sizeof(h->name));
 	    h->adaptor = i;
 	    h->port    = port;
 	    break;
@@ -487,7 +487,7 @@ static struct ng_devinfo* xv_probe(int verbose)
 	memset(info+n,0,sizeof(*info)*2);
 	snprintf(info[n].device, sizeof(info[n].device),
 		 "port:%ld", ai[i].base_id);
-	xv_mkname(ai+i, info[n].name, sizeof(info[n].name));
+	xv_mkname(ai+i, ai[i].base_id, info[n].name, sizeof(info[n].name));
 	n++;
     }
     XvFreeAdaptorInfo(ai);
@@ -498,6 +498,7 @@ static struct ng_devinfo* xv_probe(int verbose)
 
 struct ng_vid_driver xv_driver = {
     .name          = "xv",
+    .priority      = 9,
 
     .init          = xv_init,
     .open          = xv_open,

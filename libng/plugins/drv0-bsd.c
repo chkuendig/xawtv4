@@ -104,6 +104,7 @@ static int bsd_tuned(void *handle);
 
 struct ng_vid_driver bsd_driver = {
     .name          = "bktr",
+    .priority      = 1,
 
     .init          = bsd_init,
     .open          = bsd_open,

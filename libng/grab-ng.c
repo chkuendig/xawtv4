@@ -496,8 +496,19 @@ ng_reader_register(int magic, char *plugname, struct ng_reader *reader)
 int
 ng_vid_driver_register(int magic, char *plugname, struct ng_vid_driver *driver)
 {
+    struct list_head *item;
+    struct ng_vid_driver *drv;
+
     if (0 != ng_check_magic(magic,plugname,"video drv"))
 	return -1;
+
+    list_for_each(item,&ng_vid_drivers) {
+        drv = list_entry(item, struct ng_vid_driver, list);
+	if (drv->priority > driver->priority) {
+	    list_add_tail(&driver->list,&drv->list);
+	    return 0;
+	}
+    }
     list_add_tail(&driver->list,&ng_vid_drivers);
     return 0;
 }
@@ -505,8 +516,19 @@ ng_vid_driver_register(int magic, char *plugname, struct ng_vid_driver *driver)
 int
 ng_dsp_driver_register(int magic, char *plugname, struct ng_dsp_driver *driver)
 {
+    struct list_head *item;
+    struct ng_dsp_driver *drv;
+
     if (0 != ng_check_magic(magic,plugname,"dsp drv"))
 	return -1;
+
+    list_for_each(item,&ng_dsp_drivers) {
+        drv = list_entry(item, struct ng_dsp_driver, list);
+	if (drv->priority > driver->priority) {
+	    list_add_tail(&driver->list,&drv->list);
+	    return 0;
+	}
+    }
     list_add_tail(&driver->list,&ng_dsp_drivers);
     return 0;
 }
