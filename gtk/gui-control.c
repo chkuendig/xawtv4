@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -251,41 +253,46 @@ static void __init attr_x11_hooks_init(void)
 static GtkWidget *on_win, *on_label;
 static guint on_timer;
 
-void create_onscreen(void)
+static void onscreen_colors(GtkWidget *widget)
 {
     GdkColormap *cmap;
-    GdkColor black = { .red = 0x1111, .green = 0x1111, .blue = 0x1111 };
+    GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
+    GdkColor white = { .red = 0xffff, .green = 0xffff, .blue = 0xffff };
     GdkColor green = { .red = 0x0000, .green = 0xffff, .blue = 0x0000 };
     PangoFontDescription *font;
     GtkRcStyle *style;
-    
+
+    cmap = gtk_widget_get_colormap(widget);
+    gdk_colormap_alloc_color(cmap, &black, FALSE, TRUE);
+    gdk_colormap_alloc_color(cmap, &white, FALSE, TRUE);
+    gdk_colormap_alloc_color(cmap, &green, FALSE, TRUE);
+    font = pango_font_description_from_string("led fixed 36");
+
+    style = gtk_widget_get_modifier_style(widget);
+    style->font_desc = font;
+    style->fg[GTK_STATE_INSENSITIVE] = green;
+    style->bg[GTK_STATE_INSENSITIVE] = black;
+    style->fg[GTK_STATE_NORMAL] = green;
+    style->bg[GTK_STATE_NORMAL] = black;
+    style->color_flags[GTK_STATE_INSENSITIVE] |=
+	GTK_RC_FG | GTK_RC_BG;
+    style->color_flags[GTK_STATE_NORMAL] |=
+	GTK_RC_FG | GTK_RC_BG;
+    gtk_widget_modify_style(widget,style);
+}
+
+void create_onscreen(void)
+{
     on_win   = gtk_window_new(GTK_WINDOW_POPUP);
     on_label = gtk_widget_new(GTK_TYPE_LABEL,
 			      "xalign", 0.0,
 			      NULL);
+    onscreen_colors(on_win);
+    onscreen_colors(on_label);
     gtk_container_add(GTK_CONTAINER(on_win), on_label);
     gtk_window_set_resizable(GTK_WINDOW(on_win), TRUE);
     gtk_widget_set_sensitive(on_win,   FALSE);
     gtk_widget_set_sensitive(on_label, FALSE);
-
-    cmap = gtk_widget_get_colormap(on_label);
-    gdk_colormap_alloc_color(cmap, &black, FALSE, TRUE);
-    gdk_colormap_alloc_color(cmap, &green, FALSE, TRUE);
-    font = pango_font_description_from_string("led fixed 36");
-
-    style = gtk_widget_get_modifier_style(on_label);
-    style->font_desc = font;
-#if 0
-    /* why the heck that doesn't work ??? */
-    style->bg_pixmap_name[GTK_STATE_INSENSITIVE] = strdup("<none>");
-    style->fg[GTK_STATE_INSENSITIVE]   = green;
-    style->bg[GTK_STATE_INSENSITIVE]   = black;
-#else
-    style->fg[GTK_STATE_INSENSITIVE]   = black;
-#endif
-    style->color_flags[GTK_STATE_INSENSITIVE] |=
-	GTK_RC_FG | GTK_RC_BG;
-    gtk_widget_modify_style(on_label,style);
 }
 
 static gboolean popdown_onscreen(gpointer data)
@@ -887,6 +894,21 @@ static void menu_cb_save_stations(void)
     write_config_file("stations");
 }
 
+static void menu_cb_scan_analog(void)
+{
+    fprintf(stderr,"%s\n",__FUNCTION__);
+}
+
+#ifdef HAVE_DVB
+extern struct dvbmon *dvbmon;
+static void menu_cb_scan_dvb(void)
+{
+    fprintf(stderr,"%s\n",__FUNCTION__);
+    dvbscan_create_window(0,dvbmon);
+    gtk_widget_show_all(dvbscan_win);
+}
+#endif
+
 static void station_activate(GtkTreeView        *treeview,
 			     GtkTreePath        *path,
 			     GtkTreeViewColumn  *col,
@@ -952,6 +974,19 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = menu_cb_save_stations,
 	.item_type   = "<Item>",
     },{
+	.path        = "/Edit/sep2",
+	.item_type   = "<Separator>",
+    },{
+	.path        = "/Edit/Scan analog ...",
+	.callback    = menu_cb_scan_analog,
+	.item_type   = "<Item>",
+#ifdef HAVE_DVB
+    },{
+	.path        = "/Edit/Scan DVB ...",
+	.callback    = menu_cb_scan_dvb,
+	.item_type   = "<Item>",
+#endif
+    },{
 
 	/* --- dynamic devices/stations menus -------- */
 	.path        = "/_Stations",
@@ -993,7 +1028,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = menu_cb_fullscreen,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Start/stop _recording",
+	.path        = "/Commands/Start or stop _recording",
 	.accelerator = "R",
 	.callback    = menu_cb_start_stop_record,
 	.item_type   = "<Item>",
@@ -1069,7 +1104,7 @@ static GtkItemFactory *item_factory;
 /* ------------------------------------------------------------------------ */
 /* dnd                                                                      */
 
-GtkTargetEntry dnd_targets[] = {
+static GtkTargetEntry dnd_targets[] = {
     { "TARGETS",      0, 42 },
     { "UTF8_STRING",  0,  0 },
     { "TSID",         0,  1 },
@@ -1258,6 +1293,23 @@ static struct toolbarbutton toolbaritems[] = {
     }
 };
 
+void control_switchdevice(void)
+{
+    GtkWidget *item;
+    gboolean sensitive;
+
+    item = gtk_item_factory_get_widget(item_factory,"<control>/Edit/Scan analog ...");
+    sensitive = (devs.video.type  != NG_DEV_NONE &&
+		 devs.video.flags &  CAN_TUNE);
+    gtk_widget_set_sensitive(item,sensitive);
+
+#ifdef HAVE_DVB
+    item = gtk_item_factory_get_widget(item_factory,"<control>/Edit/Scan DVB ...");
+    sensitive = (NULL != devs.dvb);
+    gtk_widget_set_sensitive(item,sensitive);
+#endif
+}
+
 void create_control(void)
 {
     GtkWidget *vbox,*hbox,*menubar,*scroll;
@@ -1437,6 +1489,7 @@ void create_control(void)
     init_channel_list();
     init_devices_list();
     init_freqtab_list();
+    control_switchdevice();
 
     return;
 }

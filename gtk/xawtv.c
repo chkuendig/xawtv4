@@ -46,6 +46,8 @@
 #include "dvb-monitor.h"
 #include "gui.h"
 
+#include "logo.xpm"
+
 /* ------------------------------------------------------------------------ */
 
 /* misc globals */
@@ -54,6 +56,9 @@ Display *dpy;
 
 /* video window */
 static GtkWidget *video;
+static GdkPixmap *logo;
+static GdkGC     *gc;
+static int       idle;
 
 /* x11 stuff */
 static Visual *visual;
@@ -208,7 +213,7 @@ static void siginit(void)
 /* ------------------------------------------------------------------------ */
 
 #ifdef HAVE_DVB
-static struct dvbmon *dvbmon;
+struct dvbmon *dvbmon;
 #endif
 
 static void
@@ -247,6 +252,9 @@ grabber_init(char *dev)
 
     }
 
+    /* GUI update */
+    control_switchdevice();
+
     /* retune */
     if (NULL != curr_station)
 	do_va_cmd(2,"setstation",curr_station);
@@ -255,6 +263,11 @@ grabber_init(char *dev)
 static void
 grabber_fini(void)
 {
+    if (dvbscan_win)
+	gtk_widget_destroy(dvbscan_win);
+    if (dvbtune_dialog)
+	gtk_widget_destroy(dvbtune_dialog);
+    
 #ifdef HAVE_DVB
     if (NULL != dvbmon) {
 	dvbmon_fini(dvbmon);
@@ -611,8 +624,17 @@ static int main_loop(GMainContext *context)
 	    break;
 #ifdef HAVE_DVB
 	case DISPLAY_DVB:
-	    if (devs.dvb)
-		dvb_loop(context,video,blit);
+	    if (devs.dvb) {
+		fprintf(stderr,"#");
+		while ((0 != dvb_finish_tune(devs.dvb,100)) &&
+		       !command_pending) {
+		    fprintf(stderr,"*");
+		    g_main_context_iteration(context,FALSE);
+		}
+		fprintf(stderr,"#\n");
+		if (!command_pending)
+		    dvb_loop(context,video,blit);
+	    }
 	    break;
 #endif
 	default:
@@ -621,8 +643,14 @@ static int main_loop(GMainContext *context)
 	}
 
 	/* default/error catch */
-	while (!command_pending)
-	    g_main_context_iteration(context,TRUE);
+	if (!command_pending) {
+	    idle = 1;
+	    gdk_window_clear_area_e(video->window, 0,0,0,0);
+	    while (!command_pending)
+		g_main_context_iteration(context,TRUE);
+	    idle = 0;
+	}
+	gdk_window_clear_area_e(video->window, 0,0,0,0);
     }
 
     /* cleanup */
@@ -682,6 +710,8 @@ static gboolean expose_eh(GtkWidget *widget,
 			  GdkEventExpose *event,
 			  gpointer user_data)
 {
+    gint width, height;
+
     if (debug)
 	fprintf(stderr,"%s\n",__FUNCTION__);
 
@@ -696,6 +726,16 @@ static gboolean expose_eh(GtkWidget *widget,
 	/* nothing */
 	break;
     };
+
+    if (idle) {
+	gdk_drawable_get_size(video->window, &width, &height);
+	gdk_window_clear(video->window);
+	gdk_draw_pixmap(video->window, gc, logo, 0,0,
+			(width-320)/2,
+			(height-240)/2,
+			320,240);
+	return TRUE;
+    }
     return FALSE;
 }
 
@@ -840,6 +880,7 @@ parse_args(int *argc, char **argv)
 int
 main(int argc, char *argv[])
 {
+    GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
     XVisualInfo *vinfo_list;
     char *freqtab;
     int n;
@@ -871,6 +912,7 @@ main(int argc, char *argv[])
     main_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     video = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(main_win), video);
+    gtk_widget_modify_bg(video,GTK_STATE_NORMAL, &black);
 
     gtk_widget_add_events(video,
 			  GDK_BUTTON_PRESS_MASK   |
@@ -949,6 +991,11 @@ main(int argc, char *argv[])
     gtk_widget_show_all(main_win);
     gtk_unclutter(video);
 
+    gc = gdk_gc_new(video->window);
+    logo = gdk_pixmap_create_from_xpm_d(video->window,
+					NULL, NULL,
+					logo_xpm);
+
     /* set some values */
     if (NULL != (freqtab = cfg_get_str(O_FREQTAB)))
 	do_va_cmd(2,"setfreqtab",freqtab);
@@ -958,6 +1005,5 @@ main(int argc, char *argv[])
 	/* first in list (FIXME: don't modify when known station tuned?) */
 	do_va_cmd(2,"setstation","0");
     }
-
     return main_loop(g_main_context_default());
 }

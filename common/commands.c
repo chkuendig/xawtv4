@@ -1,6 +1,4 @@
-
 #define _GNU_SOURCE
-
 #include "config.h"
 
 #include <stdio.h>
@@ -492,8 +490,9 @@ static int tuning_handler(char *name, int argc, char **argv)
 	mute = NULL;
 
     /* ... switch ... */
-    if (debug) fprintf(stderr,"%s: station=%s channel=%s freq=%d\n",
-		       __FUNCTION__,newstation,newchannel,newfreq);
+    if (debug)
+	fprintf(stderr,"%s: station=%s channel=%s freq=%d\n",
+		__FUNCTION__,newstation,newchannel,newfreq);
     if (newstation) {
 	tune_station(newstation);
     } else if (newchannel) {

@@ -71,8 +71,17 @@ extern void create_onscreen(void);
 extern void display_onscreen(char *title);
 
 extern void menu_cb_fullscreen(void);
-void x11_station_activate(char *current);
+extern void x11_station_activate(char *current);
 
+extern void control_switchdevice(void);
+
+/* ------------------------------------------------------------------- */
+/* gui-dvbscan.c                                                       */
+
+extern GtkWidget *dvbscan_win;
+struct dvbmon;
+
+void dvbscan_create_window(int s, struct dvbmon *d);
 
 /* ------------------------------------------------------------------- */
 /* gui-dvbtune.c                                                       */

@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 	}
 	break;
     case JOB_DUMP:
-	if (0 == dvb_frontend_wait_lock(h,0))
+	if (0 == dvb_frontend_wait_lock(h,10*1000))
 	    dump_info(h,verbose);
 	break;
     }

@@ -175,14 +175,14 @@ static int tune_dvb_station(char *station)
 
     if (0 != tsid  &&  0 != pnr) {
 	/* my own station DB */
-	if (-1 == dvb_tune(devs.dvb, tsid, pnr))
+	if (-1 == dvb_start_tune(devs.dvb, tsid, pnr))
 	    return -1;
 	snprintf(curr_details, sizeof(curr_details),
 		 "TSID %d / PNR %d", tsid, pnr);
 
     } else if (NULL != vdr) {
 	/* lookup in /etc/vdr/channels.conf */
-	if (-1 == dvb_tune_vdr(devs.dvb, vdr))
+	if (-1 == dvb_start_tune_vdr(devs.dvb, vdr))
 	    return -1;
 	snprintf(curr_details, sizeof(curr_details),
 		 "vdr %s", vdr);

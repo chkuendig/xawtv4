@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
+#include <sys/time.h>
 #include <sys/ioctl.h>
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/dmx.h>
@@ -540,27 +541,34 @@ int dvb_frontend_is_locked(struct dvb_state *h)
     return (status & FE_HAS_LOCK);
 }
 
-int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
+int dvb_frontend_wait_lock(struct dvb_state *h, int timeout)
 {
-    time_t start, now;
-    struct timeval tv;
+    struct timeval start,now,tv;
+    int msec,locked = 0, runs = 0;
 
-    if (0 == timeout)
-	timeout = 10;
-
-    time(&start);
-    time(&now);
+    gettimeofday(&start,NULL);
     if (dvb_debug)
 	dvb_frontend_status_title();
-    while (start + timeout > now) {
+    for (;;) {
+	tv.tv_sec  = 0;
+	tv.tv_usec = 33 * 1000;
+	select(0,NULL,NULL,NULL,&tv);
 	if (dvb_debug)
 	    dvb_frontend_status_print(h);
 	if (dvb_frontend_is_locked(h))
+	    locked++;
+	else
+	    locked = 0;
+	if (locked > 3)
 	    return 0;
-	tv.tv_sec  = 0;
-	tv.tv_usec = 250 * 1000;
-	select(0,NULL,NULL,NULL,&tv);
-	time(&now);
+	runs++;
+
+	gettimeofday(&now,NULL);
+	msec  = (now.tv_sec - start.tv_sec) * 1000;
+	msec += now.tv_usec/1000;
+	msec -= start.tv_usec/1000;
+	if (msec > timeout && runs > 3)
+	    break;
     }
     return -1;
 }
@@ -586,26 +594,23 @@ int dvb_frontend_get_biterr(struct dvb_state *h)
 /* ----------------------------------------------------------------------- */
 /* handle dvb demux                                                        */
 
-int dvb_demux_station_filter(struct dvb_state *h, char *domain, char *section)
+void dvb_demux_filter_setup(struct dvb_state *h, int video, int audio)
 {
-    ng_mpeg_vpid = cfg_get_int(domain, section, "video",0);
-    ng_mpeg_apid = cfg_get_int(domain, section, "audio",0);
-    if (dvb_debug)
-	fprintf(stderr,"dvb mux: dvb ts pids for \"%s\": video=%d audio=%d\n",
-		section, ng_mpeg_vpid,ng_mpeg_apid);
-    
-    h->video.filter.pid      = ng_mpeg_vpid;
+    h->video.filter.pid      = video;
     h->video.filter.input    = DMX_IN_FRONTEND;
     h->video.filter.output   = DMX_OUT_TS_TAP;
     h->video.filter.pes_type = DMX_PES_VIDEO;
     h->video.filter.flags    = 0;
 
-    h->audio.filter.pid      = ng_mpeg_apid;
+    h->audio.filter.pid      = audio;
     h->audio.filter.input    = DMX_IN_FRONTEND;
     h->audio.filter.output   = DMX_OUT_TS_TAP;
     h->audio.filter.pes_type = DMX_PES_AUDIO;
     h->audio.filter.flags    = 0;
+}
 
+int dvb_demux_filter_apply(struct dvb_state *h)
+{
     if (-1 == h->video.fd) {
 	h->video.fd = open(h->demux,O_RDWR);
 	if (-1 == h->video.fd) {
@@ -642,13 +647,19 @@ int dvb_demux_station_filter(struct dvb_state *h, char *domain, char *section)
 	perror("dvb mux: [audio] ioctl DMX_START");
 	goto oops;
     }
+
+    ng_mpeg_vpid = h->video.filter.pid;
+    ng_mpeg_apid = h->audio.filter.pid;
+    if (dvb_debug)
+	fprintf(stderr,"dvb mux: dvb ts pids: video=%d audio=%d\n",
+		ng_mpeg_vpid,ng_mpeg_apid);
     return 0;
 
  oops:
     return -1;
 }
 
-void dvb_demux_station_release(struct dvb_state *h)
+void dvb_demux_filter_release(struct dvb_state *h)
 {
     if (-1 != h->audio.fd) {
 	xioctl(h->audio.fd,DMX_STOP,NULL,0);
@@ -660,6 +671,8 @@ void dvb_demux_station_release(struct dvb_state *h)
 	close(h->video.fd);
 	h->video.fd = -1;
     }
+    ng_mpeg_vpid = 0;
+    ng_mpeg_apid = 0;
 }
 
 int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot)
@@ -716,7 +729,7 @@ void dvb_fini(struct dvb_state *h)
 {
     dvb_frontend_release(h,1);
     dvb_frontend_release(h,0);
-    dvb_demux_station_release(h);
+    dvb_demux_filter_release(h);
     free(h);
 }
 
@@ -764,7 +777,7 @@ struct dvb_state* dvb_init_nr(int adapter)
     return dvb_init(path);
 }
 
-int dvb_tune(struct dvb_state *h, int tsid, int pnr)
+int dvb_start_tune(struct dvb_state *h, int tsid, int pnr)
 {
     char ts[32];
     char pr[32];
@@ -776,18 +789,12 @@ int dvb_tune(struct dvb_state *h, int tsid, int pnr)
 	fprintf(stderr,"dvb: frontend tuning failed\n");
 	return -1;
     }
-    if (0 != dvb_frontend_wait_lock(h,0)) {
-	fprintf(stderr,"dvb: frontend doesn't lock\n");
-	return -1;
-    }
-    if (0 != dvb_demux_station_filter(h,"dvb-pr",pr)) {
-	fprintf(stderr,"dvb: pid filter setup failed\n");
-	return -1;
-    }
+    dvb_demux_filter_setup(h, cfg_get_int("dvb-pr",pr, "video",0),
+			   cfg_get_int("dvb-pr",pr, "audio",0));
     return 0;
 }
 
-int dvb_tune_vdr(struct dvb_state *h, char *section)
+int dvb_start_tune_vdr(struct dvb_state *h, char *section)
 {
     char *domain = "vdr-channels";
     
@@ -795,12 +802,21 @@ int dvb_tune_vdr(struct dvb_state *h, char *section)
 	fprintf(stderr,"dvb: frontend tuning failed\n");
 	return -1;
     }
-    if (0 != dvb_frontend_wait_lock(h,0)) {
-	fprintf(stderr,"dvb: frontend doesn't lock\n");
-	return -1;
+    dvb_demux_filter_setup(h, cfg_get_int(domain, section, "video",0),
+			   cfg_get_int(domain, section, "audio",0));
+    return 0;
+}
+
+int dvb_finish_tune(struct dvb_state *h, int timeout)
+{
+    if (0 == timeout) {
+	if (!dvb_frontend_is_locked(h))
+	    return -1;
+    } else {
+	if (0 != dvb_frontend_wait_lock(h, timeout))
+	    return -1;
     }
-    if (0 != dvb_demux_station_filter(h,domain,section)) {
-	fprintf(stderr,"dvb: pid filter setup failed\n");
+    if (0 != dvb_demux_filter_apply(h)) {
 	return -1;
     }
     return 0;

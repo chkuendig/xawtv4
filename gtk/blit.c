@@ -1,4 +1,3 @@
-
 /*
  * x11 helper functions -- blit frames to the screen
  *

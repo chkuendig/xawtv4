@@ -265,16 +265,20 @@ static void play_file(char *filename)
 			filename);
 		exit(1);
 	    }
-	    if (-1 == dvb_tune(dvb, tsid, pnr)) {
+	    if (-1 == dvb_start_tune(dvb, tsid, pnr)) {
 		fprintf(stderr,"tuning \"%s\" (tsid %d, pnr %d) failed [xawtv]\n",
 			filename,tsid,pnr);
 		exit(1);
 	    }
 	} else if (GET_CMD_VDR()) {
-	    if (-1 == dvb_tune_vdr(dvb, filename)) {
+	    if (-1 == dvb_start_tune_vdr(dvb, filename)) {
 		fprintf(stderr,"tuning \"%s\" failed [vdr]\n",filename);
 		exit(1);
 	    }
+	}
+	if (0 != dvb_finish_tune(dvb, 10*1000)) {
+	    fprintf(stderr,"dvb frontend doesn't lock?\n");
+	    exit(1);
 	}
 	filename = "/dev/dvb/adapter0/dvr0";
 #else
@@ -459,6 +463,7 @@ static void usage(char *prog)
 
 int main(int argc, char *argv[])
 {
+    GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
     XVisualInfo *vinfo_list;
     int i,n;
 
@@ -467,6 +472,7 @@ int main(int argc, char *argv[])
 	toplevel = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	video = gtk_drawing_area_new();
 	gtk_widget_add_events(video,GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
+	gtk_widget_modify_bg(video,GTK_STATE_NORMAL, &black);
 	menu = create_menu(toplevel);
 	gtk_container_add(GTK_CONTAINER(toplevel), video);
 	g_signal_connect(toplevel, "delete-event",

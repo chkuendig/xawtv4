@@ -8,6 +8,9 @@ TARGETS-gtk := \
 ifeq ($(FOUND_DVB),yes)
 TARGETS-gtk += \
 	gtk/alexplore
+OBJS-gtk-dvb := \
+	gtk/gui-dvbscan.o \
+	gtk/gui-dvbtune.o
 endif
 
 gtk/pia: \
@@ -23,8 +26,9 @@ gtk/xawtv: \
 	gtk/xawtv.o \
 	gtk/av-sync.o \
 	gtk/blit.o \
-	gtk/gui-misc.o \
 	gtk/gui-control.o \
+	$(OBJS-gtk-dvb) \
+	gtk/gui-misc.o \
 	gtk/xscreensaver.o \
 	x11/xv.o \
 	x11/atoms.o \
@@ -34,8 +38,8 @@ gtk/xawtv: \
 
 gtk/mtt: \
 	gtk/mtt.o \
-	gtk/gui-misc.o \
 	gtk/gui-teletext.o \
+	gtk/gui-misc.o \
 	gtk/xscreensaver.o \
 	console/vbi-tty.o \
 	common/vbi-data.o \
@@ -46,8 +50,8 @@ gtk/mtt: \
 
 gtk/alexplore: \
 	gtk/alexplore.o \
+	$(OBJS-gtk-dvb) \
 	gtk/gui-misc.o \
-	gtk/gui-dvbtune.o \
 	gtk/xscreensaver.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture) \
