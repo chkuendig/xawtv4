@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=pia
+GenericName=Video Player
+Exec=pia %F
+Terminal=no
+Categories=AudioVideo;Player;Video
+NoDisplay=yes
+MimeType=video/mpeg

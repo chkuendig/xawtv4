@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=scantv
+Comment=scan for analog TV stations
+Exec=scantv
+Terminal=yes
+Categories=AudioVideo;TV

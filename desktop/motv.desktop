@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=motv
+GenericName=Watch TV!
+Exec=motv
+Terminal=no
+Categories=Motif;AudioVideo;TV
