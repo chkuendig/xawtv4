@@ -45,9 +45,57 @@ static struct dvbmon *dvbmon;
 
 /* ------------------------------------------------------------------------ */
 
+#define O_CMDLINE               "cmdline", "cmdline"
+
+#define O_CMD_HELP             	O_CMDLINE, "help"
+#define O_CMD_DEBUG	       	O_CMDLINE, "debug"
+
+#define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
+#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
+
+struct cfg_cmdline cmd_opts_only[] = {
+    {
+	.letter   = 'h',
+	.cmdline  = "help",
+	.option   = { O_CMD_HELP },
+	.value    = "1",
+	.desc     = "print this text",
+    },{
+	.letter   = 'd',
+	.cmdline  = "debug",
+	.option   = { O_CMD_DEBUG },
+	.needsarg = 1,
+	.desc     = "set debug level",
+    },{
+	/* end of list */
+    }
+};
+
+/* ------------------------------------------------------------------------ */
+
+static void
+usage(void)
+{
+    fprintf(stderr,
+	    "\n"
+	    "usage: alexplore [ options ]\n"
+	    "options:\n");
+
+    cfg_help_cmdline(cmd_opts_only,2,16,0);
+    fprintf(stderr,"\n");
+
+    exit(0);
+}
+
 int
 main(int argc, char *argv[])
 {
+    /* options */
+    cfg_parse_cmdline(&argc,argv,cmd_opts_only);
+    if (GET_CMD_HELP())
+	usage();
+    debug = GET_CMD_DEBUG();
+
     ng_init();
     devlist_init(1, 0, 0);
     device_init(NULL);
@@ -55,7 +103,7 @@ main(int argc, char *argv[])
 	fprintf(stderr,"no dvb device found\n");
 	exit(1);
     }
-    dvbmon = dvbmon_init(devs.dvb, 0);
+    dvbmon = dvbmon_init(devs.dvb, debug);
     dvbmon_add_callback(dvbmon,dvbwatch_scanner,NULL);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
