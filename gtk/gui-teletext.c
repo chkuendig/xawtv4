@@ -30,6 +30,53 @@
 #include "dvb-monitor.h"
 #include "gui.h"
 
+#if 1
+/* from vbi/src/lang.h */
+typedef enum {
+        LATIN_G0 = 1,
+        LATIN_G2,
+        CYRILLIC_1_G0,
+        CYRILLIC_2_G0,
+        CYRILLIC_3_G0,
+        CYRILLIC_G2,
+        GREEK_G0,
+        GREEK_G2,
+        ARABIC_G0,
+        ARABIC_G2,
+        HEBREW_G0,
+        BLOCK_MOSAIC_G1,
+        SMOOTH_MOSAIC_G3
+} vbi_character_set;
+
+typedef enum {
+        NO_SUBSET,
+        CZECH_SLOVAK,
+        ENGLISH,
+        ESTONIAN,
+        FRENCH,
+        GERMAN,
+        ITALIAN,
+        LETT_LITH,
+        POLISH,
+        PORTUG_SPANISH,
+        RUMANIAN,
+        SERB_CRO_SLO,
+        SWE_FIN_HUN,
+        TURKISH
+} vbi_national_subset;
+
+struct vbi_font_descr {
+        vbi_character_set       G0;
+        vbi_character_set       G2;     
+        vbi_national_subset     subset;         /* applies only to LATIN_G0 */
+        char *                  label;          /* Latin-1 */
+};
+
+extern struct vbi_font_descr    vbi_font_descriptors[88];
+#endif
+
+extern int debug;
+
 /* --------------------------------------------------------------------- */
 
 struct vbi_selection {
@@ -448,6 +495,30 @@ vbi_mark_rectangle(struct vbi_window *vw)
     XFillRectangle(vw->dpy, draw, vw->gc, x,y,w,h);
 }
 
+/*
+ * FIXME:
+ *   add vbi_teletext_set_default_region() menu
+ */
+static void vbi_print_page_lang(struct vbi_page *pg)
+{
+    static struct vbi_font_descr *f0, *f1;
+
+    if (pg->font[0] == f0  &&  pg->font[1] == f1)
+	return;
+    f0 = pg->font[0];
+    f1 = pg->font[1];
+    fprintf(stderr,"language/region:");
+    if (f0)
+	fprintf(stderr," font0=\"%s\",(%d)",
+		f0->label, (int)(f0-vbi_font_descriptors));
+    if (f1)
+	fprintf(stderr," font1=\"%s\",(%d)",
+		f1->label, (int)(f1-vbi_font_descriptors));
+    if (!f0 && !f1)
+	fprintf(stderr," unspecified");
+    fprintf(stderr,"\n");
+}
+
 static void
 vbi_render_page(struct vbi_window *vw)
 {
@@ -455,6 +526,9 @@ vbi_render_page(struct vbi_window *vw)
     struct vbi_char *ch;
     int y;
 
+    if (debug)
+	vbi_print_page_lang(&vw->pg);
+    
     vbi_fix_head(vw,vw->pg.text);
     for (y = 0; y < 25; y++) {
 	ch = vw->pg.text + 41*y;
