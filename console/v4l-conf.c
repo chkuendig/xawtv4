@@ -348,17 +348,37 @@ displayinfo_v4l2(int fd, struct DISPLAYINFO *d)
     fb.fmt.width  = d->width;
     fb.fmt.height = d->height;
     switch (d->bpp) {
-    case  8: fb.fmt.pixelformat = V4L2_PIX_FMT_HI240;   break;
+    case  8:
+	fb.fmt.pixelformat = V4L2_PIX_FMT_HI240;
+	break;
 #if BYTE_ORDER == BIG_ENDIAN
-    case 15: fb.fmt.pixelformat = V4L2_PIX_FMT_RGB555X; break;
-    case 16: fb.fmt.pixelformat = V4L2_PIX_FMT_RGB565X; break;
-    case 24: fb.fmt.pixelformat = V4L2_PIX_FMT_RGB24;   break;
-    case 32: fb.fmt.pixelformat = V4L2_PIX_FMT_RGB32;   break;
+    case 15:
+    case 16:
+	if (d->depth == 15)
+	    fb.fmt.pixelformat = V4L2_PIX_FMT_RGB555X;
+	else
+	    fb.fmt.pixelformat = V4L2_PIX_FMT_RGB565X;
+	break;
+    case 24:
+	fb.fmt.pixelformat = V4L2_PIX_FMT_RGB24;
+	break;
+    case 32:
+	fb.fmt.pixelformat = V4L2_PIX_FMT_RGB32;
+	break;
 #else
-    case 15: fb.fmt.pixelformat = V4L2_PIX_FMT_RGB555;  break;
-    case 16: fb.fmt.pixelformat = V4L2_PIX_FMT_RGB565;  break;
-    case 24: fb.fmt.pixelformat = V4L2_PIX_FMT_BGR24;   break;
-    case 32: fb.fmt.pixelformat = V4L2_PIX_FMT_BGR32;   break;
+    case 15:
+    case 16:
+	if (d->depth == 15)
+	    fb.fmt.pixelformat = V4L2_PIX_FMT_RGB555;
+	else
+	    fb.fmt.pixelformat = V4L2_PIX_FMT_RGB565;
+	break;
+    case 24:
+	fb.fmt.pixelformat = V4L2_PIX_FMT_BGR24;
+	break;
+    case 32:
+	fb.fmt.pixelformat = V4L2_PIX_FMT_BGR32;
+	break;
 #endif
     }
     if (yuv)
