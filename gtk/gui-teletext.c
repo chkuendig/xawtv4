@@ -495,10 +495,6 @@ vbi_mark_rectangle(struct vbi_window *vw)
     XFillRectangle(vw->dpy, draw, vw->gc, x,y,w,h);
 }
 
-/*
- * FIXME:
- *   add vbi_teletext_set_default_region() menu
- */
 static void vbi_print_page_lang(struct vbi_page *pg)
 {
     static struct vbi_font_descr *f0, *f1;
@@ -747,6 +743,9 @@ vbi_menu_cb(gpointer    user_data,
 	break;
     case 33:
 	vbi_button_next(widget,vw);
+	break;
+    case 40 ... 49:
+	vbi_teletext_set_default_region(vw->vbi->dec, (action-40)*8);
 	break;
     case 91:
 	gtk_about_box(GTK_WINDOW(vw->top), "mtt", VERSION, about_text);
@@ -1464,6 +1463,60 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback_action = 33,
 	.item_type       = "<StockItem>",
 	.extra_data      = GTK_STOCK_GO_FORWARD,
+    },{
+
+	/* --- Region menu --------------------------- */
+	.path            = noop("/_Region"),
+	.item_type       = "<Branch>",
+    },{
+	.path            = noop("/_Region/Western and _Central Europe"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 40,
+	.item_type       = "<RadioItem>",
+    },{
+	.path            = noop("/_Region/_Eastern Europe"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 41,
+	.item_type       = "/Region/Western and Central Europe",
+    },{
+	.path            = noop("/_Region/_Western Europe and Turkey"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 42,
+	.item_type       = "/Region/Western and Central Europe",
+    },{
+	.path            = noop("/_Region/Central and _Southeast Europe"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 43,
+	.item_type       = "/Region/Western and Central Europe",
+    },{
+	.path            = noop("/_Region/C_yrillic"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 44,
+	.item_type       = "/Region/Western and Central Europe",
+#if 0
+    },{
+	.path            = noop("/_Region/unused5"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 45,
+	.item_type       = "/Region/Western and Central Europe",
+#endif
+    },{
+	.path            = noop("/_Region/_Arabic"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 46,
+	.item_type       = "/Region/Western and Central Europe",
+#if 0
+    },{
+	.path            = noop("/_Region/unused7"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 47,
+	.item_type       = "/Region/Western and Central Europe",
+    },{
+	.path            = noop("/_Region/unused8"),
+	.callback        = vbi_menu_cb,
+	.callback_action = 48,
+	.item_type       = "/Region/Western and Central Europe",
+#endif
     },{
 	
 	/* --- dynamic stuff ------------------------- */
