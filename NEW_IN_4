@@ -23,11 +23,10 @@ Changes/Status Overview
 
    * motv application (gtk-ported xawtv will take over ;)
 
- work needed (i.e. broken/untested right now)
+ work needed (i.e. broken/untested/incomplete right now)
 
    * movie recording.
    * lirc support.
-   * mixer device support.
    * documentation is outdated.
    * fbtv & ttv.
 
@@ -121,6 +120,16 @@ Hints for using teletext
  the station menu, i.e. you have to use some other utility to tune the
  frontend.  mtt will happily run in parallel to a TV application
  without disrupting it.
+
+
+Hints for listening radio
+-------------------------
+
+ You can use dvbradio, a small standalone application for listening
+ radio.  Most important you have to know is that you have to do a
+ channel scan first with either xawtv or alexplore (see the DVB help
+ text above).  Anything else should be self-explanatory, just look
+ around in the GUI.
 
 
 Hints for using pia
