@@ -26,7 +26,7 @@ struct vbi_rect vbi_fullrect = {
 /*---------------------------------------------------------------------*/
 
 struct vbi_state*
-vbi_open(char *dev, int debug, int sim)
+vbi_open(char *dev, char *appname, int debug, int sim, int timeout)
 {
     struct vbi_state *vbi;
     int services = VBI_SLICED_VBI_525 | VBI_SLICED_VBI_625
@@ -71,6 +71,14 @@ vbi_open(char *dev, int debug, int sim)
 	    if (NULL != vbi->cap)
 		vbi->dvb = 1;
 	}
+#ifdef HAVE_VBI_PROXY
+	if (NULL == vbi->cap) {
+	    vbi->proxy = vbi_proxy_client_create(dev, appname, 0, &vbi->err, debug);
+	    if (vbi->proxy)
+		vbi->cap = vbi_capture_proxy_new(vbi->proxy,16,0,&services,-1,
+						 &vbi->err);
+	}
+#endif
 	if (NULL == vbi->cap)
 	    vbi->cap = vbi_capture_v4l2_new(dev,16,&services,-1,&vbi->err,debug);
 	if (NULL == vbi->cap)
@@ -90,7 +98,7 @@ vbi_open(char *dev, int debug, int sim)
     if (NULL == vbi->sliced)
 	goto oops;
     memset(vbi->sliced,0,vbi->lines * sizeof(vbi_sliced));
-    vbi->tv.tv_sec  = 1;
+    vbi->tv.tv_sec  = timeout;
     vbi->tv.tv_usec = 0;
     return vbi;
 
@@ -134,6 +142,10 @@ vbi_close(struct vbi_state *vbi)
 	vbi_capture_delete(vbi->cap);
     if (vbi->dec)
 	vbi_decoder_delete(vbi->dec);
+#ifdef HAVE_VBI_PROXY
+    if (vbi->proxy)
+	vbi_proxy_client_destroy(vbi->proxy);
+#endif
     free(vbi);
 }
 

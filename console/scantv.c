@@ -122,7 +122,7 @@ static void do_scan(int fullscan)
     
     /* vbi */
     if (devs.vbidev) {
-	vbi = vbi_open(devs.vbidev,0,0);
+	vbi = vbi_open(devs.vbidev,"scantv",0,0,1);
 	if (NULL == vbi)
 	    fprintf(stderr,"open %s: %s\n",ng_dev.vbi,strerror(errno));
 	else

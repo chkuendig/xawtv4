@@ -438,7 +438,7 @@ void analog_create_window(void)
 #ifdef HAVE_ZVBI
     /* setup vbi */
     if (devs.vbidev) {
-	devs.vbi = vbi_open(devs.vbidev,debug,0);
+	devs.vbi = vbi_open(devs.vbidev, "xawtv", debug, 0, 0);
 	vbi_ch = g_io_channel_unix_new(devs.vbi->fd);
 	vbi_id = g_io_add_watch(vbi_ch, G_IO_IN, vbi_raw_data, NULL);
 	vbi_hasdata(devs.vbi);

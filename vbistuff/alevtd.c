@@ -633,7 +633,7 @@ main(int argc, char *argv[])
     /* open vbi device */
     if (NULL == devname)
 	devname = ng_dev.vbi;
-    vbi = vbi_open(devname,debug,simulate);
+    vbi = vbi_open(devname, "alevtd", debug, simulate, 0);
     if (NULL == vbi) {
 	xperror(LOG_ERR,"cannot open vbi device",NULL);
 	exit(1);

@@ -4,9 +4,18 @@
 #ifdef HAVE_ZVBI
 #include <libzvbi.h>
 
+#if (VBI_VERSION_MAJOR == 0) && (VBI_VERSION_MINOR <= 2) && (VBI_VERSION_MICRO <= 8)
+# undef HAVE_VBI_PROXY
+#else
+# define HAVE_VBI_PROXY 1
+#endif
+
 #define VBI_MAX_SUBPAGES 64
 
 struct vbi_state {
+#ifdef HAVE_VBI_PROXY
+    vbi_proxy_client        *proxy;
+#endif
     vbi_decoder             *dec;
     vbi_capture             *cap;
     vbi_raw_decoder         *par;
@@ -30,7 +39,7 @@ enum vbi_txt_colors {
 extern char *vbi_colors[8];
 extern struct vbi_rect vbi_fullrect;
 
-struct vbi_state* vbi_open(char *dev, int debug, int sim);
+struct vbi_state* vbi_open(char *dev, char *appname, int debug, int sim, int timeout);
 int vbi_hasdata(struct vbi_state *vbi);
 void vbi_close(struct vbi_state *vbi);
 void vbi_set_pid(struct vbi_state *vbi, int pid);
