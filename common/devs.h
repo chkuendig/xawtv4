@@ -2,11 +2,7 @@
 /* current hardware drivers */
 struct devs {
     /* video hardware */
-    struct ng_devstate video;     /* v4l device  */
-    struct ng_devstate x11;       /* xvideo port */
-
-    /* use pointer for overlay */
-    struct ng_devstate *overlay;
+    struct ng_devstate video;
 
     /* sound hardware */
     struct ng_devstate sndrec;
@@ -46,3 +42,7 @@ extern int devlist_probe(void);
 extern int devlist_init(int probe);
 extern int device_init(char *name);
 extern int device_fini(void);
+
+/* ---------------------------------------------------------------------------- */
+
+struct ng_devinfo* vbi_probe(int verbose);

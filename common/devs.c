@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "grab-ng.h"
 #include "parseconfig.h"
@@ -23,6 +25,65 @@ struct devs devs;
 LIST_HEAD(global_attrs);
 
 #define DEVS_FLAG_SEEN  1
+
+/* ------------------------------------------------------------------------------ */
+
+#ifdef __linux__
+#include <asm/types.h>
+#include "videodev2.h"
+
+struct ng_devinfo* vbi_probe(int verbose)
+{
+    struct ng_devinfo *info = NULL;
+    struct v4l2_capability cap;
+    int i,n,fd;
+
+    n = 0;
+    for (i = 0; NULL != ng_dev.vbi_scan[i]; i++) {
+	fd = ng_chardev_open(ng_dev.vbi_scan[i], O_RDONLY | O_NONBLOCK,
+			     81, verbose);
+	if (-1 == fd)
+	    continue;
+	if (-1 == ioctl(fd,VIDIOC_QUERYCAP,&cap)) {
+	    if (verbose)
+		perror("ioctl VIDIOC_QUERYCAP");
+	    close(fd);
+	    continue;
+	}
+	info = realloc(info,sizeof(*info) * (n+2));
+	memset(info+n,0,sizeof(*info)*2);
+	strcpy(info[n].device, ng_dev.vbi_scan[i]);
+	snprintf(info[n].name, sizeof(info[n].name), "%s", cap.card);
+	snprintf(info[n].bus,  sizeof(info[n].bus),  "%s", cap.bus_info);
+	close(fd);
+	n++;
+    }
+    return info;
+}
+
+#else
+
+struct ng_devinfo* vbi_probe(int verbose)
+{
+    return NULL;
+}
+
+#endif
+
+static char* device_find_vbi(char *bus)
+{
+    static struct ng_devinfo* vbi = NULL;
+    int i;
+
+    if (NULL == vbi)
+	vbi = vbi_probe(0);
+    if (0 == strlen(bus))
+	return NULL;
+    for (i = 0; vbi && 0 != strlen(vbi[i].name); i++)
+	if (0 == strcmp(bus,vbi[i].bus))
+	    return vbi[i].device;
+    return NULL;
+}
 
 /* ------------------------------------------------------------------------------ */
 
@@ -41,27 +102,18 @@ static void device_print_line(char *name, char *entry, int def)
 
 static void device_print(char *name, int add)
 {
-    char *list;
-    
     fprintf(stderr,"   device configuration \"%s\"%s:\n",
 	    name, add ? " (NEW)" : "");
-    for (list  = cfg_entries_first("devs", name);
-	 list != NULL;
-	 list  = cfg_entries_next("devs", name, list)) {
-	device_print_line(name, "video",   0);
+    device_print_line(name, "video",   0);
 #ifdef HAVE_ZVBI
-	device_print_line(name, "vbi",     0);
+    device_print_line(name, "vbi",     0);
 #endif
 #ifdef HAVE_DVB
-	device_print_line(name, "dvb",  0);
+    device_print_line(name, "dvb",  0);
 #endif
-#ifdef HAVE_LIBXV
-	device_print_line(name, "xvideo",  0);
-#endif
-	device_print_line(name, "sndrec",  1);
-	device_print_line(name, "sndplay", 1);
-	// FIXME: mixer
-    }
+    device_print_line(name, "sndrec",  1);
+    device_print_line(name, "sndplay", 1);
+    // FIXME: mixer
 }
 
 static int device_probe_video(char *device)
@@ -105,6 +157,11 @@ static int device_probe_video(char *device)
 	    sprintf(name,"%s - #%d\n",h,i++);
 	}
 	cfg_set_str("devs", name, "video", device);
+	if (dev.v->busname) {
+	    char *vbi = device_find_vbi(dev.v->busname(dev.handle));
+	    if (vbi)
+		cfg_set_str("devs", name, "vbi", vbi);
+	}
     }
     cfg_set_sflags("devs", name, DEVS_FLAG_SEEN, DEVS_FLAG_SEEN);
     device_print(name,add);
@@ -173,16 +230,24 @@ int devlist_probe(void)
     for (list  = cfg_sections_first("devs");
 	 list != NULL;
 	 list  = cfg_sections_next("devs", list)) {
-	dev = cfg_get_str("devs", list, "video");
-	if (dev)
-	    device_probe_video(dev);
 #ifdef HAVE_DVB
 	dev = cfg_get_str("devs", list, "dvb");
 	if (dev)
 	    device_probe_dvb(dev);
 #endif
+	dev = cfg_get_str("devs", list, "video");
+	if (dev)
+	    device_probe_video(dev);
     }
     
+#ifdef HAVE_DVB
+    if (debug)
+	fprintf(stderr,"%s: probing dvb devices ...\n",__FUNCTION__);
+    info = dvb_probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	device_probe_dvb(info[i].device);
+#endif
+
     list_for_each(item,&ng_vid_drivers) {
         vid = list_entry(item, struct ng_vid_driver, list);
 	if (debug)
@@ -191,14 +256,6 @@ int devlist_probe(void)
 	for (i = 0; info && 0 != strlen(info[i].name); i++)
 	    device_probe_video(info[i].device);
     }
-
-#ifdef HAVE_DVB
-    if (debug)
-	fprintf(stderr,"%s: probing dvb devices ...\n",__FUNCTION__);
-    info = dvb_probe(debug);
-    for (i = 0; info && 0 != strlen(info[i].name); i++)
-	device_probe_dvb(info[i].device);
-#endif
 
     fprintf(stderr,"<== probing done.\n");
     return 0;
@@ -400,13 +457,11 @@ int device_fini()
 {
     /* cleanup attributes */
     device_attrs_del(&devs.video);
-    device_attrs_del(&devs.x11);
     device_attrs_del(&devs.sndplay);
     device_attrs_del(&devs.sndrec);
 
     /* close devices */
     ng_dev_fini(&devs.video);
-    ng_dev_fini(&devs.x11);
     ng_dev_fini(&devs.sndrec);
     ng_dev_fini(&devs.sndplay);
 
@@ -444,14 +499,6 @@ int device_init(char *name)
 	devs.dvb = dvb_init(devs.dvbadapter);
     }
     
-    /* xvideo */
-    device = cfg_get_str("devs", name, "xvideo");
-    if (NULL != device && 0 != strcasecmp(device,"none")) {
-	err = ng_vid_init(device, &devs.x11);
-	if (err)
-	    goto oops;
-    }
-    
     /* sound */
     device = cfg_get_str("devs", name, "sndrec");
     ng_dsp_init(device, &devs.sndrec, 1);
@@ -460,7 +507,6 @@ int device_init(char *name)
 
     /* init attributes */
     device_attrs_add(&devs.video);
-    device_attrs_add(&devs.x11);
     device_attrs_add(&devs.sndplay);
     device_attrs_add(&devs.sndrec);
     return 0;

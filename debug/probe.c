@@ -7,10 +7,11 @@
 #include <string.h>
 
 #include "grab-ng.h"
+#include "devs.h"
 #include "dvb.h"
 
-static int verbose;
-static int debug;
+int verbose;
+int debug;
 
 /* ------------------------------------------------------------------ */
 
@@ -46,6 +47,19 @@ print_dvb(void)
     for (i = 0; info && 0 != strlen(info[i].name); i++)
 	print_devinfo("dvb",info+i);
 #endif
+    return 0;
+}
+
+static int
+print_vbi(void)
+{
+    struct ng_devinfo *info;
+    int i;
+
+    print_driver("vbi");
+    info = vbi_probe(debug);
+    for (i = 0; info && 0 != strlen(info[i].name); i++)
+	print_devinfo("vbi",info+i);
     return 0;
 }
 
@@ -141,6 +155,11 @@ int main(int argc, char *argv[])
     /* dvb devices */
     fprintf(stderr,"probing dvb devices ...\n");
     print_dvb();
+    fprintf(stderr,"\n");
+
+    /* vbi devices */
+    fprintf(stderr,"probing vbi devices ...\n");
+    print_vbi();
     fprintf(stderr,"\n");
 
     /* video devices */

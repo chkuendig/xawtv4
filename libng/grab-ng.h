@@ -341,6 +341,7 @@ struct ng_vid_driver {
     int    (*close)(void *handle);
     int    (*fini)(void *handle);
     char*  (*devname)(void *handle);
+    char*  (*busname)(void *handle);
 
     /* attributes */
     int   (*capabilities)(void *handle);
@@ -524,9 +525,10 @@ struct ng_audio_conv {
 /* --------------------------------------------------------------------- */
 
 /* must be changed if we break compatibility */
-#define NG_PLUGIN_MAGIC 0x20040210
+#define NG_PLUGIN_MAGIC 0x20040303
 #define __init __attribute__ ((constructor))
 #define __fini __attribute__ ((destructor))
+#define __used __attribute__ ((used))
 
 extern struct list_head ng_conv;
 extern struct list_head ng_aconv;

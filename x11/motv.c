@@ -136,7 +136,7 @@ static struct vbi_window *vtx;
 static Widget attr_shell, attr_rc1;
 
 /* properties */
-static Widget prop_dlg,prop_name,prop_key,prop_channel;
+static Widget prop_dlg,prop_name,prop_key,prop_channel,prop_vdr;
 static Widget prop_group;
 
 /* preferences */
@@ -1098,7 +1098,7 @@ station_tune_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     line = XmStringUnparse(cb->item_or_text,NULL,
 			   XmMULTIBYTE_TEXT,XmMULTIBYTE_TEXT,
 			   NULL,0,0);
-    do_va_cmd(3,"setchannel",line);
+    do_va_cmd(2,"setchannel",line);
 }
 
 static void
@@ -1134,6 +1134,12 @@ create_station_prop(void)
 				    NULL);
     prop_channel = XtVaCreateManagedWidget("channel",xmComboBoxWidgetClass,
 					   rowcol,NULL);
+    XtAddCallback(prop_channel,XmNselectionCallback, station_tune_cb, NULL);
+
+    label = XtVaCreateManagedWidget("vdrL", xmLabelWidgetClass, rowcol,
+				    NULL);
+    prop_vdr = XtVaCreateManagedWidget("vdr",xmComboBoxWidgetClass,
+				       rowcol,NULL);
     XtAddCallback(prop_channel,XmNselectionCallback, station_tune_cb, NULL);
 
     XtAddCallback(prop_dlg,XmNokCallback, station_apply_cb, NULL);
@@ -3116,6 +3122,18 @@ main(int argc, char *argv[])
     /* mouse pointer magic */
     XtAddEventHandler(tv, PointerMotionMask, True, mouse_event, NULL);
     mouse_event(tv,NULL,NULL,NULL);
+
+#if 1
+    if (0 == cfg_sections_count("stations") &&
+	0 != cfg_sections_count("dvb") &&
+	NULL != cfg_get_str("devs",cfg_sections_first("devs"),"dvb")) {
+	/* easy start for dvb users, import vdr's list ... */
+	char *list;
+	cfg_sections_for_each("dvb",list)
+	    cfg_set_str("stations",list,"vdr",list);
+	write_config_file("stations");
+    }
+#endif
 
     /* build channel list */
     if (args.readconfig) {

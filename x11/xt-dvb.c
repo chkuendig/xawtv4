@@ -36,7 +36,7 @@ typedef struct _dvbPart
     XtCallbackList      update;
     XtCallbackList      delete;
     int                 verbose;
-    int                 adapter;
+    char                *adapter;
 
     /* private stuff */
     struct dvb_state    *dvb;
@@ -73,9 +73,9 @@ static XtResource resources[] = {
 	XtRString, "0"
     },{
 	"adapter",
-	XtCValue, XtRInt, sizeof(int),
+	XtCString, XtRString, sizeof(char*),
 	XtOffset(DvbWidget,dvb.adapter),
-	XtRString, "0"
+	XtRString, NULL
     },
 };
 
@@ -223,7 +223,7 @@ dvbInitialize(Widget request, Widget w, ArgList args, Cardinal *num_args)
     dw->core.height = 1;
 
     //dw->dvb.verbose = 1;
-    dw->dvb.dvb = dvb_init_nr(dw->dvb.adapter);
+    dw->dvb.dvb = dvb_init(dw->dvb.adapter);
     if (dw->dvb.dvb) {
 	if (dw->dvb.verbose)
 	    fprintf(stderr,"dvbmon: hwinit ok\n");

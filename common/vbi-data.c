@@ -68,7 +68,7 @@ vbi_open(char *dev, int debug, int sim)
 	    close(p[1]);
 	};
     } else {
-	if (NULL == vbi->cap) {
+	if (NULL == vbi->cap && 0 == strncmp(dev,"/dev/dvb/",9)) {
 	    vbi->cap = vbi_capture_dvb_new(dev,16,&services,-1,&vbi->err,debug);
 	    if (NULL != vbi->cap)
 		vbi->dvb = 1;

@@ -28,6 +28,10 @@ char*  cfg_entries_prev(char *dname, char *sname, char *current);
 int    cfg_entries_count(char *dname, char *sname);
 char*  cfg_entries_index(char *dname, char *sname, int i);
 
+#define cfg_sections_for_each(dname, item) \
+	for (item = cfg_sections_first(dname); NULL != item; \
+	     item = cfg_sections_next(dname,item))
+
 char*  cfg_search(char *dname, char *sname, char *ename, char *value);
 
 /* read */

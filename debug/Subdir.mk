@@ -16,6 +16,7 @@ endif
 debug/probe: \
 	debug/probe.o \
 	$(OBJS-dvb) \
+	common/devs.o \
 	common/parseconfig.o \
 	libng/libng.a
 

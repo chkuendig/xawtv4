@@ -535,8 +535,8 @@ configure_delayed(XtPointer data)
 	    fprintf(stderr," %s\n",conf ? "yes" : "no");
 	if (conf) {
 	    overlay_on = 1;
-	    if (NULL != devs.overlay)
-		devs.overlay->v->overlay(devs.overlay->handle,&wfmt,wx,wy,oc,oc_count,1);
+	    if (devs.video.flags & CAN_OVERLAY)
+		devs.video.v->overlay(devs.video.handle,&wfmt,wx,wy,oc,oc_count,1);
 	    if (overlay_refresh)
 		DEL_TIMER(overlay_refresh);
 	    overlay_refresh = ADD_TIMER(refresh_timer);
@@ -547,8 +547,8 @@ configure_delayed(XtPointer data)
 	    fprintf(stderr," off\n");
 	if (conf && overlay_on) {
 	    overlay_on = 0;
-	    if (NULL != devs.overlay)
-		devs.overlay->v->overlay(devs.overlay->handle,NULL,0,0,NULL,0,0);
+	    if (devs.video.flags & CAN_OVERLAY)
+		devs.video.v->overlay(devs.video.handle,NULL,0,0,NULL,0,0);
 	    if (overlay_refresh)
 		DEL_TIMER(overlay_refresh);
 	    overlay_refresh = ADD_TIMER(refresh_timer);
@@ -716,8 +716,8 @@ video_overlay(int state)
 #endif
 	    {
 		overlay_on = 0;
-		if (NULL != devs.overlay)
-		    devs.overlay->v->overlay(devs.overlay->handle,NULL,0,0,NULL,0,0);
+		if (devs.video.flags & CAN_OVERLAY)
+		    devs.video.v->overlay(devs.video.handle,NULL,0,0,NULL,0,0);
 		overlay_refresh = ADD_TIMER(refresh_timer);
 	    }
 	}

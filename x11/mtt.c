@@ -42,6 +42,8 @@
 #include "vbi-tty.h"
 
 #include "grab-ng.h"
+#include "devs.h"
+#include "parseconfig.h"
 #include "tv-config.h"
 #include "commands.h"
 #include "dvb.h"
@@ -53,6 +55,8 @@ XtAppContext  app_context;
 Widget        app_shell;
 Display       *dpy;
 int           debug;
+int           dvbmode;
+char          *vbidev;
 
 static String fallback_ressources[] = {
 #include "mtt.h"
@@ -65,10 +69,7 @@ struct ARGS {
     int   tty;
     int   debug;
     int   sim;
-
-    int   dvb;
     int   pid;
-    int   adapter;
 } args;
 
 XtResource args_desc[] = {
@@ -101,19 +102,9 @@ XtResource args_desc[] = {
 	XtOffset(struct ARGS*,sim),
 	XtRString, "0"
     },{
-	"dvb",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,dvb),
-	XtRString, "0"
-    },{
 	"pid",
 	XtCValue, XtRInt, sizeof(int),
 	XtOffset(struct ARGS*,pid),
-	XtRString, "0"
-    },{
-	"adapter",
-	XtCValue, XtRInt, sizeof(int),
-	XtOffset(struct ARGS*,adapter),
 	XtRString, "0"
     }
 };
@@ -152,22 +143,46 @@ static XtActionsRec actionTable[] = {
 
 /* --------------------------------------------------------------------- */
 
-static void mtt_dvb_init(int findpid)
+static void mtt_device_init(int findpid)
 {
-
-    if (args.dvb) {
 #ifdef HAVE_DVB
-	struct psi_info info;
-	struct dvb_state *h;
-	int i;
-	
-	if (NULL == args.device) {
-	    args.device = malloc(42);
-	    sprintf(args.device,"/dev/dvb/adapter%d/demux0",args.adapter);
-	}
+    struct psi_info info;
+    struct dvb_state *h;
+    int i;
+#endif
+    char *dev;
+
+    ng_init();
+    devlist_init(1);
+    
+    if (NULL == args.device) {
+	dev = cfg_sections_first("devs");
+	args.device = cfg_get_str("devs",dev,"dvb");
+	if (NULL == args.device)
+	    args.device = cfg_get_str("devs",dev,"vbi");
+	if (NULL == args.device)
+	    args.device = cfg_get_str("devs",dev,"video");
+	if (NULL == args.device)
+	    args.device = ng_dev.vbi;
+	fprintf(stderr,"using: %s [autodetect]\n",args.device);
+    } else {
+	fprintf(stderr,"using: %s [cmd line arg]\n",args.device);
+    }
+
+    if (0 == strncmp(args.device,"/dev/dvb/",9)) {
+	dvbmode = 1;
+	vbidev  = malloc(42);
+	snprintf(vbidev,42,"%s/demux0",args.device);
+    } else {
+	dvbmode = 0;
+	vbidev  = args.device;
+    }
+
+    if (dvbmode) {
+#ifdef HAVE_DVB
 	if (0 == args.pid && findpid) {
 	    fprintf(stderr,"no pid given, checking tables, please wait...\n");
-	    h = dvb_init_nr(args.adapter);
+	    h = dvb_init(args.device);
 	    if (NULL == h) {
 		fprintf(stderr,"can't init dvb\n");
 		exit(1);
@@ -193,10 +208,6 @@ static void mtt_dvb_init(int findpid)
 	fprintf(stderr,"compiled without dvb support, sorry\n");
 	exit(1);
 #endif
-    } else {
-	/* analog */
-	if (NULL == args.device)
-	    args.device = "/dev/vbi";
     }
 }
 
@@ -213,11 +224,10 @@ static void usage(void)
 	    "  -help         print this text\n"
 	    "  -debug        enable debug messages\n"
 	    "  -tty          use terminal mode\n"
-	    "  -device <dev> use vbi device <dev>\n"
-	    "  -dvb          use DVB mode\n"
+	    "  -device <dev> use vbi device <dev>, for DVB please use\n"
+	    "                /dev/dvb/adapter<n>\n"
 	    "  -pid <pid>    read vbi data from transport stream pid <pid>\n"
-	    "                (for DVB mode)\n"
-	    "  -adapter <n>  use DVB adapter <n>\n"
+	    "                (for DVB)\n"
 	    "\n"
 	    "--\n"
 	    "Gerd Knorr <kraxel@bytesex.org>\n");
@@ -246,23 +256,12 @@ static int main_tty(int argc, char **argv)
 	    argc -= 2;
 	    argv += 2;
 
-	} else if (0 == strcmp(argv[0],"-a") ||
-		   0 == strcmp(argv[0],"-adapter")) {
-	    args.adapter = atoi(argv[1]);
-	    argc -= 2;
-	    argv += 2;
-
 	} else if (0 == strcmp(argv[0],"-tty")) {
 	    argc -= 1;
 	    argv += 1;
 
 	} else if (0 == strcmp(argv[0],"-debug")) {
 	    args.debug = 1;
-	    argc -= 1;
-	    argv += 1;
-
-	} else if (0 == strcmp(argv[0],"-dvb")) {
-	    args.dvb = 1;
 	    argc -= 1;
 	    argv += 1;
 
@@ -280,8 +279,8 @@ static int main_tty(int argc, char **argv)
 	} else
 	    break;
     }
-    mtt_dvb_init(1);
-    vbi_tty(args.device,args.debug,args.sim,args.pid);
+    mtt_device_init(1);
+    vbi_tty(vbidev,args.debug,args.sim,args.pid);
     exit(0);
 }
 
@@ -325,19 +324,21 @@ main(int argc, char **argv)
 
     read_config();
     apply_config();
-    mtt_dvb_init(0);
+    mtt_device_init(0);
+
 #ifdef HAVE_DVB
-    if (args.dvb)
+    if (dvbmode) {
 	dvbmon = XtVaCreateWidget("dvb", dvbWidgetClass, app_shell,
-				  "adapter", args.adapter,
+				  "adapter", args.device,
 				  "verbose", args.debug,
 				  NULL);
+    }
 #endif
 
-    vbi = vbi_open(args.device,args.debug,args.sim);
+    vbi = vbi_open(vbidev,args.debug,args.sim);
     if (NULL == vbi)
 	exit(1);
-    if (args.pid)
+    if (dvbmode)
 	vbi_set_pid(vbi, args.pid);
     if (args.debug)
 	vbi_event_handler_add(vbi->dec,~0,vbi_dump_event,vbi);

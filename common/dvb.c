@@ -170,8 +170,6 @@ struct dvb_state {
 /* ----------------------------------------------------------------------- */
 /* handle diseqc                                                           */
 
-#define SEC_DELAY (15 * 1000)
-
 static int exec_diseqc(struct dvb_state *dvb, char *action)
 {
     struct dvb_diseqc_master_cmd cmd;
@@ -279,16 +277,17 @@ static char *find_diseqc(char *name)
     int  freq    = cfg_get_int("dvb", name, "frequency",0);
     char *list,*check;
 
-    for (list  = cfg_sections_first("diseqc");
-	 list != NULL;
-	 list  = cfg_sections_next("diseqc",list)) {
-	check = cfg_get_str("diseq", name, "source");
+    if (dvb_debug)
+	fprintf(stderr,"diseqc lookup: source=\"%s\" pol=\"%s\" freq=%d\n",
+		source,pol,freq);
+    cfg_sections_for_each("diseqc",list) {
+	check = cfg_get_str("diseqc", list, "source");
 	if (!check || !source || 0 != (strcasecmp(check,source)))
 	    continue;
-	check = cfg_get_str("diseq", name, "polarization");
+	check = cfg_get_str("diseqc", list, "polarization");
 	if (!check || !pol || 0 != (strcasecmp(check,pol)))
 	    continue;
-	if (freq < cfg_get_int("diseq", name, "lsof", 0))
+	if (freq < cfg_get_int("diseqc", list, "lsof", 0))
 	    return list;
     }
     return NULL;
@@ -324,9 +323,9 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	    fprintf(stderr,"no diseqc info for \"%s\"\n",name);
 	    return -1;
 	}
-	exec_diseqc(h,cfg_get_str("diseq", diseqc, "action"));
+	exec_diseqc(h,cfg_get_str("diseqc", diseqc, "action"));
 
-	lof = cfg_get_int("diseq", diseqc, "lsof", 0);
+	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val - lof;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
@@ -337,9 +336,10 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
 
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
+	    fprintf(stderr,"dvb fe: tuning freq=%d+%d, inv=%d "
 		    "symbol_rate=%d fec_inner=%s\n",
-		    h->p.frequency, h->p.inversion, h->p.u.qpsk.symbol_rate,
+		    lof, h->p.frequency, h->p.inversion,
+		    h->p.u.qpsk.symbol_rate,
 		    fe_name_rates [ h->p.u.qpsk.fec_inner ]);
 	}
 
@@ -896,7 +896,7 @@ static int parse_vdr_diseqc(char *domain, FILE *fp)
 	if (5 != sscanf(line,"%15s %15[0-9] %1s %15[0-9] %[][ a-fA-F0-9tTvVtTwW]\n",
 			source, lsof, pol, lof, action))
 	    continue;
-	sprintf(section,"diseqc-%d",i);
+	sprintf(section,"diseqc-%d",i++);
 	cfg_set_str(domain, section, "source",       source);
 	cfg_set_str(domain, section, "polarization", pol);
 	cfg_set_str(domain, section, "lsof",         lsof);
@@ -915,8 +915,6 @@ static void __init vdr_init(void)
     parse_vdr_channels("dvb",fp);
     fclose(fp);
 
-    dvb_debug = 1;
-    
     fp = fopen("/etc/vdr/diseqc.conf","r");
     if (NULL == fp)
 	return;

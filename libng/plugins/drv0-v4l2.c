@@ -40,6 +40,7 @@ static struct ng_devinfo* v4l2_probe(int verbose);
 
 /* attributes */
 static char*   v4l2_devname(void *handle);
+static char*   v4l2_busname(void *handle);
 static int     v4l2_flags(void *handle);
 static struct ng_attribute* v4l2_attrs(void *handle);
 static int     v4l2_read_attr(struct ng_attribute*);
@@ -120,6 +121,7 @@ struct ng_vid_driver v4l2_driver = {
     .close         = v4l2_close,
     .fini          = v4l2_fini,
     .devname       = v4l2_devname,
+    .busname       = v4l2_busname,
     .probe         = v4l2_probe,
     
     .capabilities  = v4l2_flags,
@@ -552,6 +554,13 @@ v4l2_devname(void *handle)
 {
     struct v4l2_handle *h = handle;
     return h->cap.card;
+}
+
+static char*
+v4l2_busname(void *handle)
+{
+    struct v4l2_handle *h = handle;
+    return h->cap.bus_info;
 }
 
 static struct ng_devinfo* v4l2_probe(int verbose)

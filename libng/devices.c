@@ -23,6 +23,11 @@ struct ng_device_config ng_dev = {
 	"/dev/bktr1",
 	NULL
     },
+    vbi_scan: {
+	"/dev/vbi0",
+	"/dev/vbi1",
+	NULL
+    },
     mixer_scan: {
 	"/dev/mixer",
 	"/dev/mixer1", 
@@ -56,6 +61,13 @@ struct ng_device_config ng_dev = {
 	"/dev/video3",
 	NULL
     },
+    vbi_scan: {
+	"/dev/vbi0",
+	"/dev/vbi1",
+	"/dev/vbi2",
+	"/dev/vbi3",
+	NULL
+    },
     mixer_scan: {
 	"/dev/mixer",
 	"/dev/mixer1", 
@@ -87,6 +99,13 @@ struct ng_device_config ng_dev_devfs = {
 	"/dev/v4l/video1",
 	"/dev/v4l/video2",
 	"/dev/v4l/video3",
+	NULL
+    },
+    vbi_scan: {
+	"/dev/v4l/vbi0",
+	"/dev/v4l/vbi1",
+	"/dev/v4l/vbi2",
+	"/dev/v4l/vbi3",
 	NULL
     },
     mixer_scan: {
