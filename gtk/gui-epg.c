@@ -27,11 +27,9 @@ static EpgStore *epg_store;
 /* ------------------------------------------------------------------------ */
 
 /* callbacks */
-static void do_refresh(void);
 static void do_filter_nofilter(void);
-static void do_filter_now(void);
-static void do_filter_next(void);
 static void do_filter_station(void);
+static void do_filter_text(GtkWidget *search);
 
 #if 0
 static gboolean is_visible(GtkTreeModel *model, GtkTreeIter *iter, gpointer data);
@@ -166,27 +164,10 @@ static struct toolbarbutton toolbaritems[] = {
 	.stock    = GTK_STOCK_INDEX,
 	.callback = do_filter_station,
     },{
-	.text     = noop("now"),
-	.tooltip  = noop("sending now"),
-	.stock    = GTK_STOCK_GO_DOWN,
-	.callback = do_filter_now,
-    },{
-	.text     = noop("next"),
-	.tooltip  = noop("sending soon"),
-	.stock    = GTK_STOCK_GO_FORWARD,
-	.callback = do_filter_next,
-    },{
 	.text     = noop("no filter"),
 	.tooltip  = noop("show all entries"),
 	.stock    = GTK_STOCK_JUSTIFY_FILL,
 	.callback = do_filter_nofilter,
-    },{
-	/* nothing */
-    },{
-	.text     = noop("refresh"),
-	.tooltip  = noop("reload epg list"),
-	.stock    = GTK_STOCK_REFRESH,
-	.callback = do_refresh,
     },{
 	/* nothing */
     }
@@ -216,6 +197,7 @@ void create_epgwin(GtkWindow* parent)
 {
     GtkTreeSelection *sel;
     GtkWidget *paned,*vbox,*scroll,*frame,*toolbar,*menubar,*handlebox;
+    GtkWidget *label,*search;
     GtkAccelGroup *accel_group;
 
     epg_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -247,14 +229,12 @@ void create_epgwin(GtkWindow* parent)
 
     /* toolbar */
     toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
-#if 0
-    label = gtk_label_new(" Search: ");
+    label = gtk_label_new(_(" Search: "));
     gtk_toolbar_add_widget(toolbar,label,-1);
     search = gtk_entry_new_with_max_length(32);
     gtk_toolbar_add_widget(toolbar,search,-1);
     g_signal_connect(search, "activate",
-		     G_CALLBACK(search_text_changed), NULL);
-#endif
+		     G_CALLBACK(do_filter_text), NULL);
     handlebox = gtk_handle_box_new();
     gtk_container_add(GTK_CONTAINER(handlebox), toolbar);
 
@@ -357,6 +337,7 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
     char buf[64];
     struct tm tm1, tm2;
     struct epgitem *epg;
+    int i,len;
 
     buffer = gtk_text_view_get_buffer(textview);
 
@@ -392,15 +373,24 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
 	TBNORM("\n");
     }
 
-    if (strlen(epg->stext)) {
+    if (0 != (len = strlen(epg->stext))) {
 	TBBOLD(_("Summary: "));
 	TBNORM(epg->stext);
-	TBNORM("\n");
+	if (epg->stext[len-1] != '\n')
+	    TBNORM("\n");
     }
 
     if (strlen(epg->lang)) {
 	TBBOLD(_("Language: "));
 	TBNORM(epg->lang);
+	TBNORM("\n");
+    }
+
+    for (i = 0; i < DIMOF(epg->cat); i++) {
+	if (NULL == epg->cat[i])
+	    continue;
+	TBBOLD(_("Category: "));
+	TBNORM(epg->cat[i]);
 	TBNORM("\n");
     }
 
@@ -458,11 +448,6 @@ void epgwin_show(struct epgitem* epg)
 
 /* callbacks */
 
-static void do_refresh(void)
-{
-    epg_store_refresh(epg_store);
-}
-
 static void do_filter(enum epg_filter type)
 {
     /* temporary disconnect store from view for fast large-scale update */
@@ -483,14 +468,12 @@ static void do_filter_station(void)
     do_filter(EPG_FILTER_STATION);
 }
 
-static void do_filter_now(void)
+static void do_filter_text(GtkWidget *search)
 {
-    do_filter(EPG_FILTER_NOW);
-}
+    const char *text = gtk_entry_get_text(GTK_ENTRY(search));
 
-static void do_filter_next(void)
-{
-    do_filter(EPG_FILTER_NEXT);
+    epg_store_filter_text(epg_store, text);
+    do_filter(EPG_FILTER_TEXT);
 }
 
 // vim: sw=4

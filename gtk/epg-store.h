@@ -24,8 +24,6 @@ GType     epg_store_get_type (void);
 
 enum epg_filter {
     EPG_FILTER_NOFILTER,
-    EPG_FILTER_NOW,
-    EPG_FILTER_NEXT,
     EPG_FILTER_STATION,
     EPG_FILTER_TEXT,
 };
@@ -56,6 +54,7 @@ void epg_store_refresh(EpgStore *st);
 void epg_store_sort(EpgStore *st);
 void epg_store_filter_type(EpgStore *st, enum epg_filter type);
 void epg_store_filter_station(EpgStore *st, int tsid, int pnr);
+void epg_store_filter_text(EpgStore *st, const char *text);
 void epg_store_station_visible(EpgStore *st, int tsid, int pnr, int visible);
 
 #endif /* _epg_store_h_included_ */

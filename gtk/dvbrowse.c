@@ -53,8 +53,8 @@ static int tune_secs = 32;
 #define O_CMD_DEVICE	       	O_CMDLINE, "device"
 
 #define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
+#define GET_CMD_PASSIVE()	cfg_get_bool(O_CMD_PASSIVE,   	0)
 #define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
-#define GET_CMD_PASSIVE()	cfg_get_int(O_CMD_PASSIVE,   	0)
 
 struct cfg_cmdline cmd_opts_only[] = {
     {
@@ -148,7 +148,15 @@ static gboolean tune_timeout(gpointer data)
 	scan_pass++;
 
     last_tune = now;
-    dvb_frontend_tune(devs.dvb, "dvb-ts", list);
+    if (-1 == dvb_frontend_tune(devs.dvb, "dvb-ts", list)) {
+	fprintf(stderr,
+		"DVB tuning failed, switching to passive mode.\n");
+	cfg_set_bool(O_CMD_PASSIVE, TRUE);
+	scan_percent = 0;
+	scan_pass = 0;
+	list = NULL;
+	return TRUE;
+    }
     snprintf(buf,sizeof(buf),"Tuning TSID %s (pass %d, %d%%) ...",
 	     list, scan_pass, scan_percent);
     gtk_label_set_label(GTK_LABEL(epg_status),buf);
@@ -178,7 +186,8 @@ static void dvbwatch_tsid(struct psi_info *info, int event,
 int
 main(int argc, char *argv[])
 {
-    char filename[1024];
+    char filename[1024],buf[128];
+    int entries;
     
     setlocale(LC_ALL,"");
     bindtextdomain(PACKAGE, LOCALEDIR);
@@ -194,7 +203,7 @@ main(int argc, char *argv[])
     read_config_file("dvb-pr");
     read_config_file("stations");
     snprintf(filename, sizeof(filename), "%s/.tv/epg", getenv("HOME"));
-    eit_read_file(filename);
+    entries = eit_read_file(filename);
 
     gtk_init(&argc, &argv);
     ng_init();
@@ -214,6 +223,10 @@ main(int argc, char *argv[])
     gtk_widget_show_all(epg_win);
     if (!debug)
 	gtk_redirect_stderr_to_gui(GTK_WINDOW(epg_win));
+    if (entries) {
+	snprintf(buf,sizeof(buf),"Read %d entries from disk.",entries);
+	gtk_label_set_label(GTK_LABEL(epg_status),buf);
+    }
 
     g_timeout_add(5000, tune_timeout, NULL);
     gtk_main();

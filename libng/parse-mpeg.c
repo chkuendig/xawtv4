@@ -589,13 +589,13 @@ int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header)
     height = (mpeg_getbits(header,44,12) + 15) & ~15;
     ratio  = mpeg_getbits(header,56,4);
     if (width != h->vfmt.width || height != h->vfmt.height) {
-	if (1 /* ng_debug */)
+	if (ng_debug)
 	    fprintf(stderr,"mpeg: size change: %dx%d => %dx%d\n",
 		    h->vfmt.width, h->vfmt.height, width, height);
 	change++;
     }
     if (ratio != h->ratio) {
-	if (1 /* ng_debug */)
+	if (ng_debug)
 	    fprintf(stderr,"mpeg: ratio change: %s => %s\n",
 		    ratio_s[h->ratio], ratio_s[ratio]);
 	change++;

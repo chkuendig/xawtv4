@@ -53,8 +53,8 @@ struct epgitem {
     time_t              start;       /* unix epoch */
     time_t              stop;
     char                lang[4];
-    char                name[64];
-    char                stext[128];
+    char                name[128];
+    char                stext[256];
     char                *etext;
     char                *cat[4];
     uint64_t            flags;
@@ -62,6 +62,7 @@ struct epgitem {
     /* for the epg store */
     int                 row;
     int                 playing;
+    struct station      *station;
 };
 
 extern struct list_head epg_list;
@@ -74,7 +75,7 @@ struct eit_state* eit_add_watch(struct dvb_state *dvb,
 void eit_del_watch(struct eit_state *eit);
 
 void eit_write_file(char *filename);
-void eit_read_file(char *filename);
+int  eit_read_file(char *filename);
 
 #ifdef HAVE_DVB
 extern struct epgitem* eit_lookup(int tsid, int pnr, time_t when, int debug);

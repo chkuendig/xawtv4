@@ -194,7 +194,7 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 	    break;
 	case STATE_INVALID:
 	case STATE_INVALID_END:
-	    if (1 /* ng_debug */)
+	    if (ng_debug)
 		fprintf(stderr,"mpeg: state=%d [%s], restarting decoder\n",
 			state,states[state]);
 	    mpeg_close(h);

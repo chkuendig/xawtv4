@@ -755,8 +755,9 @@ int dvb_demux_get_section(int fd, unsigned char *buf, int len)
     
     memset(buf,0,len);
     if ((rc = read(fd, buf, len)) < 0)
-	if ((ETIMEDOUT != errno) || dvb_debug)
-	    fprintf(stderr,"dvb mux: read: %s\n", strerror(errno));
+	if ((ETIMEDOUT != errno && EOVERFLOW != errno) || dvb_debug)
+	    fprintf(stderr,"dvb mux: read: %s [%d]\n",
+		    strerror(errno), errno);
     return rc;
 }
 

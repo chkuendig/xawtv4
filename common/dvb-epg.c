@@ -412,9 +412,12 @@ static void parse_eit_desc(unsigned char *desc, int dlen,
 		int c;
 		if (!content_desc[d])
 		    continue;
-		for (c = 0; c < DIMOF(epg->cat); c++)
+		for (c = 0; c < DIMOF(epg->cat); c++) {
 		    if (NULL == epg->cat[c])
 			break;
+		    if (content_desc[d] == epg->cat[c])
+			break;
+		}
 		if (c == DIMOF(epg->cat))
 		    continue;
 		epg->cat[c] = content_desc[d];
@@ -648,6 +651,7 @@ void eit_write_file(char *filename)
     struct list_head *item;
     struct epgitem   *epg;
     FILE *fp;
+    int i, val;
 
     fp = fopen(filename,"w");
     if (NULL == fp) {
@@ -662,6 +666,16 @@ void eit_write_file(char *filename)
 	fprintf(fp,"pnr=%d;",   epg->pnr);
 	fprintf(fp,"start=%ld;", epg->start);
 	fprintf(fp,"stop=%ld;",  epg->stop);
+	for (i = 0; i < DIMOF(epg->cat); i++) {
+	    if (NULL == epg->cat[i])
+		continue;
+	    for (val = 0; val < DIMOF(content_desc); val++) {
+		if (epg->cat[i] == content_desc[val]) {
+		    fprintf(fp,"cat%d=%d;", i, val);
+		    break;
+		}
+	    }
+	}
 	if (epg->lang[0])
 	    write_string(fp,"lang",epg->lang);
 	if (epg->name[0])
@@ -675,26 +689,30 @@ void eit_write_file(char *filename)
     fclose(fp);
 }
 
-void eit_read_file(char *filename)
+int eit_read_file(char *filename)
 {
     struct epgitem *epg;
     char line[4096];
     char name[16];
     int offset,len;
     FILE *fp;
+    unsigned int val;
+    int count = 0;
     time_t now = time(NULL);
 
     fp = fopen(filename,"r");
     if (NULL == fp) {
+#if 0
 	fprintf(stderr,"%s: %s\n",filename,strerror(errno));
-	return;
+#endif
+	return count;
     }
 
     while (NULL != fgets(line,sizeof(line),fp)) {
 	epg = malloc(sizeof(*epg));
 	memset(epg,0,sizeof(*epg));
 	for (offset = 0; offset < sizeof(line) /* && line[offset] != '\0' */;) {
-	    if (1 != sscanf(line+offset,"%16[a-z]=%n",name,&len))
+	    if (1 != sscanf(line+offset,"%16[a-z0-9]=%n",name,&len))
 		break;
 	    offset +=len;
 
@@ -716,6 +734,30 @@ void eit_read_file(char *filename)
 
 	    } else if (0 == strcmp(name,"stop")) {
 		sscanf(line+offset,"%ld;%n",&epg->stop,&len);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"cat0")) {
+		sscanf(line+offset,"%d;%n",&val,&len);
+		if (val < DIMOF(content_desc) && NULL != content_desc[val])
+		    epg->cat[0] = content_desc[val];
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"cat1")) {
+		sscanf(line+offset,"%d;%n",&val,&len);
+		if (val < DIMOF(content_desc) && NULL != content_desc[val])
+		    epg->cat[1] = content_desc[val];
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"cat2")) {
+		sscanf(line+offset,"%d;%n",&val,&len);
+		if (val < DIMOF(content_desc) && NULL != content_desc[val])
+		    epg->cat[2] = content_desc[val];
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"cat3")) {
+		sscanf(line+offset,"%d;%n",&val,&len);
+		if (val < DIMOF(content_desc) && NULL != content_desc[val])
+		    epg->cat[3] = content_desc[val];
 		offset +=len;
 
 	    } else if (0 == strcmp(name,"lang")) {
@@ -740,6 +782,11 @@ void eit_read_file(char *filename)
 				   line+offset,sizeof(line)-offset);
 		offset += len;
 
+#if 0
+	    } else {
+		fprintf(stderr,"parse error: name \"%s\"\n",name);
+#endif
+
 	    }
 
 	}
@@ -749,6 +796,7 @@ void eit_read_file(char *filename)
 	    epg->row     = -1;
 	    epg->updated++;
 	    list_add_tail(&epg->next,&epg_list);
+	    count++;
 	} else {
 	    /* hmm, ignore */
 	    if (epg->etext)
@@ -758,4 +806,5 @@ void eit_read_file(char *filename)
     }
     
     fclose(fp);
+    return count;
 }
