@@ -170,6 +170,9 @@ int tune_analog_station(char *station)
 
 int tune_dvb_channel(char *pr)
 {
+#ifndef HAVE_DVB
+    return -1;
+#else
     int tsid, pnr;
 
     if (2 != sscanf(pr,"%d-%d",&tsid,&pnr))
@@ -182,6 +185,7 @@ int tune_dvb_channel(char *pr)
     new_station(NULL);
     new_channel(NULL);
     return 0;
+#endif
 }
 
 static int tune_dvb_station(char *station)
