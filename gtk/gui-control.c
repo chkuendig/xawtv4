@@ -1450,7 +1450,7 @@ void control_switchdevice(void)
 
 void create_control(void)
 {
-    GtkWidget *vbox,*hbox,*menubar,*scroll;
+    GtkWidget *vbox,*menubar,*scroll;
     GtkWidget *handlebox,*toolbar;
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *col;
@@ -1495,7 +1495,10 @@ void create_control(void)
 				  G_TYPE_BOOLEAN); // active
     gtk_tree_view_set_model(GTK_TREE_VIEW(st_view),
 			    GTK_TREE_MODEL(st_model));
-    scroll = gtk_vscrollbar_new(gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(st_view)));
+    scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+				   GTK_POLICY_NEVER,
+				   GTK_POLICY_AUTOMATIC);
     g_signal_connect(st_view, "row-activated",
 		     G_CALLBACK(station_activate), NULL);
 
@@ -1611,16 +1614,14 @@ void create_control(void)
 
     /* Make a vbox and put stuff in */
     vbox = gtk_vbox_new(FALSE, 1);
-    hbox = gtk_hbox_new(FALSE, 1);
     handlebox = gtk_handle_box_new();
     gtk_container_add(GTK_CONTAINER(handlebox), toolbar);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
     gtk_container_add(GTK_CONTAINER(control_win), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), handlebox, FALSE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(hbox), st_view, TRUE, TRUE, 0);
-    gtk_box_pack_end(GTK_BOX(hbox), scroll, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
+    gtk_container_add(GTK_CONTAINER(scroll), st_view);
     gtk_box_pack_end(GTK_BOX(vbox), control_status, FALSE, TRUE, 0);
 
     /* dynamic stuff */

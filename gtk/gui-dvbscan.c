@@ -36,7 +36,7 @@ static int   scan_rescan = 6;   // enougth to refrest pmt's
 static int   scan_full   = 20;  // should also catch NIT tables
 static int   scan_slow   = 60;  // if full is still to fast
 
-static int   timeout_lock = 30;
+static int   timeout_lock = 15;
 static int   timeout_pat  = 10;
 static int   timeout_data;
 
@@ -57,6 +57,7 @@ static void  dvbwatch_gui(struct psi_info *info, int event,
 
 enum {
     ST_COL_NAME = 0,
+    ST_COL_NET,
     ST_COL_TSID,
     ST_COL_COUNT,
     ST_COL_FREQ,
@@ -446,7 +447,10 @@ static void dvbscan_init_gui(void)
 	find_pr(&iter,tsid,pnr);
 	if (NULL != (val = cfg_get_str("dvb-pr",list,"name")))
 	    gtk_tree_store_set(store, &iter, ST_COL_NAME, val, -1);
+	if (NULL != (val = cfg_get_str("dvb-pr",list,"net")))
+	    gtk_tree_store_set(store, &iter, ST_COL_NET, val, -1);
 	gtk_tree_store_set(store, &iter,
+			   ST_COL_CA,       cfg_get_int("dvb-pr",list,"ca",0),
 			   ST_COL_VIDEO,    cfg_get_int("dvb-pr",list,"video",0),
 			   ST_COL_AUDIO,    cfg_get_int("dvb-pr",list,"audio",0),
 			   ST_COL_TELETEXT, cfg_get_int("dvb-pr",list,"teletext",0),
@@ -461,7 +465,7 @@ static void dvbscan_init_gui(void)
 
 void dvbscan_create_window(int s)
 {
-    GtkWidget *vbox,*hbox,*menubar,*scroll;
+    GtkWidget *vbox,*menubar,*scroll;
     GtkCellRenderer *renderer;
     GtkAccelGroup *accel_group;
     GtkTreeViewColumn *col;
@@ -493,6 +497,7 @@ void dvbscan_create_window(int s)
     view  = gtk_tree_view_new();
     store = gtk_tree_store_new(ST_NUM_COLS,
 			       G_TYPE_STRING,   // name
+			       G_TYPE_STRING,   // net
 			       G_TYPE_INT,      // tsid
 			       G_TYPE_INT,      // count
 			       G_TYPE_INT,      // freq
@@ -507,7 +512,10 @@ void dvbscan_create_window(int s)
 			       G_TYPE_BOOLEAN); // scanned
     gtk_tree_view_set_model(GTK_TREE_VIEW(view),
 			    GTK_TREE_MODEL(store));
-    scroll = gtk_vscrollbar_new(gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view)));
+    scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+				   GTK_POLICY_NEVER,
+				   GTK_POLICY_AUTOMATIC);
     g_signal_connect(view, "row-activated", G_CALLBACK(activate), NULL);
     gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(view)),
 				GTK_SELECTION_MULTIPLE);
@@ -523,6 +531,19 @@ void dvbscan_create_window(int s)
 	 "weight-set",     ST_STATE_ACTIVE,
 	 "foreground-set", ST_STATE_STALE,
 	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 "foreground",  "gray",
+		 NULL);
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(view), -1, "Net", renderer,
+	 "text",           ST_COL_NET,
+	 "weight-set",     ST_STATE_ACTIVE,
+	 "foreground-set", ST_STATE_STALE,
+	 NULL);
+
 
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer,
@@ -646,6 +667,12 @@ void dvbscan_create_window(int s)
                                     GINT_TO_POINTER(ST_COL_NAME), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_NAME);
 
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NET);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_NET,
+				    gtk_sort_iter_compare_str,
+                                    GINT_TO_POINTER(ST_COL_NET), NULL);
+    gtk_tree_view_column_set_sort_column_id(col, ST_COL_NET);
+
     col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_TSID);
     gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_TSID,
 				    gtk_sort_iter_compare_int,
@@ -674,13 +701,11 @@ void dvbscan_create_window(int s)
 
     /* Make a vbox and put stuff in */
     vbox = gtk_vbox_new(FALSE, 1);
-    hbox = gtk_hbox_new(FALSE, 1);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
     gtk_container_add(GTK_CONTAINER(dvbscan_win), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(hbox), view, TRUE, TRUE, 0);
-    gtk_box_pack_end(GTK_BOX(hbox), scroll, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
+    gtk_container_add(GTK_CONTAINER(scroll), view);
     gtk_box_pack_end(GTK_BOX(vbox), status, FALSE, TRUE, 0);
 
     /* fill data */
@@ -845,6 +870,12 @@ static void dvbwatch_gui(struct psi_info *info, int event,
 	if (pr->name[0] != 0)
 	    gtk_tree_store_set(store, &iter, ST_COL_NAME,
 			       pr->name, -1);
+	if (pr->net[0] != 0)
+	    gtk_tree_store_set(store, &iter, ST_COL_NET,
+			       pr->net, -1);
+	if (pr->ca)
+	    gtk_tree_store_set(store, &iter, ST_COL_CA,
+			       pr->ca, -1);
 	if (pr->v_pid)
 	    gtk_tree_store_set(store, &iter, ST_COL_VIDEO,
 			       pr->v_pid, -1);

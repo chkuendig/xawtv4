@@ -1137,7 +1137,7 @@ main(int argc, char *argv[])
     gtk_widget_show(video);
     if (NULL == (geometry = cfg_get_str(O_CMD_GEOMETRY)) ||
 	!gtk_window_parse_geometry(GTK_WINDOW(main_win), geometry))
-	gtk_window_set_default_size(GTK_WINDOW(main_win), 320, 240);
+	gtk_window_set_default_size(GTK_WINDOW(main_win), 384, 288);
     gtk_widget_show(main_win);
     gtk_unclutter(video);
     if (!debug && GET_X11_STDERR_REDIR())

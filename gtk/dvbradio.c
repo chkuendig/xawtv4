@@ -119,6 +119,8 @@ static void tune_byname(char *station)
 
     cfg_sections_for_each("dvb-pr",list) {
 	name = cfg_get_str("dvb-pr",list,"name");
+	if (!name)
+	    continue;
 	if (0 != strcasecmp(station,name))
 	    continue;
 	current = name;
@@ -400,6 +402,8 @@ static void init_channel_list(GtkWidget *parent)
 
     cfg_sections_for_each("dvb-pr",list) {
 	name = cfg_get_str("dvb-pr",list,"name");
+	if (!name)
+	    continue;
 	if (0 == cfg_get_str("dvb-pr",list,"audio"))
 	    continue;
 	if (0 != cfg_get_str("dvb-pr",list,"video"))
