@@ -1136,7 +1136,9 @@ handle_cmdline_args(int *argc, char **argv)
     ng_debug = args.debug;
     ng_log_bad_stream = args.debug;
     ng_log_resync = args.debug;
+#ifdef HAVE_DVB
     dvb_debug = args.debug;
+#endif
 
     if (args.hwls) {
 	fprintf(stderr,"\n");

@@ -2928,7 +2928,7 @@ main(int argc, char *argv[])
     XtAddEventHandler(tv, PointerMotionMask, True, mouse_event, NULL);
     mouse_event(tv,NULL,NULL,NULL);
 
-#if 1
+#ifdef HAVE_DVB
     if (0 == cfg_sections_count("stations") &&
 	0 != cfg_sections_count("dvb") &&
 	NULL != cfg_get_str("devs",cfg_sections_first("devs"),"dvb")) {
