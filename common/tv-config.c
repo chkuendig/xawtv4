@@ -64,7 +64,7 @@ struct cfg_cmdline cmd_opts_x11[] = {
 	.cmdline = "gl",
 	.option  = { O_EXT_OPENGL },
 	.yesno   = 1,
-	.desc    = "enable/disable OpenGL (via GLX extention)",
+	.desc    = "enable/disable OpenGL (GLX extention)",
     },{
 	/* end of list */
     }
@@ -90,6 +90,22 @@ struct cfg_cmdline cmd_opts_record[] = {
 /* devices */
 struct cfg_cmdline cmd_opts_devices[] = {
     {
+	.cmdline  = "input",
+	.option   = { O_INPUT },
+	.needsarg = 1,
+	.desc     = "video input",
+    },{
+	.cmdline  = "tvnorm",
+	.option   = { O_TVNORM },
+	.needsarg = 1,
+	.desc     = "TV norm",
+    },{
+	.cmdline  = "freqtab",
+	.option   = { O_FREQTAB },
+	.needsarg = 1,
+	.desc     = "frequency table (for tuning analog tv)",
+
+    },{
 	.cmdline  = "video",
 	.option   = { "devs", "cmdline", "video" },
 	.needsarg = 1,

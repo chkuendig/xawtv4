@@ -1,5 +1,5 @@
 /*
- * (c) 2000-2002 Gerd Knorr <kraxel@goldbach.in-berlin.de>
+ * (c) 2000-2004 Gerd Knorr <kraxel@goldbach.in-berlin.de>
  *
  */
 #include "config.h"
@@ -106,7 +106,7 @@ menu(char *name, struct STRTAB *tab, char *opt)
 
 static void do_scan(int fullscan)
 {
-    struct vbi_state *vbi;
+    struct vbi_state *vbi = NULL;
     int on,tuned;
     unsigned int f,fc,f1,f2;
     char *oldname, *name, *channel, *fchannel, dummy[32];
@@ -116,17 +116,18 @@ static void do_scan(int fullscan)
 	return;
     }
 
-    do_va_cmd(2,"setinput",   cfg_get_str("options", "global", "input"));
-    do_va_cmd(2,"setnorm",    cfg_get_str("options", "global", "norm"));
-    do_va_cmd(2,"setfreqtab", cfg_get_str("options", "global", "freqtab"));
+    do_va_cmd(2,"setinput",   cfg_get_str(O_INPUT));
+    do_va_cmd(2,"setnorm",    cfg_get_str(O_TVNORM));
+    do_va_cmd(2,"setfreqtab", cfg_get_str(O_FREQTAB));
     
     /* vbi */
-    vbi = vbi_open(devs.vbidev,0,0);
-    if (NULL == vbi) {
-	fprintf(stderr,"open %s: %s\n",ng_dev.vbi,strerror(errno));
-	exit(1);
+    if (devs.vbidev) {
+	vbi = vbi_open(devs.vbidev,0,0);
+	if (NULL == vbi)
+	    fprintf(stderr,"open %s: %s\n",ng_dev.vbi,strerror(errno));
+	else
+	    vbi_event_handler_add(vbi->dec,~0,event,vbi);
     }
-    vbi_event_handler_add(vbi->dec,~0,event,vbi);
     
     if (!fullscan) {
 	/* scan channels */
@@ -143,7 +144,7 @@ static void do_scan(int fullscan)
 		fprintf(stderr,"no station\n");
 		continue;
 	    }
-	    name    = get_vbi_name(vbi);
+	    name    = vbi ? get_vbi_name(vbi) : NULL;
 	    oldname = cfg_search("stations", NULL, "channel", channel);
 
 	    if (name) {
@@ -228,7 +229,7 @@ static void do_scan(int fullscan)
 		    fchannel ? fchannel : "-");
 	    tune_analog_freq(fc);
 	    
-	    name = get_vbi_name(vbi);
+	    name = vbi ? get_vbi_name(vbi) : NULL;
 	    fprintf(stderr,"%s\n",name ? name : unknown);
 	    if (NULL == fchannel) {
 		if (NULL == name) {
@@ -266,25 +267,18 @@ usage(FILE *out, char *prog)
 	    "the config files for xawtv/motv/related applications.\n"
 	    "usage: %s [ options ]\n"
 	    "options:\n"
-	    "   -h           print this text\n"
-	    "   -i input     set input.              [%s]\n"
-	    "   -n norm      set tv norm.            [%s]\n"
-	    "   -f table     set frequency table.    [%s]\n"
-	    "   -g group     set group               [%s]\n"
-	    "   -t timeout   set timeout             [%d]\n"
-	    "   -c device    set video device file.  [%s]\n"
-	    "   -C device    set vbi device file.    [%s]\n"
-	    "   -s           skip channel scan\n"
-	    "   -a           full scan (all frequencies, not just\n"
-	    "                the ones from the frequency table)\n",
+	    "      -h              print this text\n"
+	    "      -g group        set group                               [%s]\n"
+	    "      -t timeout      set timeout                             [%d]\n"
+	    "      -s              skip channel scan\n"
+	    "      -a              full scan (all frequencies, not just\n"
+	    "                      the ones from the frequency table)\n",
 	    prog,
-	    input  ? input  : "none",
-	    tvnorm ? tvnorm : "none",
-	    table  ? table  : "none",
 	    group  ? group  : "none",
-	    timeout,
-	    ng_dev.video,
-	    ng_dev.vbi);
+	    timeout);
+
+    fprintf(stderr,"\n");
+    cfg_help_cmdline(cmd_opts_devices,6,16,40);
 }
 
 int
@@ -292,21 +286,16 @@ main(int argc, char **argv)
 {
     struct ng_attribute *attr_input;
     struct ng_attribute *attr_tvnorm;
-    char *devname = "default";
     int c, i, t, f, scan=1, fullscan=0;
     struct STRTAB *freqtabs;
     char *tab;
 
-    /* get defaults */
-    read_config();
-    input  = cfg_get_str("options", "global", "input");
-    tvnorm = cfg_get_str("options", "global", "norm");
-    table  = cfg_get_str("options", "global", "freqtab");
-    
     /* parse options */
     ng_init();
+    read_config();
+    cfg_parse_cmdline(&argc,argv,cmd_opts_devices);
     for (;;) {
-	if (-1 == (c = getopt(argc, argv, "hsadi:n:f:o:c:C:g:t:")))
+	if (-1 == (c = getopt(argc, argv, "hsadg:t:")))
 	    break;
 	switch (c) {
 	case 'd':
@@ -324,21 +313,6 @@ main(int argc, char **argv)
 	case 'g':
 	    group = optarg;
 	    break;
-	case 'i':
-	    input = optarg;
-	    break;
-	case 'n':
-	    tvnorm = optarg;
-	    break;
-	case 'f':
-	    table = optarg;
-	    break;
-	case 'c':
-	    cfg_set_str("devs", devname, "video", optarg);
-	    break;
-	case 'C':
-	    cfg_set_str("devs", devname, "vbi", optarg);
-	    break;
 	case 'h':
 	    usage(stdout,argv[0]);
 	    exit(0);
@@ -349,9 +323,14 @@ main(int argc, char **argv)
     }
     ng_debug = debug;
 
+    /* get defaults */
+    input  = cfg_get_str(O_INPUT);
+    tvnorm = cfg_get_str(O_TVNORM);
+    table  = cfg_get_str(O_FREQTAB);
+    
     /* video */
     devlist_init(1,0,0);
-    device_init(devname);
+    device_init(optind < argc ? argv[optind] : NULL);
 
     if (NG_DEV_VIDEO != devs.video.type) {
 	fprintf(stderr,"can't open video device\n");
@@ -372,13 +351,13 @@ main(int argc, char **argv)
     /* ask the user some questions ... */
     attr_input  = ng_attr_byid(&devs.video,ATTR_ID_INPUT);
     attr_tvnorm = ng_attr_byid(&devs.video,ATTR_ID_NORM);
-    i = menu("input",attr_input->choices,input);
-    t = menu("TV norm",attr_tvnorm->choices,tvnorm);
-    f = menu("frequency table",freqtabs,table);
+    i = menu("input",           attr_input->choices,  input);
+    t = menu("TV norm",         attr_tvnorm->choices, tvnorm);
+    f = menu("frequency table", freqtabs,             table);
 
-    cfg_set_str("options", "global", "input", ng_attr_getstr(attr_input,i));
-    cfg_set_str("options", "global", "norm",  ng_attr_getstr(attr_tvnorm,t));
-    cfg_set_str("options", "global", "freqtab", freqtabs[f].str);
+    cfg_set_str(O_INPUT,   ng_attr_getstr(attr_input,i));
+    cfg_set_str(O_TVNORM,  ng_attr_getstr(attr_tvnorm,t));
+    cfg_set_str(O_FREQTAB, freqtabs[f].str);
 
     if (scan) {
 	ng_dev_open(&devs.video);

@@ -404,8 +404,9 @@ cfg_parse_cmdline(int *argc, char **argv, struct cfg_cmdline *opt)
 }
 
 void
-cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2)
+cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2, int w3)
 {
+    char *val;
     int o,len;
     
     for (o = 0; opt[o].cmdline != NULL; o++) {
@@ -419,7 +420,17 @@ cfg_help_cmdline(struct cfg_cmdline *opt, int w1, int w2)
 	}
 	if (len < w2)
 	    fprintf(stderr,"%*s",w2-len,"");
-	fprintf(stderr,"%s\n",opt[o].desc);
+
+	len = fprintf(stderr,"%s ",opt[o].desc);
+	if (len < w3)
+	    fprintf(stderr,"%*s",w3-len,"");
+
+	val = cfg_get_str(opt[o].option.domain,
+			  opt[o].option.section,
+			  opt[o].option.entry);
+	if (val)
+	    fprintf(stderr,"[%s]",val);
+ 	fprintf(stderr,"\n");
     }
 }
 

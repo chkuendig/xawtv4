@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#define _GNU_SOURCE /* for memmem() */
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +29,6 @@
 
 #include <sys/select.h>
 #include <sys/ioctl.h>
-#include <linux/dvb/frontend.h>
-#include <linux/dvb/dmx.h>
 
 #include <libzvbi.h>
 
@@ -60,6 +58,18 @@ struct vbi_capture_dvb {
 };
 
 /* ----------------------------------------------------------------------- */
+
+static void *memmem(unsigned char *haystack, size_t haystacklen,
+		    unsigned char *needle, size_t needlelen)
+{
+    int i;
+
+    for (i = 0; i < haystacklen - needlelen; i++)
+	if (0 == memcmp(haystack+i,needle,needlelen))
+	    return haystack+i;
+    return NULL;
+}
+
 
 static unsigned char bitswap[256];
 
@@ -270,6 +280,11 @@ dvb_fd(vbi_capture *cap)
 /* ----------------------------------------------------------------------- */
 /* public interface                                                        */
 
+#if HAVE_DVB
+
+#include <linux/dvb/frontend.h>
+#include <linux/dvb/dmx.h>
+
 int vbi_capture_dvb_filter(vbi_capture *cap, int pid)
 {
     struct vbi_capture_dvb *dvb = (struct vbi_capture_dvb*)cap;
@@ -290,6 +305,17 @@ int vbi_capture_dvb_filter(vbi_capture *cap, int pid)
 		dvb->fd, pid);
     return 0;
 }
+
+#else
+
+int vbi_capture_dvb_filter(vbi_capture *cap, int pid)
+{
+    fprintf(stderr,"built without dvb support, sorry\n");
+    return -1;
+}
+
+
+#endif
 
 vbi_capture*
 vbi_capture_dvb_new(char *dev, int scanning,

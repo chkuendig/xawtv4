@@ -1048,13 +1048,13 @@ usage(void)
 	    "  -f  -fullscreen     startup in fullscreen mode\n");
 
     fprintf(stderr,"\n");
-    cfg_help_cmdline(cmd_opts_devices,6,16);
+    cfg_help_cmdline(cmd_opts_devices,6,16,40);
 
     fprintf(stderr,"\n");
-    cfg_help_cmdline(cmd_opts_x11,6,16);
+    cfg_help_cmdline(cmd_opts_x11,6,16,40);
 
     fprintf(stderr,"\n");
-    cfg_help_cmdline(cmd_opts_record,6,16);
+    cfg_help_cmdline(cmd_opts_record,6,16,40);
     
     fprintf(stderr,
 	    "\n"
@@ -1094,14 +1094,14 @@ handle_cmdline_args(int *argc, char **argv)
 			      NULL,0);
     if (args.readconfig)
 	read_config();
+    cfg_parse_cmdline(argc,argv,cmd_opts_x11);
+    cfg_parse_cmdline(argc,argv,cmd_opts_record);
+    cfg_parse_cmdline(argc,argv,cmd_opts_devices);
+
     if (args.help) {
 	usage();
 	exit(0);
     }
-
-    cfg_parse_cmdline(argc,argv,cmd_opts_x11);
-    cfg_parse_cmdline(argc,argv,cmd_opts_record);
-    cfg_parse_cmdline(argc,argv,cmd_opts_devices);
     if (args.writeconfig)
 	write_config_file("options");
 
