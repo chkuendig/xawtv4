@@ -41,6 +41,7 @@
 int debug = 0;
 Display *dpy;
 static struct eit_state *eit;
+static int tune_secs = 32;
 
 /* ------------------------------------------------------------------------ */
 
@@ -86,6 +87,31 @@ usage(void)
     exit(0);
 }
 
+static gboolean tune_timeout(gpointer data)
+{
+    static time_t last_tune;
+    static char *list = NULL;
+
+    if (list) {
+	if (time(NULL) - last_tune < tune_secs)
+	    return TRUE;
+	if (time(NULL) - eit_last_new_record < tune_secs)
+	    return TRUE;
+	list = cfg_sections_next("dvb-ts",list);
+    }
+    if (!list)
+	list = cfg_sections_first("dvb-ts");
+    if (!list)
+	return FALSE;
+
+    if (debug)
+	fprintf(stderr,"tune: %s\n",list);
+    last_tune = time(NULL);
+    dvb_frontend_tune(devs.dvb, "dvb-ts", list);
+	
+    return TRUE;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -109,17 +135,13 @@ main(int argc, char *argv[])
     read_config_file("dvb-pr");
     dvb_lang_init();
 
-    // quick+dirty
-    read_config_file("stations");
-    do_va_cmd(2,"setstation","0");
-    queue_run();
-
     /* setup gtk gui */
     create_epgwin(NULL);
     gtk_widget_show_all(epg_win);
     if (!debug)
 	gtk_redirect_stderr_to_gui(GTK_WINDOW(epg_win));
 
+    g_timeout_add(1000, tune_timeout, NULL);
     gtk_main();
     fprintf(stderr,"bye...\n");
 

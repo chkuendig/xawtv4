@@ -23,6 +23,8 @@ static GtkWidget* epg_status;
 static GtkListStore *epg_store;
 static GtkTreeModel *epg_store_filter;
 
+#define USE_MATCH_COL 1
+
 /* ------------------------------------------------------------------------ */
 
 enum {
@@ -69,7 +71,8 @@ static void do_filter_now(void);
 // static void do_filter_next(void);
 static void do_filter_station(void);
 
-static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter, time_t now);
+static gboolean is_visible(GtkTreeModel *model, GtkTreeIter *iter, gpointer data);
+static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter);
 static void do_filter_all(void);
 
 static void epgwin_textview_show_entry(GtkTextView* textview,
@@ -146,7 +149,7 @@ static void data_func_station(GtkTreeViewColumn *col,
 {
     gint tsid,pnr;
     char buf[20], *name;
-    
+
     gtk_tree_model_get(model, iter,
 		       EPG_COL_TSID, &tsid,
 		       EPG_COL_PNR,  &pnr,
@@ -336,14 +339,15 @@ void create_epgwin(GtkWindow* parent)
 				   G_TYPE_BOOLEAN, // EPG_COL_MATCHES,
 				   NULL);
 
-#if 1
     epg_store_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(epg_store), NULL);
+#if USE_MATCH_COL
     gtk_tree_model_filter_set_visible_column(GTK_TREE_MODEL_FILTER(epg_store_filter),
 					     EPG_COL_MATCHES);
-    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), epg_store_filter);
 #else
-    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), epg_store);
+    gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(epg_store_filter),
+					   is_visible, NULL, NULL);
 #endif
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), epg_store_filter);
 
     g_signal_connect(epg_treeview, "row-activated",
 		     G_CALLBACK(epg_row_activated), epg_win);
@@ -390,6 +394,9 @@ void create_epgwin(GtkWindow* parent)
     gtk_tree_view_column_set_resizable(col, True);
     gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
 
+    gtk_tree_sortable_set_default_sort_func(GTK_TREE_SORTABLE(epg_store),
+					    NULL, NULL, NULL);
+
     /* epg description */
     create_tags(epg_textview);
 
@@ -432,11 +439,18 @@ static void epgwin_add_item(GtkTreeIter *iter, struct epgitem* epg)
 		       EPG_COL_PNR,      epg->pnr,
 		       EPG_COL_ID,       epg->id,
 		       
+		       EPG_COL_START,    epg->start,
+		       EPG_COL_STOP,     epg->stop,
+		       EPG_COL_NAME,     epg->name,
+		       EPG_COL_STEXT,    epg->stext,
+		       EPG_COL_ETEXT,    epg->etext,
+
 		       EPG_COL_MATCHES,  False,
 		       -1);
-    do_filter_one(GTK_TREE_MODEL(epg_store), iter, time(NULL));
+    do_filter_one(GTK_TREE_MODEL(epg_store), iter);
 }
 
+#if 0
 static void epgwin_update_item(GtkTreeIter *iter, struct epgitem* epg)
 {
     gtk_list_store_set(epg_store, iter,
@@ -448,6 +462,7 @@ static void epgwin_update_item(GtkTreeIter *iter, struct epgitem* epg)
 		       -1);
     do_filter_one(GTK_TREE_MODEL(epg_store), iter, time(NULL));
 }
+#endif
 
 static int epgwin_reload_items()
 {
@@ -455,18 +470,37 @@ static int epgwin_reload_items()
     struct list_head *item;
     struct epgitem* epg;
     int count = 0;
+    gint id;
+    GtkSortType order;
+    gboolean sorted;
+
+    g_object_ref(epg_store_filter);
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), NULL);
+    
+    /* sorting disable temporarely (hmm, seems not to work ???) */
+    sorted = gtk_tree_sortable_get_sort_column_id(GTK_TREE_SORTABLE(epg_store),
+						  &id, &order);
+    if (sorted)
+	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(epg_store),
+					     GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID, 0);
 
     gtk_list_store_clear(epg_store);
-
     list_for_each(item, &epg_list) {
 	epg = list_entry(item, struct epgitem, next);
 	if (strlen(epg->name) < 3)
 	    continue;
 	// FIXME: show only stations in control window
 	epgwin_add_item(&iter,epg);
-	epgwin_update_item(&iter,epg);
+	// epgwin_update_item(&iter,epg);
 	count++;
     }
+
+    if (sorted)
+	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(epg_store),
+					     id, order);
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview),
+			    GTK_TREE_MODEL(epg_store_filter));
+    g_object_unref(epg_store_filter);
     return count;
 }
 
@@ -611,19 +645,31 @@ static void do_refresh(void)
 static void do_filter_nofilter(void)
 {
     cur_filter = EPG_FILTER_NOFILTER;
+#if USE_MATCH_COL
     do_filter_all();
+#else
+    gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(epg_store_filter));
+#endif
 }
 
 static void do_filter_station(void)
 {
     cur_filter = EPG_FILTER_STATION;
+#if USE_MATCH_COL
     do_filter_all();
+#else
+    gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(epg_store_filter));
+#endif
 }
 
 static void do_filter_now(void)
 {
     cur_filter = EPG_FILTER_NOW;
+#if USE_MATCH_COL
     do_filter_all();
+#else
+    gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(epg_store_filter));
+#endif
 }
 
 #if 0
@@ -634,10 +680,10 @@ static void do_filter_next(void)
 }
 #endif
 
-static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter, time_t now)
+static gboolean is_visible(GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
     gboolean matches = FALSE;
-    gint start, stop, tsid, pnr;
+    gint start, stop, tsid, pnr, now;
 
     switch (cur_filter) {
     case EPG_FILTER_NOFILTER:
@@ -648,6 +694,7 @@ static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter, time_t now)
 			   EPG_COL_START, &start,
 			   EPG_COL_STOP,  &stop,
 			   -1);
+	now = time(NULL);
 	if (start <= now && stop > now)
 	    matches = TRUE;
 	break;
@@ -664,7 +711,15 @@ static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter, time_t now)
 	g_warning("filter not implemented yet");
 	break;
     }
+    return matches;
+}
+
+static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter)
+{
+#if USE_MATCH_COL
+    gboolean matches = is_visible(model, iter, NULL);
     gtk_list_store_set(epg_store, iter, EPG_COL_MATCHES, matches, -1);
+#endif
 }
 
 static void do_filter_all(void)
@@ -672,12 +727,11 @@ static void do_filter_all(void)
     GtkTreeIter it;
     gboolean ok;
     GtkTreeModel* model = GTK_TREE_MODEL(epg_store);
-    time_t now = time(NULL);
 
     for (ok = gtk_tree_model_get_iter_first(model,&it);
 	 ok;
 	 ok = gtk_tree_model_iter_next(model,&it)) {
-	do_filter_one(model,&it,now);
+	do_filter_one(model,&it);
     }
 }
 
