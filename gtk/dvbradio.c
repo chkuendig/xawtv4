@@ -52,13 +52,20 @@
 
 /* misc globals */
 int debug = 0;
-Display *dpy;
+static gboolean   have_x11;
 
-static GtkWidget  *label;
 static GtkWidget  *main_win;
-static char       *current;
+static GtkWidget  *label;
+static GtkWidget  *st_menu;
 
+static GtkWidget     *conf_win;
+static GtkListStore  *store;
+static GtkWidget     *view;
+
+static char       *current;
 static struct media_stream *mm;
+
+static int init_channel_list(void);
 
 /* ------------------------------------------------------------------------ */
 
@@ -67,12 +74,14 @@ static struct media_stream *mm;
 #define O_CMD_HELP             	O_CMDLINE, "help"
 #define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
+#define O_CMD_TV	       	O_CMDLINE, "tv"
 #define O_CMD_DEVICE	       	O_CMDLINE, "device"
 #define O_CMD_GEOMETRY	       	O_CMDLINE, "geometry"
 
 #define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
 #define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
 #define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
+#define GET_CMD_TV()		cfg_get_int(O_CMD_TV,   	0)
 
 struct cfg_cmdline cmd_opts_only[] = {
     {
@@ -97,6 +106,11 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.option   = { O_CMD_DEVICE },
 	.needsarg = 1,
 	.desc     = "pick device config",
+    },{
+	.cmdline  = "tv",
+	.option   = { O_CMD_TV },
+	.desc     = "also list tv stations",
+	.value    = "1",
 
     },{
 	.cmdline  = "geometry",
@@ -190,12 +204,17 @@ static int main_loop(GMainContext *context, char *station)
 {
     /* init */
     device_init(cfg_get_str(O_CMD_DEVICE));
-    if (NULL == devs.dvb) {
-	fprintf(stderr,"not a dvb device\n");
-    } else {
-	if (station)
-	    tune_byname(station);
-    }
+    if (NULL == devs.dvb)
+	gtk_panic_box(have_x11, "No DVB device found.\n");
+
+    if (0 == init_channel_list())
+	fprintf(stderr,
+		"Hmm, no stations found.  You either don't have scanned\n"
+		"for stations yet (use \"alexplore\" for that) or there are\n"
+		"no radio stations available.\n");
+
+    if (station)
+	tune_byname(station);
 
     /* mainloop */
     if (debug)
@@ -233,7 +252,104 @@ static int main_loop(GMainContext *context, char *station)
 }
 
 /* ------------------------------------------------------------------------ */
-/* GUI                                                                      */
+/* GUI - channel conf                                                       */
+
+enum {
+    ST_COL_NAME = 0,
+    ST_COL_CHANNEL,
+    ST_STATE_VISIBLE,
+    ST_DATA_MENU,
+    
+    ST_NUM_COLS
+};
+
+static void station_toggled_cb(GtkCellRendererToggle *cell,
+			       gchar                 *path_string,
+			       gpointer               user_data)
+{
+    GtkTreeIter iter;
+    gboolean visible;
+    GtkWidget *item;
+    char *channel;
+
+    gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(store),
+					&iter, path_string);
+
+    gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+		       ST_COL_CHANNEL,   &channel,
+		       ST_STATE_VISIBLE, &visible,
+		       ST_DATA_MENU,     &item,
+		       -1);
+    if (debug)
+	fprintf(stderr, "toggled: path=%s channel=%s\n",
+		path_string,channel);
+
+    visible = !visible;
+    cfg_set_bool("radio",channel,"visible",visible);
+    gtk_list_store_set(store, &iter, ST_STATE_VISIBLE, visible, -1);
+    if (visible)
+	gtk_widget_show(item);
+    else
+	gtk_widget_hide(item);
+}
+
+static void conf_create_window(void)
+{
+    GtkWidget *hbox,*scroll;
+    GtkCellRenderer *renderer;
+
+    conf_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(conf_win), _("select stations"));
+    gtk_widget_set_size_request(GTK_WIDGET(conf_win), -1, 400);
+    g_signal_connect(G_OBJECT(conf_win), "delete-event",
+		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+    
+    /* station list */
+    view  = gtk_tree_view_new();
+    store = gtk_list_store_new(ST_NUM_COLS,
+			       G_TYPE_STRING,   // name
+			       G_TYPE_STRING,   // channel
+			       G_TYPE_BOOLEAN,  // visible
+			       G_TYPE_POINTER); // widget
+    gtk_tree_view_set_model(GTK_TREE_VIEW(view),
+			    GTK_TREE_MODEL(store));
+    scroll = gtk_vscrollbar_new(gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view)));
+#if 0
+    g_signal_connect(view, "row-activated", G_CALLBACK(activate), NULL);
+    gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(view)),
+				GTK_SELECTION_MULTIPLE);
+#endif
+
+    /* checkbox */
+    renderer = gtk_cell_renderer_toggle_new();
+    g_object_set(renderer,
+		 "activatable", True,
+		 NULL);
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(view), -1, "", renderer,
+	 "active", ST_STATE_VISIBLE,
+	 NULL);
+    g_signal_connect(renderer, "toggled",
+		     G_CALLBACK(station_toggled_cb), NULL);
+
+    /* text */
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(view), -1, "Name", renderer,
+	 "text", ST_COL_NAME,
+	 NULL);
+
+    /* Make a vbox and put stuff in */
+    hbox = gtk_hbox_new(FALSE, 1);
+    gtk_container_add(GTK_CONTAINER(conf_win), hbox);
+    gtk_box_pack_start(GTK_BOX(hbox), view, TRUE, TRUE, 0);
+    gtk_box_pack_end(GTK_BOX(hbox), scroll, FALSE, TRUE, 0);
+
+    return;
+}
+
+/* ------------------------------------------------------------------------ */
+/* GUI - main                                                               */
 
 static void menu_cb_mute(void)
 {
@@ -250,15 +366,72 @@ static void menu_cb_vol_dec(void)
     do_va_cmd(2,"volume","dec");
 }
 
+static void menu_cb_station_conf(void)
+{
+    if (GTK_WIDGET_VISIBLE(conf_win))
+	gtk_widget_hide(conf_win);
+    else
+	gtk_widget_show_all(conf_win);
+}
+
+static char* find_station(char *current, int forward)
+{
+    GtkTreeIter iter;
+    gboolean valid;
+    gboolean visible;
+    char *name;
+    char *prev = NULL;
+
+    /* find current / first station */
+    for (valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store),&iter);
+	 valid;
+	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&iter)) {
+	gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			   ST_COL_NAME,      &name,
+			   ST_STATE_VISIBLE, &visible,
+			   -1);
+	if (!visible)
+	    continue;
+	if (current && 0 != strcasecmp(name,current)) {
+	    prev = name;
+	    continue;
+	}
+	break;
+    }
+    if (!valid)
+	return NULL;
+
+    if (!current)
+	/* find first */
+	return name;
+
+    if (!forward)
+	/* walk backward */
+	return prev;
+
+    /* walk forward */
+    for (;;) {
+	valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&iter);
+	if (!valid)
+	    return NULL;
+	gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			   ST_COL_NAME,      &name,
+			   ST_STATE_VISIBLE, &visible,
+			   -1);
+	if (!visible)
+	    continue;
+	break;
+    }
+    return name;
+}
+
 static void menu_cb_station_next(void)
 {
     char *station;
 
-    if (current)
-	station = cfg_sections_next("radio",current);
-    else
-	station = cfg_sections_first("radio");
-
+    station = find_station(current,1);
+    if (NULL == station)
+	station = find_station(NULL,1);
     if (NULL == station)
 	return;
     tune_byname(station);
@@ -270,8 +443,7 @@ static void menu_cb_station_prev(void)
     char *station = NULL;
 
     if (current)
-	station = cfg_sections_prev("radio",current);
-
+	station = find_station(current,0);
     if (NULL == station)
 	return;
     tune_byname(station);
@@ -336,6 +508,14 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/_Stations",
 	.item_type   = "<Branch>",
     },{
+	.path        = "/Stations/_Configure ...",
+	.callback    = menu_cb_station_conf,
+	.item_type   = "<StockItem>",
+	.extra_data  = GTK_STOCK_PREFERENCES,
+    },{
+	.path        = "/Stations/sep1",
+	.item_type   = "<Separator>",
+    },{
 
 	/* --- Commands menu ------------------------- */
 	.path        = "/_Commands",
@@ -394,28 +574,6 @@ static void menu_cb_tune(GtkMenuItem *menuitem, void *userdata)
     command_pending++;
 }
 
-static void init_channel_list(GtkWidget *parent)
-{
-    GtkWidget *item;
-    char *list;
-    char *name;
-
-    cfg_sections_for_each("dvb-pr",list) {
-	name = cfg_get_str("dvb-pr",list,"name");
-	if (!name)
-	    continue;
-	if (0 == cfg_get_str("dvb-pr",list,"audio"))
-	    continue;
-	if (0 != cfg_get_str("dvb-pr",list,"video"))
-	    continue;
-	cfg_set_str("radio",name,"pr",list);
-	item = gtk_menu_item_new_with_label(name);
-	gtk_menu_shell_append(GTK_MENU_SHELL(parent), item);
-	g_signal_connect(G_OBJECT(item), "activate",
-			 G_CALLBACK(menu_cb_tune), name);
-    }
-}
-
 static void gtk_widget_font(GtkWidget *widget, char *fname)
 {
     PangoFontDescription *font;
@@ -451,12 +609,11 @@ static void gtk_widget_colors(GtkWidget *widget, GdkColor *fg, GdkColor *bg)
     gtk_widget_modify_style(widget,style);
 }
 
-static void create_window(void)
+static void main_create_window(void)
 {
     GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
     GdkColor green = { .red = 0x0000, .green = 0xffff, .blue = 0x0000 };
     GtkWidget *vbox,*menubar,*box;
-    GtkWidget *st_menu;
     GtkAccelGroup *accel_group;
     GtkItemFactory *item_factory;
 
@@ -494,12 +651,72 @@ static void create_window(void)
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, TRUE, 0);
 
-    init_channel_list(st_menu);
     return;
+}
+
+static int init_channel_list()
+{
+    GtkTreeIter iter;
+    GtkWidget *item;
+    gboolean visible;
+    char *list;
+    char *name;
+    int tv = GET_CMD_TV();
+    int count = 0;
+
+    cfg_sections_for_each("dvb-pr",list) {
+	name = cfg_get_str("dvb-pr",list,"name");
+	if (!name)
+	    continue;
+	if (0 == cfg_get_str("dvb-pr",list,"audio"))
+	    continue;
+	if (!tv && 0 != cfg_get_str("dvb-pr",list,"video"))
+	    continue;
+	visible = cfg_get_bool("radio",list,"visible",0);
+	count++;
+
+	/* menu item */
+	item = gtk_menu_item_new_with_label(name);
+	gtk_menu_shell_append(GTK_MENU_SHELL(st_menu), item);
+	g_signal_connect(G_OBJECT(item), "activate",
+			 G_CALLBACK(menu_cb_tune), name);
+	if (visible)
+	    gtk_widget_show(item);
+
+	/* config window */
+	gtk_list_store_append(store, &iter);
+	gtk_list_store_set(store, &iter,
+			   ST_COL_NAME,      name,
+			   ST_COL_CHANNEL,   list,
+			   ST_STATE_VISIBLE, visible,
+			   ST_DATA_MENU,     item,
+			   -1);
+    }
+    return count;
 }
 
 /* ------------------------------------------------------------------------ */
 /* main function and related helpers                                        */
+
+static void termsig(int signal)
+{
+    if (debug)
+	fprintf(stderr,"received signal %d [%s]\n",signal,strsignal(signal));
+    command_pending++;
+    exit_application++;
+}
+
+static void siginit(void)
+{
+    struct sigaction act,old;
+
+    memset(&act,0,sizeof(act));
+    sigemptyset(&act.sa_mask);
+
+    act.sa_handler = termsig;
+    sigaction(SIGINT,  &act, &old);
+    sigaction(SIGTERM, &act, &old);
+}
 
 static void
 usage(void)
@@ -521,6 +738,7 @@ parse_args(int *argc, char **argv)
     /* get config */
     cfg_parse_cmdline(argc,argv,cmd_opts_only);
     read_config();
+    read_config_file("radio");
 
     if (GET_CMD_HELP())
 	usage();
@@ -539,15 +757,30 @@ main(int argc, char *argv[])
     devlist_init(1, 0, 0);
     parse_args(&argc,argv);
 
-    if (gtk_init_check(&argc, &argv)) {
-	/* gtk window */
-	create_window();
+    have_x11 = gtk_init_check(&argc, &argv);
+    if (have_x11) {
+	/* with X11 */
+	main_create_window();
+	conf_create_window();
 	gtk_widget_show_all(main_win);
-	gtk_redirect_stderr_to_gui(GTK_WINDOW(main_win));
+	if (!debug)
+	    gtk_redirect_stderr_to_gui(GTK_WINDOW(main_win));
+	main_loop(g_main_context_default(), (argc > 1) ? argv[1] : NULL);
+	write_config_file("radio");
+    } else {
+	/* tty only */
+	if (argc > 1) {
+	    siginit();
+	    fprintf(stderr,"tuning \"%s\", press Ctrl-C to quit\n",argv[1]);
+	    main_loop(g_main_context_default(), argv[1]);
+	    fprintf(stderr,"bye...\n");
+	} else {
+	    fprintf(stderr,
+		    "When running without X11 I'll need the station you want\n"
+		    "listen to specified on the command line.  Try -h for help.\n");
+	}
     }
 
-    /* enter main loop */
-    main_loop(g_main_context_default(), (argc > 1) ? argv[1] : NULL);
-    fprintf(stderr,"bye...\n");
+    /* store config & quit */
     exit(0);
 }

@@ -203,7 +203,8 @@ main(int argc, char **argv)
 	    gtk_redirect_stderr_to_gui(NULL);
 	vbi = vbi_open(vbidev, "mtt", debug, sim, 0);
 	if (NULL == vbi)
-	    exit(1);
+	    gtk_panic_box(True, "Failed to initialize the vbi device.\n"
+			  "no TV card installed?\n");
 	dvb    = NULL;
 	dvbmon = NULL;
 #ifdef HAVE_DVB

@@ -87,19 +87,21 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+    gboolean have_x11;
+
     /* options */
     cfg_parse_cmdline(&argc,argv,cmd_opts_only);
     if (GET_CMD_HELP())
 	usage();
     debug = GET_CMD_DEBUG();
 
+    have_x11 = gtk_init_check(&argc, &argv);
+    
     ng_init();
     devlist_init(1, 0, 0);
     device_init(NULL);
-    if (NULL == devs.dvb) {
-	fprintf(stderr,"no dvb device found\n");
-	exit(1);
-    }
+    if (NULL == devs.dvb)
+	gtk_panic_box(have_x11, "No DVB device found.\n");
     devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     read_config_file("dvb-ts");

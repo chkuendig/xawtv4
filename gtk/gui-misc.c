@@ -19,6 +19,10 @@
 #include "xscreensaver.h"
 #include "gui.h"
 
+static int panic = 0;
+static int stderr_redirect = 0;
+extern int gtk_have_x11;
+
 /* ---------------------------------------------------------------------------- */
 
 void gtk_quit_cb(void)
@@ -299,6 +303,11 @@ static void stderr_hide(GtkDialog *dialog, gint arg1, gpointer user_data)
 	h->messages = NULL;
 	h->msgsize  = 0;
     }
+    if (panic) {
+	command_pending++;
+	exit_application++;
+	gtk_main_quit();
+    }
     gtk_widget_hide(h->win);
 }
 
@@ -333,6 +342,7 @@ void gtk_redirect_stderr_to_gui(GtkWindow *parent)
 
     h->ch = g_io_channel_unix_new(h->pipe_stderr);
     h->id = g_io_add_watch(h->ch, G_IO_IN, stderr_data, h);
+    stderr_redirect = 1;
 }
 
 /* ---------------------------------------------------------------------------- */
@@ -342,6 +352,11 @@ static void dialog_destroy(GtkDialog *dialog,
 			   gpointer user_data)
 {
     gtk_widget_destroy(GTK_WIDGET(dialog));
+    if (panic) {
+	command_pending++;
+	exit_application++;
+	gtk_main_quit();
+    }
 }
 
 void gtk_about_box(GtkWindow *parent, char *name, char *version, char *text)
@@ -383,10 +398,32 @@ void gtk_error_box(GtkWindow *parent, char *title, char *text)
     gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
 
     label = gtk_label_new (text);
+    gtk_widget_set(label,
+		   "xpad", SPACING,
+		   "ypad", SPACING,
+		   NULL);
     gtk_box_pack_start(box, label, TRUE, TRUE, 0);
     g_signal_connect(errbox, "response",
 		     G_CALLBACK(dialog_destroy), NULL);
     gtk_widget_show_all(errbox);
+}
+
+void gtk_panic_box(int have_x11, char *text)
+{
+    panic = 1;
+    if (!have_x11) {
+	/* no X11 */
+	fprintf(stderr,"%s",text);
+	exit(1);
+    }
+
+    if (stderr_redirect) {
+	fprintf(stderr,"\nFatal Error:\n%s",text);
+    } else {
+	gtk_error_box(NULL,"Fatal Error",text);
+    }
+    gtk_main();
+    exit(1);
 }
 
 /* ---------------------------------------------------------------------------- */

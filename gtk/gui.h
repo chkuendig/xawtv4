@@ -34,6 +34,7 @@ extern gboolean gtk_wm_delete_quit(GtkWidget *widget, GdkEvent  *event,
 extern void gtk_about_box(GtkWindow *parent, char *name, char *version,
 			  char *text);
 extern void gtk_error_box(GtkWindow *parent, char *title, char *text);
+extern void gtk_panic_box(int have_x11, char *text);
 
 extern GtkBox* gtk_add_hbox_with_label(GtkBox *vbox, char *text);
 extern GtkWidget* gtk_toolbar_build(struct toolbarbutton *btns, int count,
