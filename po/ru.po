@@ -1,0 +1,573 @@
+# Russian messages for xawtv.
+# Copyright (C) 2004 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#
+# This is an untested alpha version of the Russian translation. 
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2005-01-11 01:48+0300\n"
+"PO-Revision-Date: 2005-01-11 02:10+0300\n"
+"Last-Translator: Вячеслав Диконов (Vyacheslav Dikonov) <slava@altlinux.ru>\n"
+"Language-Team: Russian <ru@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);"
+
+#: gtk/dvbradio.c:317
+msgid "select stations"
+msgstr "выберите каналы"
+
+#: gtk/gui-analog.c:75
+#, c-format
+msgid "scanning %s ..."
+msgstr "идёт поиск %s ..."
+
+#: gtk/gui-analog.c:124
+msgid "channel scan finished"
+msgstr "поиск каналов завершён"
+
+#: gtk/gui-analog.c:347
+msgid "analog channels"
+msgstr "аналоговые каналы"
+
+#: gtk/gui-control.c:1463
+msgid "control window"
+msgstr "окно управления"
+
+#: gtk/gui-dvbscan.c:568
+msgid "alexplore: DVB channel browser & scanner"
+msgstr "alexplore: обзор и сканирование цифровых DVB каналов"
+
+#: gtk/gui-dvbscan.c:569
+msgid "DVB channels"
+msgstr "DVB каналы"
+
+#: gtk/gui-dvbscan.c:597
+msgid " Search: "
+msgstr " Поиск: "
+
+#: gtk/gui-epg.c:222
+msgid "EPG"
+msgstr "Телегид"
+
+#. columns
+#: gtk/gui-epg.c:318
+msgid "Date"
+msgstr "Дата"
+
+#: gtk/gui-epg.c:319
+msgid "Begin"
+msgstr "Начало"
+
+#: gtk/gui-epg.c:320
+msgid "End"
+msgstr "Конец"
+
+#: gtk/gui-epg.c:321
+msgid "Station"
+msgstr "Канал"
+
+#: gtk/gui-epg.c:322
+msgid "Name"
+msgstr "Имя"
+
+#: gtk/gui-epg.c:323
+msgid "Lang"
+msgstr "Язык"
+
+#: gtk/gui-epg.c:374
+msgid "Time: "
+msgstr "Время: "
+
+#: gtk/gui-epg.c:390
+msgid "Name: "
+msgstr "Имя:"
+
+#: gtk/gui-epg.c:396
+msgid "Summary: "
+msgstr "Итог: "
+
+#: gtk/gui-epg.c:402
+msgid "Language: "
+msgstr "Язык:"
+
+#: gtk/gui-epg.c:408
+msgid "Audio: "
+msgstr "Звук:"
+
+#: gtk/gui-epg.c:410
+msgid "Mono"
+msgstr "Моно"
+
+#: gtk/gui-epg.c:412
+msgid "Stereo"
+msgstr "Стерео"
+
+#: gtk/gui-epg.c:414
+msgid "Dual"
+msgstr "Двойной"
+
+#: gtk/gui-epg.c:416
+msgid "Multi"
+msgstr "Мульти"
+
+#: gtk/gui-epg.c:418
+msgid "Surround"
+msgstr "Пространственный звук"
+
+#: gtk/gui-epg.c:423
+msgid "Video: "
+msgstr "Видео: "
+
+#: gtk/gui-epg.c:434
+msgid "Description:\n"
+msgstr "Описание:\n"
+
+#: gtk/gui-teletext.c:1526
+msgid "teletext"
+msgstr "телетекст"
+
+#: x11/man.c:56
+msgid "Manual page"
+msgstr "Страница руководства"
+
+#: x11/man.c:57
+msgid "Close window"
+msgstr "Закрыть окно"
+
+#: x11/man.c:63
+msgid "please wait ..."
+msgstr "подождите, пожалуйста ..."
+
+#: x11/motv.c:682
+msgid "Device settings"
+msgstr "Настройки устройства"
+
+#: x11/motv.c:991
+msgid "Add station"
+msgstr "Добавить канал"
+
+#: x11/motv.c:1031
+msgid "Edit station"
+msgstr "Редактировать канал"
+
+#: x11/motv.c:1097
+msgid "Error"
+msgstr "Ошибка"
+
+#: x11/motv.c:1098
+msgid "You have to specify a name for the TV Station"
+msgstr "Необходимо ввести название канала"
+
+#: x11/motv.c:1144 x11/motv.c:1582 x11/motv.c:2150
+msgid "OK"
+msgstr "ОК"
+
+#: x11/motv.c:1144 x11/motv.c:1582 x11/motv.c:2150
+msgid "Cancel"
+msgstr "Отменить"
+
+#: x11/motv.c:1150
+msgid "Station name"
+msgstr "Название канала"
+
+#: x11/motv.c:1154
+msgid "Hotkey"
+msgstr "Горячая клавиша"
+
+#: x11/motv.c:1159
+msgid "Group"
+msgstr "Группа"
+
+#: x11/motv.c:1163
+msgid "Channel"
+msgstr "Канал"
+
+#: x11/motv.c:1173
+msgid "DVB name"
+msgstr "Название DVB"
+
+#. menu - file
+#. menu -- file
+#: x11/motv.c:1338 x11/vbi-gui.c:1164
+msgid "&File"
+msgstr "&Файл"
+
+#: x11/motv.c:1339
+msgid "&Record movie ..."
+msgstr "&Записать передачу..."
+
+#: x11/motv.c:1342
+msgid "&Quit"
+msgstr "&Выход"
+
+#. menu - edit
+#. menu -- edit
+#: x11/motv.c:1346 x11/vbi-gui.c:1174
+msgid "&Edit"
+msgstr "&Правка"
+
+#: x11/motv.c:1347
+msgid "&Add station ..."
+msgstr "&Добавить канал..."
+
+#: x11/motv.c:1349
+msgid "&Edit station ..."
+msgstr "&Редактировать канал"
+
+#: x11/motv.c:1351
+msgid "&Delete station"
+msgstr "&Удалить канал"
+
+#: x11/motv.c:1353
+msgid "Save stations"
+msgstr "Сохранить каналы"
+
+#: x11/motv.c:1356 x11/vbi-gui.c:1175
+msgid "&Copy"
+msgstr "&Копировать"
+
+#. menu - view
+#: x11/motv.c:1360
+msgid "&View"
+msgstr "&Просмотр"
+
+#: x11/motv.c:1361
+msgid "&Large icons"
+msgstr "&Крупные значки"
+
+#: x11/motv.c:1364
+msgid "&Details"
+msgstr "&Подробности"
+
+#. menu - tools
+#: x11/motv.c:1369
+msgid "&Tools"
+msgstr "&Инструменты"
+
+#: x11/motv.c:1376
+msgid "Frequency table"
+msgstr "Таблица частот"
+
+#: x11/motv.c:1387
+msgid "&Preferences ..."
+msgstr "&Настройки"
+
+#: x11/motv.c:1389
+msgid "&Save options"
+msgstr "&Сохранить настройки"
+
+#: x11/motv.c:1393
+msgid "&Fullscreen"
+msgstr "&На весь экран"
+
+#: x11/motv.c:1396
+msgid "Stay on &Top"
+msgstr "&Поверх других окон"
+
+#: x11/motv.c:1398
+msgid "Record &level monitor ..."
+msgstr "&Индикатор уровня звука"
+
+#: x11/motv.c:1401
+msgid "&Next station"
+msgstr "&Следующий канал"
+
+#: x11/motv.c:1404
+msgid "&Previous station"
+msgstr "&Предыдущий канал"
+
+#. menu - tools / tuner
+#: x11/motv.c:1409
+msgid "Tuner"
+msgstr "Тюнер"
+
+#: x11/motv.c:1410
+msgid "Channel &up"
+msgstr "&Следующая частота"
+
+#: x11/motv.c:1413
+msgid "Channel &down"
+msgstr "&Предыдущая частота"
+
+#: x11/motv.c:1416
+msgid "Finetune up"
+msgstr "Точная настройка вперёд"
+
+#: x11/motv.c:1419
+msgid "Finetune down"
+msgstr "Точная настройка назад"
+
+#. menu - tools / capture
+#: x11/motv.c:1424
+msgid "Grab image"
+msgstr "Захватить изображение"
+
+#: x11/motv.c:1425
+msgid "PPM, max size"
+msgstr "PPM, макс. размер"
+
+#: x11/motv.c:1428
+msgid "PPM, window size"
+msgstr "PPM, размер окна"
+
+#: x11/motv.c:1431
+msgid "&JPEG, max size"
+msgstr "&JPEG, макс. размер"
+
+#: x11/motv.c:1434
+msgid "JPEG, window size"
+msgstr "JPEG, размер окна"
+
+#. menu - tools / aspect ratio
+#: x11/motv.c:1439
+msgid "Aspect ratio"
+msgstr "Формат экрана"
+
+#: x11/motv.c:1440
+msgid "&none"
+msgstr "&ничего"
+
+#. menu - tools / launch
+#: x11/motv.c:1446
+msgid "Launch"
+msgstr "Запустить"
+
+#. menu - tools / subtitles
+#: x11/motv.c:1450
+msgid "Subtitles"
+msgstr "Субтитры"
+
+#: x11/motv.c:1451
+msgid "&disable"
+msgstr "&отключить"
+
+#: x11/motv.c:1453
+msgid "page &150"
+msgstr "страница &150"
+
+#: x11/motv.c:1455
+msgid "page &333"
+msgstr "страница &333"
+
+#: x11/motv.c:1457
+msgid "page &777"
+msgstr "страница &777"
+
+#: x11/motv.c:1459
+msgid "page 8&01"
+msgstr "страница 8&01"
+
+#: x11/motv.c:1461
+msgid "page &888"
+msgstr "страница &888"
+
+#: x11/motv.c:1471
+msgid "Filter"
+msgstr "Фильтр"
+
+#. menu - devices
+#: x11/motv.c:1489
+msgid "&Devices"
+msgstr "&Устройства"
+
+#: x11/motv.c:1498
+msgid "Device &Settings ..."
+msgstr "&Параметры устройства"
+
+#. menu - tv stations
+#: x11/motv.c:1502
+msgid "&Stations"
+msgstr "&Каналы"
+
+#. menu - help
+#: x11/motv.c:1506
+msgid "&Help"
+msgstr "&Справка"
+
+#: x11/motv.c:1510
+msgid "&About ..."
+msgstr "&О программе..."
+
+#: x11/motv.c:1617
+msgid "Record a movie"
+msgstr "Запись передачи"
+
+#: x11/motv.c:1630
+msgid "Driver:"
+msgstr "Драйвер:"
+
+#: x11/motv.c:1634
+msgid "Video options"
+msgstr "Параметры видео"
+
+#: x11/motv.c:1639
+msgid "fps:"
+msgstr "кадр/сек:"
+
+#: x11/motv.c:1644
+msgid "Audio options"
+msgstr "Параметры звука"
+
+#: x11/motv.c:1648
+msgid "Format:"
+msgstr "Формат:"
+
+#: x11/motv.c:1649
+msgid "Rate:"
+msgstr "Скорость:"
+
+#: x11/motv.c:1654
+msgid "Filenames"
+msgstr "Имена файлов"
+
+#: x11/motv.c:1660
+msgid "Video:"
+msgstr "Видео:"
+
+#: x11/motv.c:1666 x11/motv.c:1677
+msgid "Browse ..."
+msgstr "Обзор..."
+
+#: x11/motv.c:1671
+msgid "Audio:"
+msgstr "Звук:"
+
+#: x11/motv.c:1685
+msgid "Record"
+msgstr "Запись"
+
+#: x11/motv.c:1687
+msgid "Stop"
+msgstr "Остановить"
+
+#: x11/motv.c:1689
+msgid "Playback"
+msgstr "Воспроизведение"
+
+#: x11/motv.c:1691
+msgid "Close"
+msgstr "Закрыть"
+
+#: x11/motv.c:2149
+msgid "Preferences"
+msgstr "Настройки"
+
+#: x11/motv.c:2150
+msgid "Apply"
+msgstr "Применить"
+
+#: x11/motv.c:2159
+msgid "Options"
+msgstr "Параметры"
+
+#: x11/motv.c:2164
+msgid "Use onscreen display in Fullscreen mode"
+msgstr "Использовать экранное меню в полноэкранном режиме"
+
+#: x11/motv.c:2166
+msgid "keypad: ntsc mode"
+msgstr "цифр.клавиатура: режим ntsc"
+
+#: x11/motv.c:2168
+msgid "keypad: enable partial (switch on first key)"
+msgstr "цифр.клавиатура: включить частично (переключить при первом нажатии на клавишу)"
+
+#: x11/motv.c:2172
+msgid "JPEG Quality"
+msgstr "Качество JPEG"
+
+#: x11/motv.c:2718
+msgid "Monitor"
+msgstr "Монитор"
+
+#: x11/motv.c:2727
+msgid "enable"
+msgstr "включить"
+
+#: x11/motv.c:2802
+msgid "Error messages"
+msgstr "Сообщения об ошибках"
+
+#. rebuild menu
+#: x11/vbi-gui.c:240
+msgid "cycle subpages"
+msgstr "перебор подстраниц"
+
+#: x11/vbi-gui.c:597
+msgid "Save File"
+msgstr "Сохранить файл"
+
+#: x11/vbi-gui.c:604
+msgid "Character set:"
+msgstr "Кодировка:"
+
+#: x11/vbi-gui.c:1165
+msgid "&New window"
+msgstr "&Новое окно"
+
+#: x11/vbi-gui.c:1167
+msgid "&Save as ..."
+msgstr "&Сохранить как..."
+
+#: x11/vbi-gui.c:1170
+msgid "&Close"
+msgstr "&Закрыть"
+
+#. menu -- go (navigation)
+#: x11/vbi-gui.c:1179
+msgid "&Go to"
+msgstr "&Перейти к"
+
+#: x11/vbi-gui.c:1180
+msgid "&Index"
+msgstr "&Оглавление"
+
+#: x11/vbi-gui.c:1182
+msgid "&Previous page"
+msgstr "&Предыдущая страница"
+
+#: x11/vbi-gui.c:1184
+msgid "&Next page"
+msgstr "&Следующая страница"
+
+#: x11/vbi-gui.c:1189
+msgid "&Subpage"
+msgstr "&Подстраница"
+
+#: x11/vbi-gui.c:1193
+msgid "S&tations"
+msgstr "&Каналы"
+
+#. menu -- fonts
+#: x11/vbi-gui.c:1208
+msgid "F&onts"
+msgstr "&Шрифты"
+
+#~ msgid "16:9"
+#~ msgstr "16:9"
+
+#~ msgid "4:3"
+#~ msgstr "4:3"
+
+#~ msgid "HDTV"
+#~ msgstr "ТВВЧ"
+
+#~ msgid "fta"
+#~ msgstr "открытый"
+
+#~ msgid "full channel scan"
+#~ msgstr "полный поиск каналов"
+
+#~ msgid "scan"
+#~ msgstr "поиск"
+
+#~ msgid "show only free to air channels"
+#~ msgstr "показывать только открытые каналы"
+
+#~ msgid "tune manually"
+#~ msgstr "ручная настройка"
