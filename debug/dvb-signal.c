@@ -22,10 +22,12 @@ static int watch_signal(struct dvb_state *h, int loop)
 
 static int dump_info(struct dvb_state *dvb, int verbose)
 {
-    struct psi_info info;
+    struct psi_info *info;
 
-    dvb_get_transponder_info(dvb,&info,1,verbose);
-    dvb_print_transponder_info(&info);
+    info = psi_info_alloc();
+    dvb_get_transponder_info(dvb,info,1,verbose);
+    dvb_print_transponder_info(info);
+    psi_info_free(info);
     return 0;
 }
 

@@ -224,7 +224,7 @@ static int dvb_read(vbi_capture *cap,
 
 	/* ok, have a complete PES packet, pass it on ... */
 	off = dvb->buffer[8]+9;
-	rc = dvb_payload(dvb,dvb->buffer+off,dvb->psize-off, dest + lines);
+	rc = dvb_payload(dvb, dvb->buffer+off, dvb->psize-off, dest + lines);
 	if (rc > 0) {
 	    struct timeval tv;
 	    ret = 1;

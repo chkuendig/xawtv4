@@ -10,6 +10,7 @@ endif
 ifeq ($(FOUND_DVB),yes)
 TARGETS-debug += \
 	debug/dvb-signal \
+	debug/vbi-rec \
 	debug/epg
 endif
 ifeq ($(FOUND_ALSA),yes)
@@ -19,6 +20,12 @@ endif
 
 debug/dvb-signal: \
 	debug/dvb-signal.o \
+	common/parseconfig.o \
+	$(OBJS-common-dvb) \
+	libng/libng.a
+
+debug/vbi-rec: \
+	debug/vbi-rec.o \
 	common/parseconfig.o \
 	$(OBJS-common-dvb) \
 	libng/libng.a
@@ -41,6 +48,7 @@ debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
 debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)
 
 debug/dvb-signal : LDFLAGS += $(DLFLAGS)
+debug/vbi-rec    : LDFLAGS += $(DLFLAGS)
 debug/epg        : LDFLAGS += $(DLFLAGS) $(shell pkg-config --libs glib-2.0 libxml-2.0)
 
 # poor mans malloc debugging
