@@ -21,7 +21,7 @@ ifeq ($(FOUND_OS),linux)
 TARGETS-console += \
 	console/radio \
 	console/v4l-info
-#	console/fbtv \
+#	console/fbtv
 TARGETS-v4l-conf += \
 	console/v4l-conf
 endif
@@ -99,7 +99,7 @@ all:: $(TARGETS-console) $(TARGETS-v4l-conf)
 
 install::
 	$(INSTALL_PROGRAM) $(TARGETS-console) $(bindir)
-ifeq ($(FOUND_OS),linux)
+ifneq ($(TARGETS-v4l-conf),)
 	$(INSTALL_PROGRAM) $(SUID_ROOT) $(TARGETS-v4l-conf) $(bindir)
 endif
 
