@@ -1071,6 +1071,7 @@ main(int argc, char *argv[])
     hello_world();
     setlocale(LC_ALL,"");
     bindtextdomain(PACKAGE, LOCALEDIR);
+    bind_textdomain_codeset(PACKAGE, "UTF-8");
     textdomain(PACKAGE);
 
     /* lowlevel X11 init */

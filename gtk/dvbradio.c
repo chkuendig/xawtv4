@@ -151,7 +151,7 @@ dvb_loop(GMainContext *context)
     struct ng_audio_fmt *afmt;
 
     if (0 == ng_mpeg_apid) {
-	fprintf(stderr,"no DVB station tuned\n");
+	fprintf(stderr,"%s",_("No DVB station tuned.\n"));
 	return;
     }
     
@@ -208,10 +208,10 @@ static int main_loop(GMainContext *context, char *station)
 
     if (have_x11) {
 	if (0 == init_channel_list())
-	    fprintf(stderr,
-		    "Hmm, no stations found.  You either don't have scanned\n"
-		    "for stations yet (use \"alexplore\" for that) or there are\n"
-		    "no radio stations available.\n");
+	    fprintf(stderr, "%s",
+		    _("Hmm, no stations found.  You either don't have scanned\n"
+		      "for stations yet (use \"alexplore\" for that) or there are\n"
+		      "no radio stations available.\n"));
     }
 
     if (station)
@@ -234,14 +234,14 @@ static int main_loop(GMainContext *context, char *station)
 	    int rc;
 	    /* wait for DVB tuning finish (frontend lock) */
 	    if (current)
-		set_status("Tuning ...");
+		set_status(_("Tuning ..."));
 	    do {
 		rc = dvb_finish_tune(devs.dvb,100);
 		while (g_main_context_iteration(context,FALSE))
 		    /* nothing */;
 	    } while (-1 == rc && !command_pending);
 	    if (0 == rc && !command_pending) {
-		set_status("Frontend locked.");
+		set_status(_("Frontend locked."));
 		dvb_loop(context);
 	    }
 	}
@@ -340,7 +340,7 @@ static void conf_create_window(void)
     /* text */
     renderer = gtk_cell_renderer_text_new();
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Name", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Name"), renderer,
 	 "text", ST_COL_NAME,
 	 NULL);
 
@@ -465,7 +465,7 @@ static void menu_cb_record_start(void)
 	if (debug)
 	    fprintf(stderr,"start recording to %s\n", recfile);
 	if (status) {
-	    snprintf(line,sizeof(line),"Rec to %s",recfile);
+	    snprintf(line,sizeof(line),_("Rec to %s"),recfile);
 	    set_status(line);
 	}
 	av_media_start_recording(mm, wr, recfile);
@@ -477,7 +477,7 @@ static void menu_cb_record_stop(void)
     if (mm && mm->writer) {
 	if (debug)
 	    fprintf(stderr,"stop recording\n");
-	set_status("Recording stopped.");
+	set_status(_("Recording stopped."));
 	av_media_stop_recording(mm);
     }
 }
@@ -773,6 +773,11 @@ parse_args(int *argc, char **argv)
 int
 main(int argc, char *argv[])
 {
+    setlocale(LC_ALL,"");
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    bind_textdomain_codeset(PACKAGE, "UTF-8");
+    textdomain(PACKAGE);
+
     /* basic init */
     ng_init();
     devlist_init(1, 0, 0);
