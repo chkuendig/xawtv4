@@ -624,41 +624,63 @@ void dvb_demux_filter_setup(struct dvb_state *h, int video, int audio)
 
 int dvb_demux_filter_apply(struct dvb_state *h)
 {
-    if (-1 == h->video.fd) {
-	h->video.fd = open(h->demux,O_RDWR);
+    if (0 != h->video.filter.pid) {
+	/* setup video filter */
 	if (-1 == h->video.fd) {
-	    fprintf(stderr,"dvb mux: [video] open %s: %s\n",
-		    h->demux,strerror(errno));
+	    h->video.fd = open(h->demux,O_RDWR);
+	    if (-1 == h->video.fd) {
+		fprintf(stderr,"dvb mux: [video] open %s: %s\n",
+			h->demux,strerror(errno));
+		goto oops;
+	    }
+	}
+	if (-1 == xioctl(h->video.fd,DMX_SET_PES_FILTER,&h->video.filter,0)) {
+	    fprintf(stderr,"dvb mux: [video %d] ioctl DMX_SET_PES_FILTER: %s\n",
+		    ng_mpeg_vpid, strerror(errno));
 	    goto oops;
 	}
-    }
-    if (-1 == xioctl(h->video.fd,DMX_SET_PES_FILTER,&h->video.filter,0)) {
-	fprintf(stderr,"dvb mux: [video %d] ioctl DMX_SET_PES_FILTER: %s\n",
-		ng_mpeg_vpid, strerror(errno));
-	goto oops;
+    } else {
+	/* no video */
+	if (-1 != h->video.fd) {
+	    close(h->video.fd);
+	    h->video.fd = -1;
+	}
     }
 
-    if (-1 == h->audio.fd) {
-	h->audio.fd = open(h->demux,O_RDWR);
+    if (0 != h->audio.filter.pid) {
+	/* setup audio filter */
 	if (-1 == h->audio.fd) {
-	    fprintf(stderr,"dvb mux: [audio] open %s: %s\n",
-		    h->demux,strerror(errno));
+	    h->audio.fd = open(h->demux,O_RDWR);
+	    if (-1 == h->audio.fd) {
+		fprintf(stderr,"dvb mux: [audio] open %s: %s\n",
+			h->demux,strerror(errno));
+		goto oops;
+	    }
+	}
+	if (-1 == xioctl(h->audio.fd,DMX_SET_PES_FILTER,&h->audio.filter,0)) {
+	    fprintf(stderr,"dvb mux: [audio %d] ioctl DMX_SET_PES_FILTER: %s\n",
+		    ng_mpeg_apid, strerror(errno));
+	    goto oops;
+	}
+    } else {
+	/* no audio */
+	if (-1 != h->audio.fd) {
+	    close(h->audio.fd);
+	    h->audio.fd = -1;
+	}
+    }
+
+    if (-1 != h->video.fd) {
+	if (-1 == xioctl(h->video.fd,DMX_START,NULL,0)) {
+	    perror("dvb mux: [video] ioctl DMX_START");
 	    goto oops;
 	}
     }
-    if (-1 == xioctl(h->audio.fd,DMX_SET_PES_FILTER,&h->audio.filter,0)) {
-	fprintf(stderr,"dvb mux: [audio %d] ioctl DMX_SET_PES_FILTER: %s\n",
-		ng_mpeg_apid, strerror(errno));
-	goto oops;
-    }
-
-    if (-1 == xioctl(h->video.fd,DMX_START,NULL,0)) {
-	perror("dvb mux: [video] ioctl DMX_START");
-	goto oops;
-    }
-    if (-1 == xioctl(h->audio.fd,DMX_START,NULL,0)) {
-	perror("dvb mux: [audio] ioctl DMX_START");
-	goto oops;
+    if (-1 != h->audio.fd) {
+	if (-1 == xioctl(h->audio.fd,DMX_START,NULL,0)) {
+	    perror("dvb mux: [audio] ioctl DMX_START");
+	    goto oops;
+	}
     }
 
     ng_mpeg_vpid = h->video.filter.pid;
@@ -688,11 +710,10 @@ void dvb_demux_filter_release(struct dvb_state *h)
     ng_mpeg_apid = 0;
 }
 
-int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot,
-			  int timeout)
+int dvb_demux_req_section(struct dvb_state *h, int fd, int pid, int sec,
+			  int oneshot, int timeout)
 {
     struct dmx_sct_filter_params filter;
-    int fd = -1;
     
     memset(&filter,0,sizeof(filter));
     filter.pid              = pid;
@@ -703,11 +724,13 @@ int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot,
     if (oneshot)
 	filter.flags       |= DMX_ONESHOT;
 
-    fd = open(h->demux, O_RDWR);
     if (-1 == fd) {
-	fprintf(stderr,"dvb mux: [pid %d] open %s: %s\n",
-		pid, h->demux, strerror(errno));
-	goto oops;
+	fd = open(h->demux, O_RDWR);
+	if (-1 == fd) {
+	    fprintf(stderr,"dvb mux: [pid %d] open %s: %s\n",
+		    pid, h->demux, strerror(errno));
+	    goto oops;
+	}
     }
     if (-1 == xioctl(fd, DMX_SET_FILTER, &filter, 0)) {
 	fprintf(stderr,"dvb mux: [pid %d] ioctl DMX_SET_PES_FILTER: %s\n",
@@ -823,7 +846,7 @@ int dvb_start_tune_vdr(struct dvb_state *h, char *section)
 
 int dvb_finish_tune(struct dvb_state *h, int timeout)
 {
-    if (0 == h->video.filter.pid || 0 == h->audio.filter.pid)
+    if (0 == h->video.filter.pid && 0 == h->audio.filter.pid)
 	return -2;
 
     if (0 == timeout) {
@@ -887,8 +910,8 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     int sdt, pat;
 
     if (names)
-	sdt = dvb_demux_req_section(dvb, 0x11, 0x42, 1, 60);
-    pat = dvb_demux_req_section(dvb, 0x00, 0x00, 1, 20);
+	sdt = dvb_demux_req_section(dvb, -1, 0x11, 0x42, 1, 60);
+    pat = dvb_demux_req_section(dvb, -1, 0x00, 0x00, 1, 20);
 
     /* program association table */
     if (dvb_demux_get_section(&pat, buf, sizeof(buf), 1) < 0)
@@ -898,7 +921,7 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     /* program maps */
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);
-	pr->fd = dvb_demux_req_section(dvb, pr->p_pid, 2, 1, 20);
+	pr->fd = dvb_demux_req_section(dvb, -1, pr->p_pid, 2, 1, 20);
     }
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);

@@ -224,7 +224,7 @@ static void table_open(struct dvbmon *dm, char *name, int pid, int sec)
     tab->name = name;
     tab->pid  = pid;
     tab->sec  = sec;
-    tab->fd   = dvb_demux_req_section(dm->dvb, pid, sec, 0, 600);
+    tab->fd   = dvb_demux_req_section(dm->dvb, -1, pid, sec, 0, 600);
     if (-1 == tab->fd) {
 	free(tab);
 	return;

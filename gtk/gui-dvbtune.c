@@ -18,6 +18,7 @@
 #include "grab-ng.h"
 #include "devs.h"
 #include "parseconfig.h"
+#include "tv-config.h"
 #include "dvb-tuning.h"
 #include "gui.h"
 
