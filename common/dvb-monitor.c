@@ -210,6 +210,7 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
 	if (!pr->updated)
 	    continue;
 	pr->updated = 0;
+	dvb_lang_parse_audio(pr->audio);
 	call_callbacks(dm, DVBMON_EVENT_UPDATE_PR, pr->tsid, pr->pnr);
     }
     

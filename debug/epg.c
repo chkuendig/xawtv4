@@ -216,7 +216,7 @@ int debug   = 0;
 int verbose = 0;
 int current = 0;
 int notune  = 0;
-int timeout = 10;
+int timeout = 32;
 
 static void dvbwatch_tsid(struct psi_info *info, int event,
 			  int tsid, int pnr, void *data)

@@ -1061,15 +1061,7 @@ main(int argc, char *argv[])
     /* basic init */
     ng_init();
     parse_args(&argc,argv);
-
-#if 0 // def HAVE_DVB
-    /* easy start for dvb users, import vdr's list ... */
-    if (0 == cfg_sections_count("stations") &&
-	0 != cfg_sections_count("vdr-channels") &&
-	NULL != cfg_get_str("devs",cfg_sections_first("devs"),"dvb")) {
-	vdr_import_stations();
-    }
-#endif
+    dvb_lang_init();
 
     /* gtk main window */
     if (debug)

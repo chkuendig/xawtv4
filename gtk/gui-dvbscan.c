@@ -98,13 +98,7 @@ static void menu_cb_about(void)
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
-	"\n"
-	"Hints for getting started:\n"
-	"  - The channel scan needs a starting point, thus you have to\n"
-	"    tune one channel manually before starting a scan.\n"
-	"  - Activate a row (double-click or enter key) to tune that\n"
-	"    transport stream.";
+	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n";
 
     gtk_about_box(GTK_WINDOW(dvbscan_win), "alexplore", VERSION, text);
 }

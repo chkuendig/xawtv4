@@ -106,6 +106,7 @@ main(int argc, char *argv[])
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
+    dvb_lang_init();
 
     if (gtk_init_check(&argc, &argv)) {
 	/* setup gtk gui */

@@ -62,6 +62,7 @@ struct epgitem {
 
 extern struct list_head epg_list;
 extern time_t eit_last_new_record;
+extern int    eit_count_records;
 
 struct eit_state;
 struct eit_state* eit_add_watch(struct dvb_state *dvb,
@@ -78,3 +79,11 @@ static inline struct epgitem* eit_lookup(int tsid, int pnr, time_t when,
 /* -------------------------------------------------------- */
 /* dvb-lang.c                                               */
 
+struct dvb_lang {
+    struct list_head next;
+    char lang[3];
+};
+extern struct list_head dvb_langs;
+
+void dvb_lang_parse_audio(char *audio);
+void dvb_lang_init(void);

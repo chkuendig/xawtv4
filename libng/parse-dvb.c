@@ -73,6 +73,10 @@ static int handle_control_8(unsigned char *src,  int slen,
 	    case 0x87: /* </em> */
 		s++;
 		break;
+	    case 0x1a: /* ^Z    */
+		dest[d++] = ' ';
+		s++;
+		break;
 	    case 0x8a: /* <br>  */
 		dest[d++] = '\n';
 		s++;

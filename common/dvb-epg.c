@@ -203,6 +203,7 @@ static struct epgitem* epgitem_get(int tsid, int pnr, int id)
     epg->id      = id;
     epg->updated = 1;
     list_add_tail(&epg->next,&epg_list);
+    eit_count_records++;
     return epg;
 }
 
@@ -505,14 +506,16 @@ static gboolean eit_data(GIOChannel *source, GIOCondition condition,
     struct eit_state *eit = data;
     unsigned char buf[4096];
 
-    if (eit->alive)
-	fprintf(stderr,"%c\r",alive[(count++)%4]);
     if (dvb_demux_get_section(eit->fd, buf, sizeof(buf)) < 0) {
 	eit->fd = dvb_demux_req_section(eit->dvb, eit->fd , 0x12,
 					eit->sec, eit->mask, 0, 20);
 	return TRUE;
     }
     mpeg_parse_psi_eit(buf, eit->verbose);
+    if (eit->alive)
+	fprintf(stderr,"%c  #%d %2ds\r",
+		alive[(count++)%4], eit_count_records,
+		(int)(time(NULL)-eit_last_new_record));
     return TRUE;
 }
 
@@ -521,6 +524,7 @@ static gboolean eit_data(GIOChannel *source, GIOCondition condition,
 
 LIST_HEAD(epg_list);
 time_t eit_last_new_record;
+int    eit_count_records;
 
 struct eit_state* eit_add_watch(struct dvb_state *dvb,
 				int section, int mask, int verbose, int alive)
