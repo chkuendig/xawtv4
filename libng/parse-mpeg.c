@@ -888,7 +888,7 @@ static void dump_data(unsigned char *data, int len)
 
 static void dump_desc(unsigned char *desc, int dlen)
 {
-    int i,t,l,l2;
+    int i,j,t,l,l2,l3;
 
     for (i = 0; i < dlen; i += desc[i+1] +2) {
 	t = desc[i];
@@ -935,6 +935,33 @@ static void dump_desc(unsigned char *desc, int dlen)
 	    dump_data(desc+i+4,desc[i+3]);
 	    fprintf(stderr,",");
 	    dump_data(desc+i+l2+5,desc[i+l2+4]);
+	    break;
+
+	case 0x4d: /*  event (eid) */
+	    fprintf(stderr," short=[%3.3s|",desc+i+2);
+	    l2 = desc[i+5];
+	    l3 = desc[i+6+l2];
+	    dump_data(desc+i+6,l2);
+	    fprintf(stderr,"|");
+	    dump_data(desc+i+7+l2,l3);
+	    fprintf(stderr,"]");
+	    break;
+	case 0x4e: /*  event (eid) */
+	    fprintf(stderr," *ext event");
+	    break;
+	case 0x4f: /*  event (eid) */
+	    fprintf(stderr," *time shift event");
+	    break;
+	case 0x50: /*  event (eid) */
+	    fprintf(stderr," *component");
+	    break;
+	case 0x54: /*  event (eid) */
+	    fprintf(stderr," content=");
+	    for (j = 0; j < l; j+=2)
+		fprintf(stderr,"%s0x%02x", j ? "," : "", desc[i+j+2]);
+	    break;
+	case 0x55: /*  event (eid) */
+	    fprintf(stderr," *parental rating");
 	    break;
 	    
 	default:
@@ -1172,6 +1199,47 @@ int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 	    dump_desc(data + j/8, dlen);
 	    fprintf(stderr,"\n");
 	}
+	j += 8*dlen;
+    }
+    
+    if (verbose > 1)
+	fprintf(stderr,"\n");
+    return len+4;
+}
+
+int mpeg_parse_psi_eit(void *fixme, unsigned char *data, int verbose)
+{
+    int id,version,current,len;
+    int j,dlen,tsid,nid;
+
+    len     = mpeg_getbits(data,12,12) + 3 - 4;
+    id      = mpeg_getbits(data,24,16);
+    version = mpeg_getbits(data,42,5);
+    current = mpeg_getbits(data,47,1);
+    if (!current)
+	return len+4;
+
+    tsid = mpeg_getbits(data,64,16);
+    nid  = mpeg_getbits(data,80,16);
+    fprintf(stderr,
+	    "ts [eit]: id %3d ver %2d tsid %d nid %d [%d/%d]\n",
+	    id, version, tsid, nid,
+	    mpeg_getbits(data,48, 8),
+	    mpeg_getbits(data,56, 8));
+
+    j = 112;
+    while (j < len*8) {
+	fprintf(stderr,"  id %d day %d time %06x du %06x r %d ca %d  #",
+		mpeg_getbits(data,j,16),
+		mpeg_getbits(data,j+16,16),
+		mpeg_getbits(data,j+32,24),
+		mpeg_getbits(data,j+56,24),
+		mpeg_getbits(data,j+80,3),
+		mpeg_getbits(data,j+83,1));
+	dlen = mpeg_getbits(data,j+84,12);
+	j += 96;
+	// dump_desc(data + j/8, dlen);
+	fprintf(stderr,"\n");
 	j += 8*dlen;
     }
     

@@ -29,6 +29,21 @@ static int dump_info(struct dvb_state *dvb, int verbose)
     return 0;
 }
 
+static int dump_events(struct dvb_state *dvb, int verbose)
+{
+    unsigned char buf[4096];
+    int eit;
+
+    eit = dvb_demux_req_section(dvb, -1, 0x12, 0x4e, 0, 20);
+    for (;;) {
+	if (dvb_demux_get_section(eit, buf, sizeof(buf)) < 0)
+	    return -1;
+	mpeg_parse_psi_eit(NULL, buf, verbose);
+    }
+    close(eit);
+    return 0;
+}
+
 /* ----------------------------------------------------------------------- */
 
 static void
@@ -49,6 +64,7 @@ usage(FILE *out, char *argv0)
 	    "  -h          print this help text\n"
 	    "  -v          be verbose\n"
 	    "  -t          dump transponder info\n"
+	    "  -e          dump event info\n"
 	    "  -s          watch signal quality   [default]\n"
 	    "    -1        run once\n",
 	    name);
@@ -57,6 +73,7 @@ usage(FILE *out, char *argv0)
 
 #define JOB_SIGNAL 1
 #define JOB_DUMP   2
+#define JOB_EVENTS 3
 
 int main(int argc, char *argv[])
 {
@@ -68,7 +85,7 @@ int main(int argc, char *argv[])
     int c;
     
     for (;;) {
-	if (-1 == (c = getopt(argc, argv, "hvst123a:")))
+	if (-1 == (c = getopt(argc, argv, "hvste123a:")))
 	    break;
 	switch (c) {
 	case 'v':
@@ -79,6 +96,9 @@ int main(int argc, char *argv[])
 	    break;
 	case 't':
 	    job = JOB_DUMP;
+	    break;
+	case 'e':
+	    job = JOB_EVENTS;
 	    break;
 	case '1':
 	case '2':
@@ -123,6 +143,11 @@ int main(int argc, char *argv[])
     case JOB_DUMP:
 	if (0 == dvb_frontend_wait_lock(h,10*1000))
 	    dump_info(h,verbose);
+	break;
+    case JOB_EVENTS:
+	if (0 == dvb_frontend_wait_lock(h,10*1000)) {
+	    dump_events(h,verbose);
+	}
 	break;
     }
     

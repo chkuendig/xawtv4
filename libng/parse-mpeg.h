@@ -192,5 +192,6 @@ int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose);
 int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose);
+int mpeg_parse_psi_eit(void *fixme, unsigned char *data, int verbose);
 int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose);
 int mpeg_find_ts_packet(struct mpeg_handle *h, int wanted, off_t *pos);
