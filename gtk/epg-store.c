@@ -4,8 +4,9 @@
 #include <time.h>
 
 #include "epg-store.h"
-#include "dvb.h"
+#include "list.h"
 #include "parseconfig.h"
+#include "dvb.h"
 
 /* boring declarations of local functions */
 
@@ -44,6 +45,31 @@ static gboolean     epg_store_iter_parent     (GtkTreeModel      *tree_model,
 					       GtkTreeIter       *child);
 
 static GObjectClass *parent_class = NULL;
+
+/* ------------------------------------------------------------------------- */
+
+#define ST_HASH_SIZE            (16)
+#define ST_HASH_KEY(tsid,pnr)   ((tsid+pnr)%ST_HASH_SIZE)
+
+struct station {
+    struct list_head  next;
+    int               tsid;
+    int               pnr;
+    char              name[64];
+    int               visible;
+};
+
+struct _EpgStore {
+    GObject           parent;      /* this MUST be the first member */
+    guint             num_rows;    /* number of rows that we have   */
+    struct epgitem    **rows;
+
+    enum epg_filter   filter_type;
+    int               filter_tsid;
+    int               filter_pnr;
+
+    struct list_head  stations[ST_HASH_SIZE];
+};
 
 /* ------------------------------------------------------------------------- */
 
@@ -110,10 +136,14 @@ epg_store_tree_model_init (GtkTreeModelIface *iface)
 static void
 epg_store_init(EpgStore *st)
 {
-    /* alloc / init stuff */
+    int i;
+
     st->filter_type = EPG_FILTER_NOFILTER;
     st->filter_tsid = -1;
     st->filter_pnr  = -1;
+
+    for (i = 0; i < ST_HASH_SIZE; i++)
+	INIT_LIST_HEAD(&st->stations[i]);
 }
 
 static void
@@ -124,6 +154,43 @@ epg_store_finalize(GObject *object)
     if (st->rows)
 	free(st->rows);
     (*parent_class->finalize)(object);
+}
+
+/* ------------------------------------------------------------------------- */
+
+static struct station* station_new(int tsid, int pnr)
+{
+    char buf[32],*name;
+    struct station *tv;
+
+    tv = malloc(sizeof(*tv));
+    memset(tv,0,sizeof(*tv));
+    tv->tsid    = tsid;
+    tv->pnr     = pnr;
+    tv->visible = TRUE;
+    snprintf(buf,sizeof(buf),"%d-%d",tsid,pnr);
+    name = cfg_get_str("dvb-pr",buf,"name");
+    snprintf(tv->name,sizeof(tv->name),"%s",name ? name : buf);
+    return tv;
+}
+
+static struct station* station_lookup(EpgStore *st, int tsid, int pnr)
+{
+    struct list_head *hash,*item;
+    struct station *tv;
+
+    hash = &st->stations[ST_HASH_KEY(tsid,pnr)];
+    list_for_each(item,hash) {
+	tv = list_entry(item, struct station, next);
+	if (tv->tsid != tsid)
+	    continue;
+	if (tv->pnr != pnr)
+	    continue;
+	return tv;
+    }
+    tv = station_new(tsid,pnr);
+    list_add_tail(&tv->next,hash);
+    return tv;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -212,8 +279,9 @@ epg_store_get_value (GtkTreeModel *tree_model,
 {
     enum epg_cols column = index;
     struct epgitem *epg = iter->user_data;
-    char buf[64],*name;
+    char buf[64];
     struct tm *tm;
+    struct station *tv;
 
     switch(column) {
     case EPG_COL_DATE:
@@ -235,10 +303,9 @@ epg_store_get_value (GtkTreeModel *tree_model,
 	g_value_set_string(value, buf);
 	break;
     case EPG_COL_STATION:
-	snprintf(buf,sizeof(buf),"%d-%d",epg->tsid,epg->pnr);
-	name = cfg_get_str("dvb-pr",buf,"name");
+	tv = station_lookup(EPG_STORE(tree_model), epg->tsid, epg->pnr);
 	g_value_init(value, G_TYPE_STRING);
-	g_value_set_string(value, name ? name : buf);
+	g_value_set_string(value, tv->name);
 	break;
     case EPG_COL_NAME:
 	g_value_init(value, G_TYPE_STRING);
@@ -414,7 +481,9 @@ static gboolean is_visible(EpgStore *st, struct epgitem *epg, time_t now)
     gboolean matches = FALSE;
     gboolean playing = FALSE;
     gboolean stale = FALSE;
+    struct station *tv;
 
+    /* check time */
     if (epg->stop < now)
 	stale = TRUE;
     if (epg->start <= now && epg->stop > now)
@@ -424,6 +493,7 @@ static gboolean is_visible(EpgStore *st, struct epgitem *epg, time_t now)
 	epg->updated++;
     }
 
+    /* filter options */
     switch (st->filter_type) {
     case EPG_FILTER_NOFILTER:
 	matches = !stale;
@@ -440,6 +510,12 @@ static gboolean is_visible(EpgStore *st, struct epgitem *epg, time_t now)
 	/* TODO */
 	break;
     }
+
+    /* station visble? */
+    tv = station_lookup(st, epg->tsid, epg->pnr);
+    if (!tv->visible)
+	matches = FALSE;
+    
     return matches;
 }
 
@@ -466,19 +542,29 @@ epg_store_refresh(EpgStore *st)
 }
 
 void
-epg_store_set_filter(EpgStore *st, enum epg_filter type)
+epg_store_filter_type(EpgStore *st, enum epg_filter type)
 {
     st->filter_type = type;
     epg_store_refresh(st);
 }
 
 void
-epg_store_set_station(EpgStore *st, int tsid, int pnr)
+epg_store_filter_station(EpgStore *st, int tsid, int pnr)
 {
     st->filter_tsid = tsid;
     st->filter_pnr  = pnr;
     if (st->filter_type == EPG_FILTER_STATION)
 	epg_store_refresh(st);
+}
+
+void
+epg_store_station_visible(EpgStore *st, int tsid, int pnr, int visible)
+{
+    struct station *tv;
+
+    tv = station_lookup(st, tsid, pnr);
+    tv->visible = visible;
+    epg_store_refresh(st);
 }
 
 /* ------------------------------------------------------------------------- */

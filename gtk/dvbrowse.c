@@ -143,6 +143,7 @@ main(int argc, char *argv[])
     eit = eit_add_watch(devs.dvb, 0x50,0xf0, debug, 0);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
+    read_config_file("stations");
     dvb_lang_init();
 
     /* setup gtk gui */

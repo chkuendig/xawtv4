@@ -44,6 +44,36 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
 				       GtkTreeIter *tree);
 static void selection_changed(GtkTreeSelection *sel, GtkTextView* textview);
 
+/* ------------------------------------------------------------------------ */
+
+static void init_stations(void)
+{
+    char *list;
+    int tsid, pnr;
+
+    if (0 == cfg_sections_count("stations"))
+	/* no stations configured => show all */
+	return;
+
+    /* disable all stations ... */
+    cfg_sections_for_each("dvb-pr",list) {
+	if (2 != sscanf(list,"%d-%d",&tsid,&pnr))
+	    continue;
+	epg_store_station_visible(epg_store, tsid, pnr, FALSE);
+    }
+
+    /* ... and enable the ones in the station list */
+    cfg_sections_for_each("stations",list) {
+	tsid = cfg_get_int("stations",list,"tsid",0);
+	pnr  = cfg_get_int("stations",list,"pnr",0);
+	if (0 == tsid || 0 == pnr)
+	    continue;
+	epg_store_station_visible(epg_store, tsid, pnr, TRUE);
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+
 static void epg_row_activated(GtkTreeView* treeview,
 			      GtkTreePath *path,
 			      GtkTreeViewColumn* col,
@@ -299,6 +329,7 @@ void create_epgwin(GtkWindow* parent)
 
     /* epg description */
     create_tags(epg_textview);
+    init_stations();
 
     sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(epg_treeview));
     g_signal_connect(sel, "changed",
@@ -409,7 +440,7 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
 void epgwin_show(struct epgitem* epg)
 {
     if (epg) {
-	epg_store_set_station(epg_store, epg->tsid, epg->pnr);
+	epg_store_filter_station(epg_store, epg->tsid, epg->pnr);
 #if 0
 	if (0 == epgwin_find_item(&iter, epg->tsid, epg->pnr, epg->id))
 	    epgwin_textview_show_entry(GTK_TEXT_VIEW(epg_textview),
@@ -434,7 +465,7 @@ static void do_filter(enum epg_filter type)
     /* temporary disconnect store from view for fast large-scale update */
     g_object_ref(epg_store);
     gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), NULL);
-    epg_store_set_filter(epg_store, type);
+    epg_store_filter_type(epg_store, type);
     gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), GTK_TREE_MODEL(epg_store));
     g_object_unref(epg_store);
 }

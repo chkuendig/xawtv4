@@ -51,20 +51,11 @@ enum epg_cols {
     EPG_N_COLUMNS,
 };
 
-struct _EpgStore {
-    GObject         parent;      /* this MUST be the first member */
-    guint           num_rows;    /* number of rows that we have   */
-    struct epgitem  **rows;
-
-    enum epg_filter filter_type;
-    int filter_tsid;
-    int filter_pnr;
-};
-
 EpgStore  *epg_store_new(void);
 void epg_store_refresh(EpgStore *st);
 void epg_store_sort(EpgStore *st);
-void epg_store_set_filter(EpgStore *st, enum epg_filter type);
-void epg_store_set_station(EpgStore *st, int tsid, int pnr);
+void epg_store_filter_type(EpgStore *st, enum epg_filter type);
+void epg_store_filter_station(EpgStore *st, int tsid, int pnr);
+void epg_store_station_visible(EpgStore *st, int tsid, int pnr, int visible);
 
 #endif /* _epg_store_h_included_ */

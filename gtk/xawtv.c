@@ -281,8 +281,10 @@ grabber_fini(void)
 	    gtk_widget_destroy(satellite_dialog);
 	dvbmon_fini(devs.dvbmon);
 	devs.dvbmon = NULL;
-	write_config_file("dvb-ts");
-	write_config_file("dvb-pr");
+	if (GET_CMD_READCONF()) {
+	    write_config_file("dvb-ts");
+	    write_config_file("dvb-pr");
+	}
 	if (eit)
 	    eit_del_watch(eit);
     }
@@ -1174,7 +1176,9 @@ main(int argc, char *argv[])
 
     /* enter main loop */
     main_loop(g_main_context_default());
-    write_config_file("options");
+
+    if (GET_CMD_READCONF())
+	write_config_file("options");
     fprintf(stderr,"bye...\n");
     exit(0);
 }
