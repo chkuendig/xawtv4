@@ -495,10 +495,12 @@ int device_fini()
     ng_dev_fini(&devs.sndrec);
     ng_dev_fini(&devs.sndplay);
 
+#ifdef HAVE_DVB
     if (devs.dvb) {
 	dvb_fini(devs.dvb);
 	devs.dvb = NULL;
     }
+#endif
     return 0;
 }
 
@@ -532,12 +534,14 @@ int device_init(char *name)
     if (NULL != device && 0 != strcasecmp(device,"none"))
 	devs.vbidev = device;
 
+#ifdef HAVE_DVB
     /* dvb */
     device = cfg_get_str("devs", name, "dvb");
     if (NULL != device && 0 != strcasecmp(device,"none")) {
 	devs.dvbadapter = device;
 	devs.dvb = dvb_init(devs.dvbadapter);
     }
+#endif
     
     /* sound */
     device = cfg_get_str("devs", name, "sndrec");
