@@ -44,3 +44,11 @@ extern void create_onscreen(void);
 extern void display_onscreen(char *title);
 
 extern void menu_cb_fullscreen(void);
+
+
+/* ------------------------------------------------------------------- */
+/* gui-dvbtune.c                                                       */
+
+extern GtkWidget *dvbtune_dialog;
+
+void create_dvbtune(GtkWindow *parent);

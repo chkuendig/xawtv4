@@ -26,54 +26,56 @@ int dvb_debug = 0;
 /* ----------------------------------------------------------------------- */
 /* map vdr config file numbers to enums                                    */
 
+#define VDR_MAX 999
+
 static fe_bandwidth_t fe_vdr_bandwidth[] = {
-    [ 0 ... 256 ] = BANDWIDTH_AUTO,
-    [ 8 ]         = BANDWIDTH_8_MHZ,
-    [ 7 ]         = BANDWIDTH_7_MHZ,
-    [ 6 ]         = BANDWIDTH_6_MHZ,
+    [ 0 ... VDR_MAX ] = BANDWIDTH_AUTO,
+    [ 8 ]             = BANDWIDTH_8_MHZ,
+    [ 7 ]             = BANDWIDTH_7_MHZ,
+    [ 6 ]             = BANDWIDTH_6_MHZ,
 };
 
 static fe_code_rate_t fe_vdr_rates[] = {
-    [ 0 ... 256 ] = FEC_AUTO,
-    [ 12 ]        = FEC_1_2,
-    [ 23 ]        = FEC_2_3,
-    [ 34 ]        = FEC_3_4,
-    [ 45 ]        = FEC_4_5,
-    [ 56 ]        = FEC_5_6,
-    [ 67 ]        = FEC_6_7,
-    [ 78 ]        = FEC_7_8,
-    [ 89 ]        = FEC_8_9,
+    [ 0 ... VDR_MAX ] = FEC_AUTO,
+    [ 12 ]            = FEC_1_2,
+    [ 23 ]            = FEC_2_3,
+    [ 34 ]            = FEC_3_4,
+    [ 45 ]            = FEC_4_5,
+    [ 56 ]            = FEC_5_6,
+    [ 67 ]            = FEC_6_7,
+    [ 78 ]            = FEC_7_8,
+    [ 89 ]            = FEC_8_9,
 };
 
 static fe_modulation_t fe_vdr_modulation[] = {
-    [ 0 ... 256 ] = QAM_AUTO,
-    [  16 ]       = QAM_16,
-    [  32 ]       = QAM_32,
-    [  64 ]       = QAM_64,
-    [ 128 ]       = QAM_128,
-    [ 256 ]       = QAM_256,
+    [ 0 ... VDR_MAX ] = QAM_AUTO,
+    [  16 ]           = QAM_16,
+    [  32 ]           = QAM_32,
+    [  64 ]           = QAM_64,
+    [ 128 ]           = QAM_128,
+    [ 256 ]           = QAM_256,
 };
 
 static fe_transmit_mode_t fe_vdr_transmission[] = {
-    [ 0 ... 256 ] = TRANSMISSION_MODE_AUTO,
-    [ 2 ]         = TRANSMISSION_MODE_2K,
-    [ 8 ]         = TRANSMISSION_MODE_8K,
+    [ 0 ... VDR_MAX ] = TRANSMISSION_MODE_AUTO,
+    [ 2 ]             = TRANSMISSION_MODE_2K,
+    [ 8 ]             = TRANSMISSION_MODE_8K,
 };
 
 static fe_guard_interval_t fe_vdr_guard[] = {
-    [ 0 ... 256 ] = GUARD_INTERVAL_AUTO,
-    [  4 ]        = GUARD_INTERVAL_1_4,
-    [  8 ]        = GUARD_INTERVAL_1_8,
-    [ 16 ]        = GUARD_INTERVAL_1_16,
-    [ 32 ]        = GUARD_INTERVAL_1_32,
+    [ 0 ... VDR_MAX ] = GUARD_INTERVAL_AUTO,
+    [  4 ]            = GUARD_INTERVAL_1_4,
+    [  8 ]            = GUARD_INTERVAL_1_8,
+    [ 16 ]            = GUARD_INTERVAL_1_16,
+    [ 32 ]            = GUARD_INTERVAL_1_32,
 };
 
 static fe_hierarchy_t fe_vdr_hierarchy[] = {
-    [ 0 ... 256 ] = HIERARCHY_AUTO,
-    [ 0 ]         = HIERARCHY_NONE,
-    [ 1 ]         = HIERARCHY_1,
-    [ 2 ]         = HIERARCHY_2,
-    [ 4 ]         = HIERARCHY_4,
+    [ 0 ... VDR_MAX ] = HIERARCHY_AUTO,
+    [ 0 ]             = HIERARCHY_NONE,
+    [ 1 ]             = HIERARCHY_1,
+    [ 2 ]             = HIERARCHY_2,
+    [ 4 ]             = HIERARCHY_4,
 };
 
 /* ----------------------------------------------------------------------- */
@@ -344,7 +346,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
 	h->p.u.ofdm.constellation = fe_vdr_modulation [ val ];
 	val = cfg_get_int(domain, section, "transmission", 0);
 	h->p.u.ofdm.transmission_mode = fe_vdr_transmission [ val ];
-	val= cfg_get_int(domain, section, "guard_intervall", GUARD_INTERVAL_AUTO);
+	val= cfg_get_int(domain, section, "guard_interval", GUARD_INTERVAL_AUTO);
 	h->p.u.ofdm.guard_interval = fe_vdr_guard [ val ];
 	val = cfg_get_int(domain, section, "hierarchy", HIERARCHY_AUTO);
 	h->p.u.ofdm.hierarchy_information = fe_vdr_hierarchy [ val ];
@@ -444,6 +446,16 @@ int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
 	time(&now);
     }
     return -1;
+}
+
+int dvb_frontend_get_type(struct dvb_state *h)
+{
+    return h->info.type;
+}
+
+int dvb_frontend_get_caps(struct dvb_state *h)
+{
+    return h->info.caps;
 }
 
 int dvb_frontend_get_biterr(struct dvb_state *h)

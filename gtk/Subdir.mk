@@ -28,13 +28,14 @@ gtk/xawtv: \
 gtk/alexplore: \
 	gtk/alexplore.o \
 	gtk/gui-misc.o \
+	gtk/gui-dvbtune.o \
 	common/dvb-monitor.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture)
 
 $(TARGETS-gtk) : CFLAGS  += $(GTK_CFLAGS)
-$(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) -ljpeg -lm
-$(TARGETS-gtk) : LDFLAGS += $(DLFLAGS) $(THREAD_LIBS)
+$(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) $(THREAD_LIBS) -ljpeg -lm
+$(TARGETS-gtk) : LDFLAGS += $(DLFLAGS)
 
 
 ifeq ($(FOUND_GTK),yes)

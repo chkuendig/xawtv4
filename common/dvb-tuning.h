@@ -21,6 +21,8 @@ void dvb_frontend_status_print(struct dvb_state *h);
 int dvb_frontend_is_locked(struct dvb_state *h);
 int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout);
 int dvb_frontend_get_biterr(struct dvb_state *h);
+int dvb_frontend_get_type(struct dvb_state *h);
+int dvb_frontend_get_caps(struct dvb_state *h);
 void dvb_frontend_release(struct dvb_state *h, int write);
 
 /* low level demux interface */
