@@ -237,6 +237,11 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 
     switch (h->info.type) {
     case FE_QPSK:
+	/*
+	 * DVB-S
+	 *   - kernel API uses kHz here.
+	 *   - /etc/vdr/channel.conf + diseqc.conf use MHz
+	 */
 	diseqc = find_diseqc(name);
 	if (!diseqc) {
 	    fprintf(stderr,"no diseqc info for \"%s\"\n",name);
@@ -249,7 +254,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 
 	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
-	h->p.frequency = (val - lof) * 1000;
+	h->p.frequency = val - lof;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
 
@@ -258,21 +263,29 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
 
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d+%d, inv=%s "
+	    fprintf(stderr,"dvb fe: tuning freq=%d+%d MHz, inv=%s "
 		    "symbol_rate=%d fec_inner=%s\n",
-		    lof, h->p.frequency / 1000,
+		    lof, h->p.frequency,
 		    dvb_fe_inversion [ h->p.inversion ],
 		    h->p.u.qpsk.symbol_rate,
 		    dvb_fe_rates [ h->p.u.qpsk.fec_inner ]);
 	}
+	h->p.frequency *= 1000; // MHz => kHz
 	break;
 
     case FE_QAM:
+	/*
+	 * DVB-C
+	 *   - kernel API uses Hz here.
+	 *   - /etc/vdr/channel.conf allows Hz, kHz and MHz
+	 */
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val;
+	while (h->p.frequency < 1000000)
+	    h->p.frequency *= 1000;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
-
+	
 	val = cfg_get_int("dvb", name, "symbol_rate", 0);
 	h->p.u.qam.symbol_rate = val;
 	h->p.u.qam.fec_inner = FEC_AUTO; // FIXME
@@ -280,7 +293,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	h->p.u.qam.modulation = fe_vdr_modulation [ val ];
 
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
+	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%d "
 		    "symbol_rate=%d fec_inner=%s modulation=%s\n",
 		    h->p.frequency, h->p.inversion, h->p.u.qam.symbol_rate,
 		    dvb_fe_rates      [ h->p.u.qam.fec_inner  ],
@@ -289,8 +302,11 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	break;
 
     case FE_OFDM:
+	/* DVB-T  --  same as DVB-C */
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val * 1000;
+	while (h->p.frequency < 1000000)
+	    h->p.frequency *= 1000;
 	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
 
@@ -310,7 +326,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	h->p.u.ofdm.hierarchy_information = fe_vdr_hierarchy [ val ];
 
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
+	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%d "
 		    "bandwidth=%s code_rate=[%s-%s] constellation=%s "
 		    "transmission=%s guard=%s hierarchy=%s\n",
 		    h->p.frequency, h->p.inversion,
