@@ -73,6 +73,9 @@ struct eit_state* eit_add_watch(struct dvb_state *dvb,
 				int section, int mask, int verbose, int alive);
 void eit_del_watch(struct eit_state *eit);
 
+void eit_write_file(char *filename);
+void eit_read_file(char *filename);
+
 #ifdef HAVE_DVB
 extern struct epgitem* eit_lookup(int tsid, int pnr, time_t when, int debug);
 #else

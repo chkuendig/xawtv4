@@ -1064,6 +1064,9 @@ main(int argc, char *argv[])
     int n;
 
     hello_world();
+    setlocale(LC_ALL,"");
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    textdomain(PACKAGE);
 
     /* lowlevel X11 init */
     gtk_init(&argc, &argv);

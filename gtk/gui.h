@@ -1,13 +1,19 @@
-
 /* ------------------------------------------------------------------- */
 /* i18n                                                                */
+
+#include <locale.h>
+#include <libintl.h>
+
+#define _(string)     gettext(string)
+#define noop(string)  string
+
+/* ------------------------------------------------------------------- */
+/* misc                                                                */
 
 #define TITLE_TIME          6000
 #define ONSCREEN_TIME       5000
 #define EPG_TIME            5000
 #define SPACING               12
-
-#define _(string) string
 
 /* ------------------------------------------------------------------- */
 /* gui-misc.c                                                          */

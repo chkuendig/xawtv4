@@ -294,7 +294,7 @@ static void* mpeg_ps_open(char *moviename)
     /* audio */
     pos  = 0;
     for (;;) {
-	size = mpeg_find_ps_packet(h,0xc0,&pos);
+	size = mpeg_find_ps_packet(h,0xc0,0xf0,&pos);
 	if (!size)
 	    break;
 	off = mpeg_parse_pes_packet(h, mpeg_get_data(h,pos,32),
@@ -312,7 +312,7 @@ static void* mpeg_ps_open(char *moviename)
     /* video */
     pos  = 0;
     for (;;) {
-	size = mpeg_find_ps_packet(h,0xe0,&pos);
+	size = mpeg_find_ps_packet(h,0xe0,0xf0,&pos);
 	if (!size)
 	    break;
 	off = mpeg_parse_pes_packet(h, mpeg_get_data(h,pos,32),
@@ -365,7 +365,7 @@ static struct ng_video_buf* mpeg_ps_vdata(void *handle, unsigned int *drop)
 	    h->slowdown = 0;
 	    return buf;
 	}
-	size = mpeg_find_ps_packet(h,0xe0,&h->video_offset);
+	size = mpeg_find_ps_packet(h,0xe0,0xf0,&h->video_offset);
 	if (0 == size)
 	    return NULL;
 	off = mpeg_parse_pes_packet(h, mpeg_get_data(h,h->video_offset,32),
@@ -387,7 +387,7 @@ static struct ng_audio_buf* mpeg_ps_adata(void *handle)
     size_t size, off;
     int aligned;
 
-    size = mpeg_find_ps_packet(h,0xc0,&h->audio_offset);
+    size = mpeg_find_ps_packet(h,0xc0,0xf0,&h->audio_offset);
     if (0 == size)
 	return NULL;
     off = mpeg_parse_pes_packet(h, mpeg_get_data(h,h->audio_offset,32),

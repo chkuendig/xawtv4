@@ -609,7 +609,7 @@ int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header)
 /* ----------------------------------------------------------------------- */
 /* program streams                                                         */
 
-size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
+size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, int mask, off_t *pos)
 {
     unsigned char *buf;
     size_t size;
@@ -650,7 +650,7 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
 		    (int)buf[3],(int64_t)*pos,(int)size,packet);
 
 	/* our packet ? */
-	if (buf[3] == packet)
+	if ((buf[3] & mask) == packet)
 	    return size;
 	*pos += size;
 

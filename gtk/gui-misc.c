@@ -71,9 +71,9 @@ GtkWidget* gtk_toolbar_build(struct toolbarbutton *btns, int count,
 	    if (btns[i].toggle) {
 		item = gtk_toggle_tool_button_new();
 		gtk_tool_button_set_label(GTK_TOOL_BUTTON(item),
-					  btns[i].text);
+					  gettext(btns[i].text));
 	    } else {
-		item = gtk_tool_button_new(NULL, btns[i].text);
+		item = gtk_tool_button_new(NULL, gettext(btns[i].text));
 	    }
 	    if (btns[i].stock)
 		gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(item),
@@ -83,7 +83,7 @@ GtkWidget* gtk_toolbar_build(struct toolbarbutton *btns, int count,
 		    tooltips = gtk_tooltips_new();
 		gtk_tool_item_set_tooltip(GTK_TOOL_ITEM(item),
 					  tooltips,
-					  btns[i].tooltip,
+					  gettext(btns[i].tooltip),
 					  btns[i].priv);
 	    }
 	    if (btns[i].callback)

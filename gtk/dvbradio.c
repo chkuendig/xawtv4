@@ -515,10 +515,10 @@ static void menu_cb_about(void)
 static GtkItemFactoryEntry menu_items[] = {
     {
 	/* --- File menu ----------------------------- */
-	.path        = "/_File",
+	.path        = noop("/_File"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/File/_Quit",
+	.path        = noop("/File/_Quit"),
 	.accelerator = "Q",
 	.callback    = gtk_quit_cb,
 	.item_type   = "<StockItem>",
@@ -526,10 +526,10 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- dynamic devices/stations menus -------- */
-	.path        = "/_Stations",
+	.path        = noop("/_Stations"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Stations/_Configure ...",
+	.path        = noop("/Stations/_Configure ..."),
 	.callback    = menu_cb_station_conf,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_PREFERENCES,
@@ -539,22 +539,22 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- Commands menu ------------------------- */
-	.path        = "/_Commands",
+	.path        = noop("/_Commands"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Commands/Next station",
+	.path        = noop("/Commands/Next station"),
 	.accelerator = "space",  // Page_Up
 	.callback    = menu_cb_station_next,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_FORWARD,
     },{
-	.path        = "/Commands/Previous station",
+	.path        = noop("/Commands/Previous station"),
 	.accelerator = "BackSpace",  // Page_Down
 	.callback    = menu_cb_station_prev,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_GO_BACK,
     },{
-	.path        = "/Commands/Start or stop _recording",
+	.path        = noop("/Commands/Start or stop _recording"),
 	.accelerator = "r",
 	.callback    = menu_cb_record_toggle,
 	.item_type   = "<Item>",
@@ -562,27 +562,27 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/sep1",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Commands/Mute",
+	.path        = noop("/Commands/Mute"),
 	.accelerator = "KP_Enter",
 	.callback    = menu_cb_mute,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Increase Volume",
+	.path        = noop("/Commands/Increase Volume"),
 	.accelerator = "KP_Add",
 	.callback    = menu_cb_vol_inc,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Decrease Volume",
+	.path        = noop("/Commands/Decrease Volume"),
 	.accelerator = "KP_Subtract",
 	.callback    = menu_cb_vol_dec,
 	.item_type   = "<Item>",
     },{
 
 	/* --- Help menu ----------------------------- */
-	.path        = "/_Help",
+	.path        = noop("/_Help"),
 	.item_type   = "<LastBranch>",
     },{
-	.path        = "/Help/_About ...",
+	.path        = noop("/Help/_About ..."),
 	.callback    = menu_cb_about,
 	.item_type   = "<Item>",
     }
@@ -647,6 +647,9 @@ static void main_create_window(void)
     accel_group = gtk_accel_group_new ();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<radio>",
 					accel_group);
+    gtk_item_factory_set_translate_func(item_factory,
+					(GtkTranslateFunc)gettext,
+					NULL,NULL);
     gtk_item_factory_create_items(item_factory, DIMOF(menu_items),
 				  menu_items, NULL);
     gtk_window_add_accel_group(GTK_WINDOW(main_win), accel_group);

@@ -1401,17 +1401,17 @@ static void vbi_font_menu(struct vbi_window *vw)
 static GtkItemFactoryEntry menu_items[] = {
     {
 	/* --- File menu ----------------------------- */
-	.path            = "/_File",
+	.path            = noop("/_File"),
 	.item_type       = "<Branch>",
     },{
-	.path            = "/File/_New window",
+	.path            = noop("/File/_New window"),
 	.accelerator     = "N",
 	.callback        = vbi_menu_cb,
 	.callback_action = 11,
 	.item_type       = "<StockItem>",
 	.extra_data      = GTK_STOCK_NEW,
     },{
-	.path            = "/File/_Save as ...",
+	.path            = noop("/File/_Save as ..."),
 	.accelerator     = "S",
 	.callback        = vbi_menu_cb,
 	.callback_action = 12,
@@ -1421,7 +1421,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path            = "/File/sep1",
 	.item_type       = "<Separator>",
     },{
-	.path            = "/File/_Close window",
+	.path            = noop("/File/_Close window"),
 	.accelerator     = "Q",
 	.callback        = vbi_menu_cb,
 	.callback_action = 13,
@@ -1430,10 +1430,10 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- Edit menu ----------------------------- */
-	.path            = "/_Edit",
+	.path            = noop("/_Edit"),
 	.item_type       = "<Branch>",
     },{
-	.path            = "/Edit/_Copy ...",
+	.path            = noop("/Edit/_Copy ..."),
 	.callback        = vbi_menu_cb,
 	.callback_action = 21,
 	.item_type       = "<StockItem>",
@@ -1441,24 +1441,24 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- Goto menu ----------------------------- */
-	.path            = "/_Go to",
+	.path            = noop("/_Go to"),
 	.item_type       = "<Branch>",
     },{
-	.path            = "/Go to/_Index",
+	.path            = noop("/Go to/_Index"),
 	.accelerator     = "I",
 	.callback        = vbi_menu_cb,
 	.callback_action = 31,
 	.item_type       = "<StockItem>",
 	.extra_data      = GTK_STOCK_HOME,
     },{
-	.path            = "/Go to/_Previous Page",
+	.path            = noop("/Go to/_Previous Page"),
 	.accelerator     = "BackSpace",
 	.callback        = vbi_menu_cb,
 	.callback_action = 32,
 	.item_type       = "<StockItem>",
 	.extra_data      = GTK_STOCK_GO_BACK,
     },{
-	.path            = "/Go to/_Next Page",
+	.path            = noop("/Go to/_Next Page"),
 	.accelerator     = "space",
 	.callback        = vbi_menu_cb,
 	.callback_action = 33,
@@ -1467,21 +1467,21 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 	
 	/* --- dynamic stuff ------------------------- */
-	.path            = "/_Subpage",
+	.path            = noop("/_Subpage"),
 	.item_type       = "<Branch>",
     },{
-	.path            = "/_Station",
+	.path            = noop("/_Station"),
 	.item_type       = "<Branch>",
     },{
-	.path            = "/_Font",
+	.path            = noop("/_Font"),
 	.item_type       = "<Branch>",
     },{
 
 	/* --- Help menu ----------------------------- */
-	.path            = "/_Help",
+	.path            = noop("/_Help"),
 	.item_type       = "<LastBranch>",
     },{
-	.path            = "/Help/_About ...",
+	.path            = noop("/Help/_About ..."),
 	.callback        = vbi_menu_cb,
 	.callback_action = 91,
 	.item_type       = "<Item>",
@@ -1490,25 +1490,25 @@ static GtkItemFactoryEntry menu_items[] = {
 
 static struct toolbarbutton toolbaritems[] = {
     {
-	.text     = "index",
-	.tooltip  = "index page",
+	.text     = noop("index"),
+	.tooltip  = noop("index page"),
 	.stock    = GTK_STOCK_HOME,
 	.callback = G_CALLBACK(vbi_button_home),
     },{
-	.text     = "prev",
-	.tooltip  = "previous page",
+	.text     = noop("prev"),
+	.tooltip  = noop("previous page"),
 	.stock    = GTK_STOCK_GO_BACK,
 	.callback = G_CALLBACK(vbi_button_prev),
     },{
-	.text     = "next",
-	.tooltip  = "next page",
+	.text     = noop("next"),
+	.tooltip  = noop("next page"),
 	.stock    = GTK_STOCK_GO_FORWARD,
 	.callback = G_CALLBACK(vbi_button_next),
     },{
 	/* nothing */
     },{
-	.text     = "close",
-	.tooltip  = "close window",
+	.text     = noop("close"),
+	.tooltip  = noop("close window"),
 	.stock    = GTK_STOCK_QUIT,
 	.callback = G_CALLBACK(vbi_button_close),
     }
@@ -1538,6 +1538,9 @@ void vbi_create_window(struct vbi_state *vbi, struct dvbmon *dvbmon)
     accel_group = gtk_accel_group_new ();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<tt>",
 					accel_group);
+    gtk_item_factory_set_translate_func(item_factory,
+					(GtkTranslateFunc)gettext,
+					NULL,NULL);
     gtk_item_factory_create_items(item_factory, DIMOF(menu_items),
 				  menu_items, vw);
     gtk_window_add_accel_group(GTK_WINDOW(toplevel), accel_group);

@@ -135,10 +135,10 @@ static void menu_cb_close(void)
 static GtkItemFactoryEntry menu_items[] = {
     {
 	/* --- File menu ----------------------------- */
-	.path        = "/_File",
+	.path        = noop("/_File"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/File/_Close",
+	.path        = noop("/File/_Close"),
 	.accelerator = "<control>Q",
 	.callback    = menu_cb_close,
 	.item_type   = "<StockItem>",
@@ -147,10 +147,10 @@ static GtkItemFactoryEntry menu_items[] = {
 #if 0
     },{
 	/* --- Help menu ----------------------------- */
-	.path        = "/_Help",
+	.path        = noop("/_Help"),
 	.item_type   = "<LastBranch>",
     },{
-	.path        = "/Help/_About ...",
+	.path        = noop("/Help/_About ..."),
 	.callback    = menu_cb_about,
 	.item_type   = "<Item>",
 #endif
@@ -161,30 +161,30 @@ static GtkItemFactory *item_factory;
 
 static struct toolbarbutton toolbaritems[] = {
     {
-	.text     = "station",
-	.tooltip  = "current station",
+	.text     = noop("station"),
+	.tooltip  = noop("current station"),
 	.stock    = GTK_STOCK_INDEX,
 	.callback = do_filter_station,
     },{
-	.text     = "now",
-	.tooltip  = "sending now",
+	.text     = noop("now"),
+	.tooltip  = noop("sending now"),
 	.stock    = GTK_STOCK_GO_DOWN,
 	.callback = do_filter_now,
     },{
-	.text     = "next",
-	.tooltip  = "sending soon",
+	.text     = noop("next"),
+	.tooltip  = noop("sending soon"),
 	.stock    = GTK_STOCK_GO_FORWARD,
 	.callback = do_filter_next,
     },{
-	.text     = "no filter",
-	.tooltip  = "show all entries",
+	.text     = noop("no filter"),
+	.tooltip  = noop("show all entries"),
 	.stock    = GTK_STOCK_JUSTIFY_FILL,
 	.callback = do_filter_nofilter,
     },{
 	/* nothing */
     },{
-	.text     = "refresh",
-	.tooltip  = "reload epg list",
+	.text     = noop("refresh"),
+	.tooltip  = noop("reload epg list"),
 	.stock    = GTK_STOCK_REFRESH,
 	.callback = do_refresh,
     },{
@@ -237,6 +237,9 @@ void create_epgwin(GtkWindow* parent)
     accel_group = gtk_accel_group_new ();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<epg>",
 					accel_group);
+    gtk_item_factory_set_translate_func(item_factory,
+					(GtkTranslateFunc)gettext,
+					NULL,NULL);
     gtk_item_factory_create_items(item_factory, nmenu_items,
 				  menu_items, NULL);
     gtk_window_add_accel_group(GTK_WINDOW(epg_win), accel_group);
@@ -419,11 +422,11 @@ static void epgwin_textview_show_entry(GtkTextView* textview,
     if (epg->flags&EPG_FLAGS_VIDEO) {
 	TBBOLD(_("Video: "));
 	if (epg->flags&EPG_FLAG_VIDEO_4_3)
-	    TBNORM(_("4:3"));
+	    TBNORM("4:3");
 	if (epg->flags&EPG_FLAG_VIDEO_16_9)
-	    TBNORM(_("16:9"));
+	    TBNORM("16:9");
 	if (epg->flags&EPG_FLAG_VIDEO_HDTV)
-	    TBNORM(_("HDTV"));
+	    TBNORM("HDTV");
 	TBNORM("\n");
     }
 

@@ -355,10 +355,10 @@ static void drag_data_get(GtkWidget *widget,
 static GtkItemFactoryEntry menu_items[] = {
     {
 	/* --- File menu ----------------------------- */
-	.path        = "/_File",
+	.path        = noop("/_File"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/File/_Close",
+	.path        = noop("/File/_Close"),
 	.accelerator = "<control>Q",
 	.callback    = menu_cb_close,
 	.item_type   = "<StockItem>",
@@ -366,14 +366,14 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 
 	/* --- Commands menu ------------------------- */
-	.path        = "/_Commands",
+	.path        = noop("/_Commands"),
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Commands/Satellite _config ...",
+	.path        = noop("/Commands/Satellite _config ..."),
 	.callback    = menu_cb_sat,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/_Tune manually ...",
+	.path        = noop("/Commands/_Tune manually ..."),
 	.accelerator = "<control>T",
 	.callback    = menu_cb_tune,
 	.item_type   = "<Item>",
@@ -381,31 +381,31 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/sep1",
 	.item_type   = "<Separator>",
     },{
-	.path        = "/Commands/Fast _rescan",
+	.path        = noop("/Commands/Fast _rescan"),
 	.accelerator = "<control>R",
 	.callback    = menu_cb_rescan,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Full _scan",
+	.path        = noop("/Commands/Full _scan"),
 	.accelerator = "<control>S",
 	.callback    = menu_cb_full_scan,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/Insane slow scan",
+	.path        = noop("/Commands/Insane slow scan"),
 	.callback    = menu_cb_slow_scan,
 	.item_type   = "<Item>",
     },{
 
 	/* --- Database menu ------------------------- */
-	.path        = "/_Database",
+	.path        = noop("/_Database"),
 	.item_type   = "<Branch>",
 
     },{
 	/* --- Help menu ----------------------------- */
-	.path        = "/_Help",
+	.path        = noop("/_Help"),
 	.item_type   = "<LastBranch>",
     },{
-	.path        = "/Help/_About ...",
+	.path        = noop("/Help/_About ..."),
 	.callback    = menu_cb_about,
 	.item_type   = "<Item>",
     }
@@ -528,25 +528,25 @@ static void dvbscan_init_gui(void)
 
 static struct toolbarbutton toolbaritems[] = {
     {
-	.text     = "tune",
-	.tooltip  = "tune manually",
+	.text     = noop("tune"),
+	.tooltip  = noop("tune manually"),
 //	.stock    = GTK_STOCK_,
 	.callback = menu_cb_tune,
     },{
-	.text     = "scan",
-	.tooltip  = "full channel scan",
+	.text     = noop("scan"),
+	.tooltip  = noop("full channel scan"),
 	.stock    = GTK_STOCK_FIND,
 	.callback = menu_cb_full_scan,
     },{
-	.text     = "close",
-	.tooltip  = "close window",
+	.text     = noop("close"),
+	.tooltip  = noop("close window"),
 	.stock    = GTK_STOCK_QUIT,
 	.callback = menu_cb_close,
     },{
 	/* nothing */
     },{
-	.text     = "fta",
-	.tooltip  = "show only free to air channels",
+	.text     = noop("fta"),
+	.tooltip  = noop("show only free to air channels"),
 	.toggle   = 1,
 	.callback = G_CALLBACK(fta_button_changed),
     },{
@@ -575,6 +575,9 @@ void dvbscan_create_window(int s)
     accel_group = gtk_accel_group_new ();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<browser>",
 					accel_group);
+    gtk_item_factory_set_translate_func(item_factory,
+					(GtkTranslateFunc)gettext,
+					NULL,NULL);
     gtk_item_factory_create_items(item_factory, nmenu_items,
 				  menu_items, NULL);
     gtk_window_add_accel_group(GTK_WINDOW(dvbscan_win), accel_group);
@@ -591,7 +594,7 @@ void dvbscan_create_window(int s)
 
     /* toolbar */
     toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
-    label = gtk_label_new(" Search: ");
+    label = gtk_label_new(_(" Search: "));
     gtk_toolbar_add_widget(toolbar,label,-1);
     search = gtk_entry_new_with_max_length(32);
     gtk_toolbar_add_widget(toolbar,search,-1);

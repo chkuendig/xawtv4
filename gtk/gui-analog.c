@@ -353,6 +353,9 @@ void analog_create_window(void)
     accel_group = gtk_accel_group_new ();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<analog>",
 					accel_group);
+    gtk_item_factory_set_translate_func(item_factory,
+					(GtkTranslateFunc)gettext,
+					NULL,NULL);
     gtk_item_factory_create_items(item_factory, nmenu_items,
 				  menu_items, NULL);
     gtk_window_add_accel_group(GTK_WINDOW(analog_win), accel_group);

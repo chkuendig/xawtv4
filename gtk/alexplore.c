@@ -46,6 +46,7 @@ Display *dpy;
 
 #define O_CMD_HELP             	O_CMDLINE, "help"
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
+#define O_CMD_DEVICE	       	O_CMDLINE, "device"
 
 #define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
 #define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
@@ -63,6 +64,11 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.option   = { O_CMD_DEBUG },
 	.needsarg = 1,
 	.desc     = "set debug level",
+    },{
+	.cmdline  = "device",
+	.option   = { O_CMD_DEVICE },
+	.needsarg = 1,
+	.desc     = "pick device config (use -hwconfig to list them)",
     },{
 	/* end of list */
     }
@@ -89,6 +95,10 @@ main(int argc, char *argv[])
 {
     gboolean have_x11;
 
+    setlocale(LC_ALL,"");
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    textdomain(PACKAGE);
+
     /* options */
     cfg_parse_cmdline(&argc,argv,cmd_opts_only);
     if (GET_CMD_HELP())
@@ -99,7 +109,7 @@ main(int argc, char *argv[])
     
     ng_init();
     devlist_init(1, 0, 0);
-    device_init(NULL);
+    device_init(cfg_get_str(O_CMD_DEVICE));
     if (NULL == devs.dvb)
 	gtk_panic_box(have_x11, "No DVB device found.\n");
     devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
@@ -113,7 +123,7 @@ main(int argc, char *argv[])
 	dvbscan_create_window(1);
 	dvbscan_show_window();
 	if (!debug)
-	    gtk_redirect_stderr_to_gui(GTK_WINDOW(dvbscan_win));
+ 	    gtk_redirect_stderr_to_gui(GTK_WINDOW(dvbscan_win));
     } else {
 	/* enter tty mode */
 	fprintf(stderr,"can't open display\n");

@@ -26,6 +26,7 @@ INSTALL_DIR	:= @INSTALL@ -d -m 755
 
 # misc
 VERSION		:= 4.0-pre
+PACKAGE		:= xawtv
 ifneq ($(wildcard .snapshot),)
   SNAPSHOT	+= SNAPSHOT $(shell cat .snapshot)
 endif
@@ -184,11 +185,11 @@ include $(srcdir)/gtk/Subdir.mk
 #########################################################
 # translations
 
-I18N_SRCS := $(wildcard x11/*.c)
+I18N_SRCS := $(wildcard gtk/*.c)
 LANGUAGES := $(patsubst po/%.po,%,$(wildcard po/*.po))
 
 po/xawtv.pot: $(I18N_SRCS)
-	xgettext -s -o $@ -d xawtv -k -k_ $(I18N_SRCS)
+	xgettext -s -o $@ -d xawtv -k -k_ -knoop $(I18N_SRCS)
 
 %.pox: %.po po/xawtv.pot
 	msgmerge -o $@ $^

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <signal.h>
+#include <errno.h>
 #include <inttypes.h>
 
 #include <glib.h>
@@ -593,4 +594,168 @@ struct epgitem* eit_lookup(int tsid, int pnr, time_t when, int debug)
 	return epg;
     }
     return NULL;
+}
+
+/* ----------------------------------------------------------------------- */
+
+#if 0 /* TODO */
+char     *cat[4];
+uint64_t flags;
+#endif
+
+static void write_string(FILE *fp, char *name, unsigned char *str)
+{
+    int i, len = strlen(str);
+
+    fprintf(fp,"%s=",name);
+    for (i = 0; i < len; i++) {
+	if (isalnum(str[i]) || ' ' == str[i])
+	    fputc(str[i],fp);
+	else
+	    fprintf(fp,"\\x%02x",str[i]);
+    }
+    fprintf(fp,";");
+}
+
+static int parse_string(unsigned char *dst, int dlen,
+			unsigned char *src, int slen)
+{
+    int s,d,c;
+
+    for (s = 0, d = 0; src[s] != ';' && s < slen;) {
+	switch (src[s]) {
+	case ';':
+	    break;
+	case '\\':
+	    sscanf(src+s+2,"%2x",&c);
+	    dst[d++] = c;
+	    s += 4;
+	    break;
+	default:
+	    dst[d++] = src[s++];
+	    break;
+	}
+	if (d == dlen-1)
+	    break;
+    }
+    dst[d++] = 0;
+    s++;
+    return s;
+}
+
+void eit_write_file(char *filename)
+{
+    struct list_head *item;
+    struct epgitem   *epg;
+    FILE *fp;
+
+    fp = fopen(filename,"w");
+    if (NULL == fp) {
+	fprintf(stderr,"%s: %s\n",filename,strerror(errno));
+	return;
+    }
+
+    list_for_each(item,&epg_list) {
+	epg = list_entry(item, struct epgitem, next);
+	fprintf(fp,"id=%d;",    epg->id);
+	fprintf(fp,"tsid=%d;",  epg->tsid);
+	fprintf(fp,"pnr=%d;",   epg->pnr);
+	fprintf(fp,"start=%ld;", epg->start);
+	fprintf(fp,"stop=%ld;",  epg->stop);
+	if (epg->lang[0])
+	    write_string(fp,"lang",epg->lang);
+	if (epg->name[0])
+	    write_string(fp,"name",epg->name);
+	if (epg->stext[0])
+	    write_string(fp,"stext",epg->stext);
+	if (epg->etext)
+	    write_string(fp,"etext",epg->etext);
+	fprintf(fp,"\n");
+    }
+    fclose(fp);
+}
+
+void eit_read_file(char *filename)
+{
+    struct epgitem *epg;
+    char line[4096];
+    char name[16];
+    int offset,len;
+    FILE *fp;
+    time_t now = time(NULL);
+
+    fp = fopen(filename,"r");
+    if (NULL == fp) {
+	fprintf(stderr,"%s: %s\n",filename,strerror(errno));
+	return;
+    }
+
+    while (NULL != fgets(line,sizeof(line),fp)) {
+	epg = malloc(sizeof(*epg));
+	memset(epg,0,sizeof(*epg));
+	for (offset = 0; offset < sizeof(line) /* && line[offset] != '\0' */;) {
+	    if (1 != sscanf(line+offset,"%16[a-z]=%n",name,&len))
+		break;
+	    offset +=len;
+
+	    if (0 == strcmp(name,"id")) {
+		sscanf(line+offset,"%d;%n",&epg->id,&len);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"tsid")) {
+		sscanf(line+offset,"%d;%n",&epg->tsid,&len);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"pnr")) {
+		sscanf(line+offset,"%d;%n",&epg->pnr,&len);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"start")) {
+		sscanf(line+offset,"%ld;%n",&epg->start,&len);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"stop")) {
+		sscanf(line+offset,"%ld;%n",&epg->stop,&len);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"lang")) {
+		len = parse_string(epg->lang,sizeof(epg->lang),
+				   line+offset,sizeof(line)-offset);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"name")) {
+		len = parse_string(epg->name,sizeof(epg->name),
+				   line+offset,sizeof(line)-offset);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"stext")) {
+		len = parse_string(epg->stext,sizeof(epg->stext),
+				   line+offset,sizeof(line)-offset);
+		offset +=len;
+
+	    } else if (0 == strcmp(name,"etext")) {
+		int dlen = strlen(line+offset);
+		epg->etext = malloc(dlen);
+		len = parse_string(epg->etext,dlen,
+				   line+offset,sizeof(line)-offset);
+		offset += len;
+
+	    }
+
+	}
+	if (epg->tsid && epg->pnr && epg->id &&
+	    epg->stop > now) {
+	    /* finalize */
+	    epg->row     = -1;
+	    epg->updated++;
+	    list_add_tail(&epg->next,&epg_list);
+	} else {
+	    /* hmm, ignore */
+	    if (epg->etext)
+		free(epg->etext);
+	    free(epg);
+	}
+    }
+    
+    fclose(fp);
 }

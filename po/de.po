@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-04-16 13:10+0200\n"
+"POT-Creation-Date: 2005-01-10 15:04+0100\n"
 "PO-Revision-Date: 2004-04-16 12:16+0200\n"
 "Last-Translator: Gerd Knorr <kraxel@bytesex.org>\n"
 "Language-Team: German <de@li.org>\n"
@@ -17,363 +17,163 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: x11/motv.c:1512
-msgid "&About ..."
-msgstr "&Über ..."
+#: gtk/gui-dvbscan.c:594
+msgid " Search: "
+msgstr " Suche: "
 
-#: x11/motv.c:1349
-msgid "&Add station ..."
-msgstr "Sender &hinzufügen ..."
+#: gtk/gui-dvbscan.c:358
+msgid "/_File"
+msgstr "_Datei"
 
-#: x11/vbi-gui.c:1164
-msgid "&Close"
-msgstr "&Schließen"
+#: gtk/gui-epg.c:424
+msgid "16:9"
+msgstr ""
 
-#: x11/motv.c:1358 x11/vbi-gui.c:1169
-msgid "&Copy"
-msgstr "&Kopieren"
+#: gtk/gui-epg.c:422
+msgid "4:3"
+msgstr ""
 
-#: x11/motv.c:1353
-msgid "&Delete station"
-msgstr "Sender &löschen"
-
-#: x11/motv.c:1366
-msgid "&Details"
-msgstr "&Details"
-
-#: x11/motv.c:1491
-msgid "&Devices"
-msgstr "&Geräte"
-
-#: x11/motv.c:1348 x11/vbi-gui.c:1168
-msgid "&Edit"
-msgstr "&Bearbeiten"
-
-#: x11/motv.c:1351
-msgid "&Edit station ..."
-msgstr "&Sender bearbeiten ..."
-
-#: x11/motv.c:1340 x11/vbi-gui.c:1158
-msgid "&File"
-msgstr "&Datei"
-
-#: x11/motv.c:1395
-msgid "&Fullscreen"
-msgstr "&Vollbild"
-
-#: x11/vbi-gui.c:1173
-msgid "&Go to"
-msgstr "&Gehe zu"
-
-#: x11/motv.c:1508
-msgid "&Help"
-msgstr "&Hilfe"
-
-#: x11/vbi-gui.c:1174
-msgid "&Index"
-msgstr "&Index"
-
-#: x11/motv.c:1433
-msgid "&JPEG, max size"
-msgstr "&JPEG, volle Größe"
-
-#: x11/motv.c:1363
-msgid "&Large icons"
-msgstr "Große &Symbole"
-
-#: x11/vbi-gui.c:1159
-msgid "&New window"
-msgstr "&Neues Fenster"
-
-#: x11/vbi-gui.c:1178
-msgid "&Next page"
-msgstr "&Nächste Seite"
-
-#: x11/motv.c:1403
-msgid "&Next station"
-msgstr "&Nächster Sender"
-
-#: x11/motv.c:1389
-msgid "&Preferences ..."
-msgstr "&Einstellungen ..."
-
-#: x11/vbi-gui.c:1176
-msgid "&Previous page"
-msgstr "&Vorherige Seite"
-
-#: x11/motv.c:1406
-msgid "&Previous station"
-msgstr "&vorheriger Sender"
-
-#: x11/motv.c:1344
-msgid "&Quit"
-msgstr "&Beenden"
-
-#: x11/motv.c:1341
-msgid "&Record movie ..."
-msgstr "&Film aufzeichnen ..."
-
-#: x11/vbi-gui.c:1161
-msgid "&Save as ..."
-msgstr "&Speichern unter ..."
-
-#: x11/motv.c:1391
-msgid "&Save options"
-msgstr "&Einstellungen speichern"
-
-#: x11/motv.c:1504
-msgid "&Stations"
-msgstr "&Sender"
-
-#: x11/vbi-gui.c:1183
-msgid "&Subpage"
-msgstr "&Unterseite"
-
-#: x11/motv.c:1371
-msgid "&Tools"
-msgstr "&Tools"
-
-#: x11/motv.c:1362
-msgid "&View"
-msgstr "&Ansicht"
-
-#: x11/motv.c:1453
-msgid "&disable"
-msgstr "&ausschalten"
-
-#: x11/motv.c:1442
-msgid "&none"
-msgstr "&kein"
-
-#: x11/motv.c:993
-msgid "Add station"
-msgstr "Sender hinzufügen"
-
-#: x11/motv.c:2152
-msgid "Apply"
-msgstr "Anwenden"
-
-#: x11/motv.c:1441
-msgid "Aspect ratio"
-msgstr "Seitenverhältnis"
-
-#: x11/motv.c:1646
-msgid "Audio options"
-msgstr "Toneinstellungen"
-
-#: x11/motv.c:1673
-msgid "Audio:"
+#: gtk/gui-epg.c:405
+msgid "Audio: "
 msgstr "Ton:"
 
-#: x11/motv.c:1668 x11/motv.c:1679
-msgid "Browse ..."
-msgstr "Auswählen ..."
+#: gtk/gui-epg.c:316
+msgid "Begin"
+msgstr "Anfang"
 
-#: x11/motv.c:1146 x11/motv.c:1584 x11/motv.c:2152
-msgid "Cancel"
-msgstr "Abbrechen"
+#: gtk/gui-dvbscan.c:569
+msgid "DVB channels"
+msgstr ""
 
-#: x11/motv.c:1165
-msgid "Channel"
-msgstr "Kanal"
-
-#: x11/motv.c:1415
-msgid "Channel &down"
-msgstr "&vorheriger Kanal"
-
-#: x11/motv.c:1412
-msgid "Channel &up"
-msgstr "&nächster Kanal"
-
-#: x11/vbi-gui.c:598
-msgid "Character set:"
-msgstr "Zeichensatz: "
-
-#: x11/motv.c:1693
-msgid "Close"
-msgstr "Schließen"
-
-#: x11/man.c:57
-msgid "Close window"
-msgstr "Fenster schließen"
-
-#: x11/motv.c:1175
-msgid "DVB name"
-msgstr "DVB name"
-
-#: x11/motv.c:1500
-msgid "Device &Settings ..."
-msgstr "&Geräteeinstellungen ..."
-
-#: x11/motv.c:684
-msgid "Device settings"
-msgstr "Geräteeinstellungen"
-
-#: x11/motv.c:1632
-msgid "Driver:"
-msgstr "Treiber:"
-
-#: x11/motv.c:1033
-msgid "Edit station"
-msgstr "Sender bearbeiten"
-
-#: x11/motv.c:1099
-msgid "Error"
-msgstr "Fehler"
-
-#: x11/motv.c:2804
-msgid "Error messages"
-msgstr "Fehlermeldungen"
-
-#: x11/vbi-gui.c:1202
-msgid "F&onts"
-msgstr "&Schrift"
-
-#: x11/motv.c:1656
-msgid "Filenames"
-msgstr "Dateinamen"
-
-#: x11/motv.c:1473
-msgid "Filter"
-msgstr "Filter"
-
-#: x11/motv.c:1650
-msgid "Format:"
-msgstr "Format:"
-
-#: x11/motv.c:1378
-msgid "Frequency table"
-msgstr "Frequenztabelle"
-
-#: x11/motv.c:1426
-msgid "Grab image"
-msgstr "Bild speichern"
-
-#: x11/motv.c:1161
-msgid "Group"
-msgstr "Gruppe"
-
-#: x11/motv.c:1156
-msgid "Hotkey"
-msgstr "Hotkey"
-
-#: x11/motv.c:2174
-msgid "JPEG Quality"
-msgstr "JPEG Qualität"
-
-#: x11/motv.c:1436
-msgid "JPEG, window size"
-msgstr "JPEG, Fenstergröße"
-
-#: x11/motv.c:1448
-msgid "Launch"
-msgstr "Starten"
-
-#: x11/motv.c:1146 x11/motv.c:1584 x11/motv.c:2152
-msgid "OK"
-msgstr "OK"
-
-#: x11/motv.c:2161
-msgid "Options"
-msgstr "Einstellungen"
-
-#: x11/motv.c:1427
-msgid "PPM, max size"
-msgstr "PPM, volle Größe"
-
-#: x11/motv.c:1430
-msgid "PPM, window size"
-msgstr "PPM, Fenstergröße"
-
-#: x11/motv.c:1691
-msgid "Playback"
-msgstr "Wiedergabe"
-
-#: x11/motv.c:2151
-msgid "Preferences"
-msgstr "Einstellungen"
-
-#: x11/motv.c:1651
-msgid "Rate:"
+#: gtk/gui-epg.c:315
+msgid "Date"
 msgstr "Rate:"
 
-#: x11/motv.c:1687
-msgid "Record"
-msgstr "Aufnahme"
+#: gtk/gui-epg.c:431
+msgid "Description:\n"
+msgstr ""
 
-#: x11/motv.c:1619
-#, fuzzy
-msgid "Record a movie"
-msgstr "&Film aufzeichnen ..."
+#: gtk/gui-epg.c:411
+msgid "Dual"
+msgstr ""
 
-#: x11/vbi-gui.c:1187
-msgid "S&tations"
-msgstr "&Sender"
+#: gtk/gui-epg.c:222
+msgid "EPG"
+msgstr ""
 
-#: x11/vbi-gui.c:591
-msgid "Save File"
-msgstr "Datei speichern"
+#: gtk/gui-epg.c:317
+msgid "End"
+msgstr ""
 
-#: x11/motv.c:1355
-msgid "Save stations"
-msgstr "Sender speichern"
+#: gtk/gui-epg.c:426
+msgid "HDTV"
+msgstr ""
 
-#: x11/motv.c:1152
-msgid "Station name"
-msgstr "Name des Senders"
+#: gtk/gui-epg.c:320
+msgid "Lang"
+msgstr ""
 
-#: x11/motv.c:1689
-msgid "Stop"
-msgstr "Beenden"
+#: gtk/gui-epg.c:399
+msgid "Language: "
+msgstr ""
 
-#: x11/motv.c:1452
-msgid "Subtitles"
-msgstr "Untertitel"
+#: gtk/gui-epg.c:407
+msgid "Mono"
+msgstr ""
 
-#: x11/motv.c:1411
-msgid "Tuner"
-msgstr "Tuner"
+#: gtk/gui-epg.c:413
+msgid "Multi"
+msgstr ""
 
-#: x11/motv.c:1636
-msgid "Video options"
-msgstr "Bildeinstellungen"
+#: gtk/gui-epg.c:319
+msgid "Name"
+msgstr ""
 
-#: x11/motv.c:1662
-msgid "Video:"
-msgstr "Bild:"
+#: gtk/gui-epg.c:387
+msgid "Name: "
+msgstr ""
 
-#: x11/motv.c:1100
-msgid "You have to specify a name for the TV Station"
-msgstr "Sie müssen einen Name für den Sender vergeben"
+#: gtk/gui-epg.c:318
+msgid "Station"
+msgstr "Sender"
 
-#: x11/motv.c:2729
-msgid "enable"
-msgstr "einschalten"
+#: gtk/gui-epg.c:409
+msgid "Stereo"
+msgstr ""
 
-#: x11/motv.c:1641
-msgid "fps:"
-msgstr "fps:"
+#: gtk/gui-epg.c:393
+msgid "Summary: "
+msgstr ""
 
-#: x11/motv.c:1455
-msgid "page &150"
-msgstr "Seite &150"
+#: gtk/gui-epg.c:415
+msgid "Surround"
+msgstr ""
 
-#: x11/motv.c:1457
-msgid "page &333"
-msgstr "Seite &333"
+#: gtk/gui-epg.c:371
+msgid "Time: "
+msgstr ""
 
-#: x11/motv.c:1459
-msgid "page &777"
-msgstr "Seite &777"
+#: gtk/gui-epg.c:420
+msgid "Video: "
+msgstr ""
 
-#: x11/motv.c:1463
-msgid "page &888"
-msgstr "Seite &888"
+#: gtk/gui-dvbscan.c:568
+msgid "alexplore: DVB channel browser & scanner"
+msgstr ""
 
-#: x11/motv.c:1461
-msgid "page 8&01"
-msgstr "Seite 8&01"
+#: gtk/gui-analog.c:347
+msgid "analog channels"
+msgstr ""
 
-#: x11/man.c:63
-msgid "please wait ..."
-msgstr "bitte warten ..."
+#: gtk/gui-analog.c:124
+msgid "channel scan finished"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:541
+msgid "close"
+msgstr "schließen"
+
+#: gtk/gui-dvbscan.c:542
+msgid "close window"
+msgstr "Fenster schließen"
+
+#: gtk/gui-control.c:1463
+msgid "control window"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:548
+msgid "fta"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:537
+msgid "full channel scan"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:536
+msgid "scan"
+msgstr ""
+
+#: gtk/gui-analog.c:75
+msgid "scanning %s ..."
+msgstr ""
+
+#: gtk/dvbradio.c:317
+msgid "select stations"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:549
+msgid "show only free to air channels"
+msgstr ""
+
+#: gtk/gui-teletext.c:1526
+msgid "teletext"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:531
+msgid "tune"
+msgstr ""
+
+#: gtk/gui-dvbscan.c:532
+msgid "tune manually"
+msgstr ""
+

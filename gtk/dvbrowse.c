@@ -50,6 +50,7 @@ static int tune_secs = 32;
 #define O_CMD_HELP             	O_CMDLINE, "help"
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_PASSIVE	       	O_CMDLINE, "passive"
+#define O_CMD_DEVICE	       	O_CMDLINE, "device"
 
 #define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
 #define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
@@ -69,6 +70,11 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.needsarg = 1,
 	.desc     = "set debug level",
     },{
+	.cmdline  = "device",
+	.option   = { O_CMD_DEVICE },
+	.needsarg = 1,
+	.desc     = "pick device config (use -hwconfig to list them)",
+    },{
 	.letter   = 'p',
 	.cmdline  = "passive",
 	.option   = { O_CMD_PASSIVE },
@@ -80,6 +86,8 @@ struct cfg_cmdline cmd_opts_only[] = {
 };
 
 /* ------------------------------------------------------------------------ */
+
+static int scan_percent,scan_pass;
 
 static void
 usage(void)
@@ -106,8 +114,8 @@ static gboolean tune_timeout(gpointer data)
     if (!dvb_frontend_is_locked(devs.dvb)) {
 	if (list) {
 	    snprintf(buf,sizeof(buf),
-		     "Tuned TSID %s (%d/%d), frontend not locked (yet?).",
-		     list, n, cfg_sections_count("dvb-ts"));
+		     "Tuned TSID %s (pass %d, %d%%), frontend not locked (yet?).",
+		     list, scan_pass, scan_percent);
 	} else {
 	    snprintf(buf,sizeof(buf),"Frontend not locked.");
 	}
@@ -135,12 +143,16 @@ static gboolean tune_timeout(gpointer data)
 	return FALSE;
     }
 
+    scan_percent = n * 100 / cfg_sections_count("dvb-ts");
+    if (1 == n)
+	scan_pass++;
+
     last_tune = now;
     dvb_frontend_tune(devs.dvb, "dvb-ts", list);
-    snprintf(buf,sizeof(buf),"Tuning TSID %s (%d/%d) ...",
-	     list, n, cfg_sections_count("dvb-ts"));
+    snprintf(buf,sizeof(buf),"Tuning TSID %s (pass %d, %d%%) ...",
+	     list, scan_pass, scan_percent);
     gtk_label_set_label(GTK_LABEL(epg_status),buf);
-	
+
     return TRUE;
 }
 
@@ -151,8 +163,13 @@ static void dvbwatch_tsid(struct psi_info *info, int event,
 
     switch (event) {
     case DVBMON_EVENT_SWITCH_TS:
-	snprintf(buf,sizeof(buf),"Reading TSID %d ...",
-		 tsid);
+	if (scan_pass && scan_percent)
+		snprintf(buf, sizeof(buf),
+			 "Reading TSID %d (pass %d, %d%%) ...",
+			 tsid, scan_pass, scan_percent);
+	else
+		snprintf(buf,sizeof(buf),"Reading TSID %d ...",
+			 tsid);
 	gtk_label_set_label(GTK_LABEL(epg_status),buf);
 	break;
     }
@@ -161,16 +178,28 @@ static void dvbwatch_tsid(struct psi_info *info, int event,
 int
 main(int argc, char *argv[])
 {
+    char filename[1024];
+    
+    setlocale(LC_ALL,"");
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    textdomain(PACKAGE);
+
     /* options */
     cfg_parse_cmdline(&argc,argv,cmd_opts_only);
     if (GET_CMD_HELP())
 	usage();
     debug = GET_CMD_DEBUG();
 
+    read_config_file("dvb-ts");
+    read_config_file("dvb-pr");
+    read_config_file("stations");
+    snprintf(filename, sizeof(filename), "%s/.tv/epg", getenv("HOME"));
+    eit_read_file(filename);
+
     gtk_init(&argc, &argv);
     ng_init();
     devlist_init(1, 0, 0);
-    device_init(NULL);
+    device_init(cfg_get_str(O_CMD_DEVICE));
     if (NULL == devs.dvb)
 	gtk_panic_box(1, "No DVB device found.\n");
     devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
@@ -178,9 +207,6 @@ main(int argc, char *argv[])
     dvbmon_add_callback(devs.dvbmon,dvbwatch_tsid,NULL);
 //  eit = eit_add_watch(devs.dvb, 0x4e,0xff, 0, 0);
     eit = eit_add_watch(devs.dvb, 0x50,0xf0, debug, 0);
-    read_config_file("dvb-ts");
-    read_config_file("dvb-pr");
-    read_config_file("stations");
     dvb_lang_init();
 
     /* setup gtk gui */
@@ -192,6 +218,7 @@ main(int argc, char *argv[])
     g_timeout_add(5000, tune_timeout, NULL);
     gtk_main();
     fprintf(stderr,"bye...\n");
+    eit_write_file(filename);
 
     eit_del_watch(eit);
     dvbmon_fini(devs.dvbmon);

@@ -168,6 +168,10 @@ main(int argc, char **argv)
     int  sim = 0;
     int  c;
     
+    setlocale(LC_ALL,"");
+    bindtextdomain(PACKAGE, LOCALEDIR);
+    textdomain(PACKAGE);
+
     for (;;) {
 	if (-1 == (c = getopt(argc, argv, "hsdtp:c:")))
 	    break;

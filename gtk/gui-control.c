@@ -1469,6 +1469,9 @@ void create_control(void)
     control_accel_group = gtk_accel_group_new();
     item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<control>",
 					control_accel_group);
+    gtk_item_factory_set_translate_func(item_factory,
+					(GtkTranslateFunc)gettext,
+					NULL,NULL);
     gtk_item_factory_create_items(item_factory, DIMOF(menu_items),
 				  menu_items, NULL);
     gtk_window_add_accel_group(GTK_WINDOW(control_win), control_accel_group);

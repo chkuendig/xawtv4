@@ -188,7 +188,7 @@ int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header);
 unsigned char* mpeg_find_audio_hdr(unsigned char *buf, int off, int size);
 
 /* program stream */
-size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos);
+size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, int mask, off_t *pos);
 
 /* transport stream */
 void mpeg_parse_psi_string(unsigned char *src, int slen,
