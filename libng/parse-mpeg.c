@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <iconv.h>
+#include <inttypes.h>
 
 #include "grab-ng.h"
 #include "parse-mpeg.h"
@@ -16,6 +17,13 @@
 #define FILE_BUF_MIN       (512*1024)
 #define FILE_BUF_MAX    (8*1024*1024)
 #define FILE_BLKSIZE        (16*1024)
+
+#ifndef PRId64
+# warning Hmm, your C99 support is incomplete, will guess (should be ok for 32bit archs)
+# define PRId64 "lld"
+# define PRIx64 "llx"
+# define PRIu64 "llu"
+#endif
 
 int  ng_mpeg_vpid    = 0;
 int  ng_mpeg_apid    = 0;

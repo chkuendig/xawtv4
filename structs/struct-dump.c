@@ -7,6 +7,13 @@
 
 #include "struct-dump.h"
 
+#ifndef PRId64
+# warning Hmm, your C99 support is incomplete, will guess (should be ok for 32bit archs)
+# define PRId64 "lld"
+# define PRIx64 "llx"
+# define PRIu64 "llu"
+#endif
+
 /* ---------------------------------------------------------------------- */
 
 struct struct_desc desc_int[] = {{

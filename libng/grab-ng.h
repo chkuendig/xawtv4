@@ -55,7 +55,6 @@ extern int  ng_mpeg_apid;
 #define GETELEM(array,index,default) \
 	(index < sizeof(array)/sizeof(array[0]) ? array[index] : default)
 
-
 /* --------------------------------------------------------------------- */
 /* defines                                                               */
 
