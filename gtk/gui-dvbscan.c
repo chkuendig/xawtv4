@@ -477,6 +477,16 @@ static void dvbscan_init_gui(void)
 
 static struct toolbarbutton toolbaritems[] = {
     {
+	.text     = "tune",
+	.tooltip  = "tune manually",
+//	.stock    = GTK_STOCK_,
+	.callback = menu_cb_tune,
+    },{
+	.text     = "scan",
+	.tooltip  = "full channel scan",
+	.stock    = GTK_STOCK_FIND,
+	.callback = menu_cb_full_scan,
+    },{
 	.text     = "close",
 	.tooltip  = "close window",
 	.stock    = GTK_STOCK_QUIT,
