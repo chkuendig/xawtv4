@@ -1599,6 +1599,13 @@ void create_control(void)
                                     GINT_TO_POINTER(ST_COL_TSID), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_TSID);
 
+    /* configure */
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(st_view), ST_COL_NAME);
+    gtk_tree_view_column_set_resizable(col,True);
+
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(st_view), ST_COL_GROUP);
+    gtk_tree_view_column_set_resizable(col,True);
+
     /* dnd */
     gtk_drag_dest_set(st_view,
 		      // GTK_DEST_DEFAULT_ALL,

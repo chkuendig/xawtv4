@@ -250,6 +250,7 @@ grabber_init(char *dev)
 	devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
 	dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
 	eit = eit_add_watch(devs.dvb, 0x4e,0xff, 0, 0);
+//	eit = eit_add_watch(devs.dvb, 0x50,0xf0, 0, 0);
 	if (debug)
 	    dvbmon_add_callback(devs.dvbmon,dvbwatch_logger,NULL);
 #endif

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
 #include <sys/ioctl.h>
 #include <linux/dvb/frontend.h>
 
@@ -128,9 +127,16 @@ static GtkWidget *add_omenu(GtkBox *box, char *text,
 }
 
 /* ---------------------------------------------------------------------------- */
-/*                                                                              */
 
+GtkWidget *satellite_dialog;
 GtkWidget *dvbtune_dialog;
+char *dvbtune_lnb;
+char *dvbtune_sat;
+
+static GtkWidget *lnb_c;
+static GtkWidget *lnb_e;
+static GtkWidget *sat;
+
 static GtkWidget *frame;
 static GtkWidget *frequency;
 static GtkWidget *symbol_rate;
@@ -143,9 +149,6 @@ static GtkWidget *transmission;
 static GtkWidget *polarization;
 static GtkWidget *guard;
 static GtkWidget *hierarchy;
-static GtkWidget *lnb_c;
-static GtkWidget *lnb_e;
-static GtkWidget *sat;
 
 static void add_frequency(GtkBox *box)
 {
@@ -239,9 +242,9 @@ static void add_sat(GtkBox *box)
     sat = add_omenu(box, "Satellite", m_sat, DIMOF(m_sat), 0);
 }
 
-static void response(GtkDialog *dialog,
-		     gint arg1,
-		     gpointer user_data)
+static void tune_response(GtkDialog *dialog,
+			  gint arg1,
+			  gpointer user_data)
 {
     char *d = "tmp";
     char *s = "dvbtune";
@@ -291,17 +294,11 @@ static void response(GtkDialog *dialog,
 	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(hierarchy));
 	    cfg_set_str(d, s, "hierarchy", m_hi[n].value);
 	}
-	if (lnb_e) {
-	    val = (char*)gtk_entry_get_text(GTK_ENTRY(lnb_e));
-	    if (strlen(val) > 0)
-		cfg_set_str(d, s, "lnb", val);
-	}
-	if (sat) {
-	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(sat));
-	    if (strlen(m_sat[n].value) > 0)
-		cfg_set_str(d, s, "sat", m_sat[n].value);
-	}
-#if 1
+	if (dvbtune_lnb)
+	    cfg_set_str(d, s, "lnb", dvbtune_lnb);
+	if (dvbtune_sat)
+	    cfg_set_str(d, s, "sat", dvbtune_sat);
+#if 0
 	write_config_file("tmp");
 #endif
 	dvb_frontend_tune(devs.dvb, d, s);
@@ -345,8 +342,6 @@ void create_dvbtune(GtkWindow *parent)
 	add_symbol_rate(box);
 	add_inversion(box, caps);
 	add_polarization(box);
-	add_lnb(box);
-	add_sat(box);
 	break;
     case FE_QAM:  /* DVB-C */
 	gtk_frame_set_label(GTK_FRAME(frame)," DVB-C ");
@@ -367,6 +362,67 @@ void create_dvbtune(GtkWindow *parent)
     }
 
     g_signal_connect(dvbtune_dialog, "response",
-		     G_CALLBACK(response), NULL);
+		     G_CALLBACK(tune_response), NULL);
     gtk_widget_show_all(dvbtune_dialog);
+}
+
+/* ---------------------------------------------------------------------------- */
+
+static void sat_response(GtkDialog *dialog,
+			 gint arg1,
+			 gpointer user_data)
+{
+    char *val;
+    int n;
+
+    if (arg1 == GTK_RESPONSE_OK) {
+	val = (char*)gtk_entry_get_text(GTK_ENTRY(lnb_e));
+	if (strlen(val) > 0) {
+	    if (dvbtune_lnb)
+		free(dvbtune_lnb);
+	    dvbtune_lnb = strdup(val);
+	}
+	n = gtk_option_menu_get_history(GTK_OPTION_MENU(sat));
+	if (strlen(m_sat[n].value) > 0) {
+	    dvbtune_sat = m_sat[n].value;
+	}
+    }
+    gtk_widget_hide(GTK_WIDGET(dialog));
+}
+
+void create_satellite(GtkWindow *parent)
+{
+    GtkBox *box,*vbox;
+
+    if (dvb_frontend_get_type(devs.dvb) != FE_QPSK) {
+	gtk_error_box(parent,"Error",
+		      "You don't have a DVB-S card, thus there is\n"
+		      "no need to setup satellite parameters ;)\n");
+	return;
+    }
+    
+    satellite_dialog =
+	gtk_dialog_new_with_buttons("Satellite Parameters", parent, 0,
+				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
+				    NULL);
+    gtk_dialog_set_default_response(GTK_DIALOG(satellite_dialog),
+				    GTK_RESPONSE_OK);
+    g_signal_connect(satellite_dialog, "delete-event",
+		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+
+    vbox = GTK_BOX(GTK_DIALOG(satellite_dialog)->vbox);
+    frame = gtk_frame_new(NULL);
+    gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
+    gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
+    box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+    gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
+
+    add_lnb(box);
+    add_sat(box);
+
+    g_signal_connect(satellite_dialog, "response",
+		     G_CALLBACK(sat_response), NULL);
+    gtk_widget_show_all(satellite_dialog);
 }

@@ -799,6 +799,10 @@ struct dvb_state* dvb_init(char *adapter)
     /* hacking DVB-S without hardware ;) */
     h->info.type = FE_QPSK;
 #endif
+#if 0
+    /* hacking DVB-C without hardware ;) */
+    h->info.type = FE_QAM;
+#endif
     return h;
 
  oops:

@@ -97,13 +97,19 @@ void dvbscan_create_window(int s);
 /* gui-dvbtune.c                                                       */
 
 extern GtkWidget *dvbtune_dialog;
+extern GtkWidget *satellite_dialog;
+extern char *dvbtune_lnb;
+extern char *dvbtune_sat;
+
 void create_dvbtune(GtkWindow *parent);
+void create_satellite(GtkWindow *parent);
 
 /* ------------------------------------------------------------------- */
 /* gui-teletext.c                                                      */
 
 struct vbi_state;
 struct dvbmon;
+
 void vbi_create_window(struct vbi_state *vbi, struct dvbmon *dvbmon);
 
 /* ------------------------------------------------------------------- */

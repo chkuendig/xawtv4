@@ -6,6 +6,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <linux/dvb/frontend.h>
 
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
@@ -53,7 +58,7 @@ static int   scan_tuned;
 static int   scan_locked;
 static gint  fe_poll_id;
 
-static void  scan_ts_start(void);
+static int   scan_ts_start(void);
 static char* scan_ts_next(void);
 static void  mark_stale(void);
 static void  do_search(void);
@@ -61,6 +66,7 @@ static void  find_ts(GtkTreeIter *iter, int tsid);
 static void  find_pr(GtkTreeIter *iter, int tsid, int pnr);
 static void  dvbwatch_gui(struct psi_info *info, int event,
 			  int tsid, int pnr, void *data);
+static void scan_database(GtkItemFactory *factory, int type, char *path);
 
 /* ------------------------------------------------------------------------ */
 
@@ -109,6 +115,14 @@ static void menu_cb_tune(void)
 	gtk_widget_show(dvbtune_dialog);
     else
 	create_dvbtune(GTK_WINDOW(dvbscan_win));
+}
+
+static void menu_cb_sat(void)
+{
+    if (satellite_dialog)
+	gtk_widget_show(satellite_dialog);
+    else
+	create_satellite(GTK_WINDOW(dvbscan_win));
 }
 
 static void scan_drop_stale()
@@ -236,7 +250,11 @@ static void scan_do_start(int seconds)
     timeout_data = seconds;
     mark_stale();
     dvbmon_refresh(devs.dvbmon);
-    scan_ts_start();
+    if (0 == scan_ts_start())
+	gtk_error_box(GTK_WINDOW(dvbscan_win), "Sorry",
+		      "I need at least one DVB stream as starting point\n"
+		      "for a scan, please tune one from the database\n"
+		      "or by specifying the parameters manually.\n");
     scan_do_next(time(NULL));
 }
 
@@ -357,7 +375,11 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/_Commands",
 	.item_type   = "<Branch>",
     },{
-	.path        = "/Commands/_Tune frontend ...",
+	.path        = "/Commands/Satellite _config ...",
+	.callback    = menu_cb_sat,
+	.item_type   = "<Item>",
+    },{
+	.path        = "/Commands/_Tune manually ...",
 	.accelerator = "<control>T",
 	.callback    = menu_cb_tune,
 	.item_type   = "<Item>",
@@ -380,6 +402,11 @@ static GtkItemFactoryEntry menu_items[] = {
 	.item_type   = "<Item>",
     },{
 
+	/* --- Database menu ------------------------- */
+	.path        = "/_Database",
+	.item_type   = "<Branch>",
+
+    },{
 	/* --- Help menu ----------------------------- */
 	.path        = "/_Help",
 	.item_type   = "<LastBranch>",
@@ -532,6 +559,7 @@ void dvbscan_create_window(int s)
 {
     GtkWidget *vbox,*menubar,*scroll;
     GtkWidget *handlebox,*toolbar,*label,*search;
+    GtkTreeViewColumn *col;
     GtkCellRenderer *renderer;
     GtkAccelGroup *accel_group;
 
@@ -557,6 +585,10 @@ void dvbscan_create_window(int s)
 	noabout = gtk_item_factory_get_widget(item_factory,"<browser>/Help/About ...");
 	gtk_widget_destroy(noabout);
     }
+
+    /* db menu */
+    scan_database(item_factory, dvb_frontend_get_type(devs.dvb),
+		  "/usr/share/dvb");
 
     /* toolbar */
     toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
@@ -754,6 +786,13 @@ void dvbscan_create_window(int s)
 	(GTK_TREE_VIEW(view), -1, "", renderer,
 	 NULL);
 
+    /* configure */
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NAME);
+    gtk_tree_view_column_set_resizable(col,True);
+
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NET);
+    gtk_tree_view_column_set_resizable(col,True);
+
     /* dnd */
     gtk_drag_source_set(view,
 			GDK_BUTTON1_MASK,
@@ -804,16 +843,19 @@ static void switch_ts(void)
     }
 }
 
-static void scan_ts_start(void)
+static int scan_ts_start(void)
 {
     gboolean valid;
     GtkTreeIter iter;
+    int count = 0;
 
     for (valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store),&iter);
 	 valid;
 	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&iter)) {
 	gtk_tree_store_set(store, &iter, ST_STATE_SCANNED, FALSE, -1);
+	count++;
     }
+    return count;
 }
 
 static char* scan_ts_next(void)
@@ -1020,4 +1062,171 @@ static void dvbwatch_gui(struct psi_info *info, int event,
 			       pr->t_pid, -1);
 	break;
     }
+}
+
+/* ------------------------------------------------------------------------ */
+
+static void dbentry_cb(gpointer data)
+{
+    char *d = "tmp";
+    char *s = "dvbtune";
+    char freq[16] = "";
+    char sym[16]  = "";
+    char r_hi[8]  = "";
+    char r_lo[8]  = "";
+    char pol[4]   = "";
+    char bw[4]    = "";
+    char mo[4]    = "";
+    char tr[4]    = "";
+    char gu[4]    = "";
+    char hi[4]    = "";
+    char *line = data;
+
+    switch (line[0]) {
+    case 'T':
+	sscanf(line, "T %15[0-9] %3[0-9]MHz %7s %7s "
+	       "QAM%3[0-9] %3[0-9]k 1/%3[0-9] %8s",
+	       freq, bw, r_hi, r_lo, mo, tr, gu, hi);
+	break;
+    case 'C':
+	sscanf(line, "C %15[0-9] %15[0-9] %7s QAM%3[0-9]",
+	       freq, sym, r_hi, mo);
+	break;
+    case 'S':
+	sscanf(line, "S %15[0-9] %3s %15[0-9] %7s",
+	       freq, pol, sym, r_hi);
+	if (dvbtune_lnb)
+	    cfg_set_str(d, s, "lnb", dvbtune_lnb);
+	if (dvbtune_sat)
+	    cfg_set_str(d, s, "sat", dvbtune_sat);
+	break;
+    }
+
+    if (strlen(freq) > 0)
+	cfg_set_str(d, s, "frequency", freq);
+    if (strlen(pol) > 0)
+	cfg_set_str(d, s, "polarization", pol);
+    if (strlen(sym) > 0)
+	cfg_set_str(d, s, "symbol_rate", sym);
+    if (strlen(bw) > 0)
+	cfg_set_str(d, s, "bandwidth", bw);
+    if (strlen(mo) > 0)
+	cfg_set_str(d, s, "modulation", mo);
+    if (strlen(tr) > 0)
+	cfg_set_str(d, s, "transmission", tr);
+    if (strlen(gu) > 0)
+	cfg_set_str(d, s, "guard_interval", gu);
+
+#if 0
+    /* FIXME (or depend on "auto" working ok ... ) */
+    cfg_set_str(d, s, "code_rate_high", r_hi);
+    cfg_set_str(d, s, "code_rate_low", r_lo);
+    cfg_set_str(d, s, "hierarchy", hi);
+#endif
+
+    dvb_frontend_tune(devs.dvb, d, s);
+    cfg_del_section(d, s);
+    dvbmon_refresh(devs.dvbmon);
+}
+    
+static void add_dbentry(GtkItemFactory *factory, char *filename, int nr, char *line)
+{
+    char *basename;
+    char guipath[128];
+    GtkItemFactoryEntry entry;
+    int i,freq;
+
+    basename = strrchr(filename,'/');
+    if (NULL == basename)
+	return;
+    sscanf(line+2,"%d",&freq);
+    snprintf(guipath, sizeof(guipath),
+	     "/Database/%s/#%d (%d)", basename+1, nr, freq);
+    basename = guipath+10;
+    for (i = 0; basename[i] != 0; i++) {
+	switch (basename[i]) {
+	case '-':
+	    basename[i] = (2 == i) ? '/' : ' ';
+	    break;
+	case '_':
+	    basename[i] = ' ';
+	    break;
+	}
+    }
+    memset(&entry,0,sizeof(entry));
+    entry.path      = guipath;
+    entry.callback  = dbentry_cb;
+    entry.item_type = "<Item>";
+    gtk_item_factory_create_items(factory, 1, &entry, strdup(line));
+}
+
+static void scan_dbfile(GtkItemFactory *factory, int type, char *filename)
+{
+    FILE *fp;
+    char line[128];
+    int count = 1;
+
+    if (NULL == (fp = fopen(filename,"r")))
+	return;
+    while (NULL != fgets(line,sizeof(line),fp)) {
+	if (line[0] == '#')  // comment
+	    continue;
+	if (line[0] == '\n') // empty line
+	    continue;
+	if (line[1] != ' ') {
+//	    fprintf(stderr,"ERROR: %s",line);
+	    goto out;
+	}
+	switch (line[0]) {
+	case 'T':
+	    if (FE_OFDM == type)
+		add_dbentry(factory, filename, count++, line);
+	    break;
+	case 'C':
+	    if (FE_QAM == type)
+		add_dbentry(factory, filename, count++, line);
+	    break;
+	case 'S':
+	    if (FE_QPSK == type)
+		add_dbentry(factory, filename, count++, line);
+	    break;
+	default:
+//	    fprintf(stderr,"ERROR: %s",line);
+	    goto out;
+	}
+    }
+
+out:
+    fclose(fp);
+}
+
+static void scan_database(GtkItemFactory *factory, int type, char *dirpath)
+{
+    struct dirent *ent;
+    struct stat st;
+    char filename[128];
+    DIR *dir;
+
+    dir = opendir(dirpath);
+    if (NULL == dir)
+	return;
+    while (NULL != (ent = readdir(dir))) {
+	if ('.' == ent->d_name[0])
+	    continue;
+	snprintf(filename,sizeof(filename),
+		 "%s/%s",dirpath,ent->d_name);
+
+        if (ent->d_type != DT_UNKNOWN) {
+	    st.st_mode = DTTOIF(ent->d_type);
+        } else {
+            if (-1 == lstat(filename, &st))
+		continue;
+	}
+
+        if (S_ISDIR(st.st_mode))
+	    scan_database(factory, type, filename);
+        if (S_ISREG(st.st_mode))
+	    scan_dbfile(factory, type, filename);
+    }
+    closedir(dir);
 }
