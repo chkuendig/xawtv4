@@ -32,6 +32,7 @@ gtk/xawtv: \
 	gtk/av-sync.o \
 	gtk/blit.o \
 	gtk/gui-control.o \
+	gtk/gui-epg.o \
 	gtk/gui-analog.o \
 	$(OBJS-gtk-dvb) \
 	gtk/gui-misc.o \

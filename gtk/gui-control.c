@@ -343,14 +343,15 @@ void display_onscreen(char *title)
 /* ------------------------------------------------------------------------ */
 /* epg display                                                              */
 
-static GtkWidget *epg_win, *epg_bar, *epg_time, *epg_name;
+GtkWidget *epg_popup;
+static GtkWidget *epg_bar, *epg_time, *epg_name;
 static guint epg_timer;
 
 void create_epg(void)
 {
     GtkWidget *box;
     
-    epg_win  = gtk_window_new(GTK_WINDOW_POPUP);
+    epg_popup  = gtk_window_new(GTK_WINDOW_POPUP);
     box = gtk_vbox_new(TRUE, 0);
     epg_bar  = gtk_progress_bar_new();
     epg_time = gtk_widget_new(GTK_TYPE_LABEL,
@@ -362,19 +363,27 @@ void create_epg(void)
 			      "xpad", SPACING,
 			      NULL);
 
-    gtk_container_add(GTK_CONTAINER(epg_win), box);
+    gtk_container_add(GTK_CONTAINER(epg_popup), box);
     gtk_box_pack_start(GTK_BOX(box), epg_bar,  FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(box), epg_time, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(box), epg_name, FALSE, TRUE, 0);
 
-    gtk_window_set_resizable(GTK_WINDOW(epg_win), TRUE);
+    gtk_window_set_resizable(GTK_WINDOW(epg_popup), TRUE);
 }
 
 static gboolean popdown_epg(gpointer data)
 {
-    gtk_widget_hide(epg_win);
+    gtk_widget_hide(epg_popup);
     epg_timer = 0;
     return FALSE;
+}
+
+gboolean epg_shown(void)
+{
+    if(epg_popup && GTK_WIDGET_VISIBLE(epg_popup))
+	return TRUE;
+    else
+	return FALSE;
 }
 
 void display_epg(GtkWindow *win, struct epgitem *epg)
@@ -388,7 +397,10 @@ void display_epg(GtkWindow *win, struct epgitem *epg)
 
     if (!GET_EPG())
 	return;
-    gtk_widget_hide(epg_win);
+    gtk_widget_hide(epg_popup);
+
+    if(!epg)
+	return;
 
     total  = epg->stop  - epg->start;
     passed = time(NULL) - epg->start;
@@ -407,15 +419,15 @@ void display_epg(GtkWindow *win, struct epgitem *epg)
 
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(epg_bar),
 				  (gdouble)passed/total);
-    gtk_window_resize(GTK_WINDOW(epg_win), 100, 30);
-    gtk_window_get_size(GTK_WINDOW(epg_win), &ew, &eh);
+    gtk_window_resize(GTK_WINDOW(epg_popup), 100, 30);
+    gtk_window_get_size(GTK_WINDOW(epg_popup), &ew, &eh);
     gtk_window_get_position(win, &vx, &vy);
     gtk_window_get_size(win, &vw, &vh);
     ex = vx + (vw-ew)/2;
     ey = vy + vh - eh - 10;
-    gtk_window_move(GTK_WINDOW(epg_win), ex, ey);
+    gtk_window_move(GTK_WINDOW(epg_popup), ex, ey);
 
-    gtk_widget_show_all(epg_win);
+    gtk_widget_show_all(epg_popup);
     if (epg_timer)
 	g_source_destroy(g_main_context_find_source_by_id
 			 (g_main_context_default(), epg_timer));

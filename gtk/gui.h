@@ -68,6 +68,7 @@ extern char          *curr_station;
 extern char          *pick_device_new;
 
 extern GtkWidget     *main_win;
+extern GtkWidget     *epg_popup;
 extern GtkWidget     *control_win;
 extern GtkWidget     *control_st_menu;
 extern GtkWidget     *control_status;
@@ -78,6 +79,8 @@ extern void create_onscreen(void);
 extern void display_onscreen(char *title);
 extern void create_epg(void);
 extern void display_epg(GtkWindow *win, struct epgitem *epg);
+/** whether the epg popup is currently shown */
+extern gboolean epg_shown(void);
 
 extern void menu_cb_fullscreen(void);
 extern void x11_station_activate(char *current);
@@ -111,6 +114,15 @@ extern GtkWidget *analog_win;
 void analog_create_window(void);
 void analog_set_freqtab(void);
 void analog_set_channel(char *channel);
+
+/* ------------------------------------------------------------------- */
+/* gui-epg.c                                                           */
+
+extern GtkWidget     *epg_win;
+
+extern void create_epgwin(GtkWindow* parent);
+extern void epgwin_hide();
+extern void epgwin_show(struct epgitem* epg);
 
 /* ------------------------------------------------------------------- */
 /* xawtv.c                                                             */

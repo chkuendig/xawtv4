@@ -1,8 +1,12 @@
+#include <inttypes.h>
+#include <list.h>
 
 /* -------------------------------------------------------- */
 /* dvb-monitor.c                                            */
 
 struct dvbmon;
+struct psi_info;
+struct dvb_state;
 
 typedef void (*dvbmon_notify)(struct psi_info *info, int event,
 			      int tsid, int pnr, void *data);

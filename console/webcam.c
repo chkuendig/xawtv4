@@ -1,8 +1,10 @@
 /*
- * (c) 1998-2003 Gerd Knorr
+ * capture a image, compress as jpeg and upload to the webserver
+ * using the ftp utility or ssh
  *
- *    capture a image, compress as jpeg and upload to the webserver
- *    using the ftp utility or ssh
+ * (c) 1998-2003 Gerd Knorr
+ * 
+ * sshs mode contributed by Renzo Davoli.
  *
  */
 

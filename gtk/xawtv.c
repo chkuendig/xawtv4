@@ -355,6 +355,7 @@ static void print_epg(struct epgitem *epg)
     struct tm tm;
     time_t total, passed;
     int c;
+    unsigned char percent = 0;
 
     localtime_r(&epg->start,&tm);
     strftime(from,sizeof(from),"%H:%M",&tm);
@@ -364,9 +365,12 @@ static void print_epg(struct epgitem *epg)
     total  = epg->stop  - epg->start;
     passed = time(NULL) - epg->start;
 
+    if (total)
+	percent = passed * 100 / total;
+
     fprintf(stderr,"<epg>\n");
     fprintf(stderr,"time    : %s - %s  (%2d%%)\n",
-	    from, to, (int)(passed * 100 / total));
+	    from, to, percent);
     if (epg->name[0])
 	fprintf(stderr,"title   : %s\n",epg->name);
     if (epg->stext[0])
@@ -393,6 +397,8 @@ static gboolean epg_timer_func(gpointer data)
 	if (debug)
 	    print_epg(epg);
 	display_epg(GTK_WINDOW(main_win), epg);
+	if (GTK_WIDGET_VISIBLE(epg_win))
+	    epgwin_show(epg);
 	epg_timer_id = g_timeout_add(3000, epg_timer_func, NULL);
 	return FALSE;
     }
@@ -432,6 +438,8 @@ static void new_station(void)
 	    if (debug)
 		print_epg(epg);
 	    display_epg(GTK_WINDOW(main_win), epg);
+	    if (GTK_WIDGET_VISIBLE(epg_win))
+		epgwin_show(epg);
 	} else {
 	    epg_timer_id = g_timeout_add(300, epg_timer_func, NULL);
 	}
@@ -809,12 +817,23 @@ static gboolean mouse_button_eh(GtkWidget *widget,
 				GdkEventButton *event,
 				gpointer user_data)
 {
+    struct epgitem *epg = NULL;
+    
     if (NULL != control_win  &&  3 == event->button) {
 	if (GTK_WIDGET_VISIBLE(control_win))
 	    gtk_widget_hide(control_win);
 	else
 	    gtk_widget_show_all(control_win);
 	return TRUE;
+    }
+    if (NULL != epg_win && 2 == event->button) {
+
+	if (!GTK_WIDGET_VISIBLE(epg_win)) {
+	    epg = eit_lookup(curr_tsid, curr_pnr, time(NULL), epg_debug);
+	    epgwin_show(epg);
+	} else {
+	    gtk_widget_hide(epg_win);
+	}
     }
     if (NULL != control_st_menu  &&  1 == event->button) {
 	gtk_widget_show_all(control_st_menu);
@@ -1128,6 +1147,7 @@ main(int argc, char *argv[])
     create_control();
     create_onscreen();
     create_epg();
+    create_epgwin(GTK_WINDOW(main_win));
     gtk_window_add_accel_group(GTK_WINDOW(main_win), control_accel_group);
     
     /* finalize X11 init + show windows */
