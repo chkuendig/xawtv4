@@ -11,7 +11,9 @@
 #include "grab-ng.h"
 
 #include "parseconfig.h"
+#include "tv-config.h"
 #include "commands.h"
+#include "tuning.h"
 #include "devs.h"
 
 #include "gui.h"
@@ -28,6 +30,15 @@ GtkWidget     *control_win;
 GtkAccelGroup *control_accel_group;
 GtkWidget     *control_st_menu;
 GtkWidget     *control_status;
+
+static GtkWidget     *station_dialog;
+static GtkWidget     *station_name;
+static GtkWidget     *station_group_c;
+static GtkWidget     *station_group_e;
+static GtkWidget     *station_hotkey;
+static GtkWidget     *station_ch_omenu;
+static GtkWidget     *station_dvb_omenu;
+static GtkTreeIter   station_edit_iter;
 
 static GtkWidget     *control_dev_menu;
 static GtkWidget     *control_freq_menu;
@@ -137,13 +148,8 @@ attr_x11_add_ctrl(struct ng_attribute *attr)
 	gtk_widget_show(x11->widget);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(x11->widget),
 				       x11->value);
-#if 1
 	g_signal_connect(G_OBJECT(x11->widget), "activate",
 			 G_CALLBACK(attr_x11_bool_cb), attr);
-#else
-	command_cb_add(GTK_MENU_ITEM(x11->widget),
-		       3,"setattr",attr->name,"toggle");
-#endif
 	break;
     case ATTR_TYPE_CHOICE:
 	if (debug)
@@ -396,28 +402,25 @@ GtkWidget    *st_view;
 enum {
     ST_COL_NAME    = 0,
     ST_COL_GROUP,
-    ST_COL_DATA,
+    ST_COL_HOTKEY,
+    ST_COL_CHANNEL,
+    ST_COL_TSID,
+    ST_COL_PNR,
+
+    ST_DATA_MENU,
+
+    ST_STATE_ACTIVE,
     ST_NUM_COLS
 };
 
 struct st_group {
     char               *name;
-    struct list_head   list;
-    struct list_head   stations;
     GtkWidget          *push;
     GtkWidget          *menu;
+
+    struct list_head   list;
 };
 LIST_HEAD(ch_groups);
-
-struct station {
-    char               *name;
-    struct list_head   global;
-    struct list_head   group;
-    guint              key;
-    GdkModifierType    mods;
-    GtkWidget          *menu;
-};
-LIST_HEAD(x11_stations);
 
 static struct st_group* group_get(char *name)
 {
@@ -435,52 +438,40 @@ static struct st_group* group_get(char *name)
     group = malloc(sizeof(*group));
     memset(group,0,sizeof(*group));
     group->name = strdup(name);
-    INIT_LIST_HEAD(&group->stations);
 
-#if 0
-    group->menu1 = XmCreatePulldownMenu(st_menu1, group->name, NULL, 0);
-    group->menu2 = XmCreatePulldownMenu(st_menu2, group->name, NULL, 0);
-
-    group->btn1 = XtVaCreateManagedWidget(group->name,
-					  xmCascadeButtonWidgetClass, st_menu1,
-					  XmNsubMenuId, group->menu1,
-					  NULL);
-    group->btn2 = XtVaCreateManagedWidget(group->name,
-					  xmCascadeButtonWidgetClass, st_menu2,
-					  XmNsubMenuId, group->menu2,
-					  NULL);
-#else
     group->push = gtk_menu_item_new_with_label(name);
     gtk_menu_shell_append(GTK_MENU_SHELL(control_st_menu),
 			  group->push);
     group->menu = gtk_menu_new();
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(group->push), group->menu);
-#endif
 
+    gtk_widget_show(group->push);
+    gtk_widget_show(group->menu);
     list_add_tail(&group->list,&ch_groups);
     return group;
 }
 
-static void x11_station_add(char *name)
+static void x11_station_add(GtkTreeIter *iter)
 {
-    struct st_group *group;
-    struct station *st;
+    gtk_list_store_append(st_model, iter);
+    gtk_list_store_set(st_model, iter,
+		       ST_STATE_ACTIVE, FALSE,
+		       -1);
+}
+
+static void x11_station_apply(GtkTreeIter *iter, char *name)
+{
     char key[32], ctrl[16], accel[64];
     char *keyname, *groupname;
-    GtkTreeIter iter;
-    
-    /* add channel */
-    st = malloc(sizeof(*st));
-    memset(st,0,sizeof(*st));
-    st->name = strdup(name);
+    struct st_group *group = NULL;
+    GdkModifierType gmods;
+    GtkWidget *menu;
+    guint gkey;
 
     /* submenu */
     groupname = cfg_get_str("stations", name, "group");
-    if (NULL != groupname) {
+    if (NULL != groupname)
 	group = group_get(groupname);
-    } else {
-	group = NULL;
-    }
 
     /* hotkey */
     keyname = cfg_get_str("stations", name, "key");
@@ -491,30 +482,39 @@ static void x11_station_add(char *name)
 	} else {
 	    sprintf(accel,"%s",keyname);
 	}
-	gtk_accelerator_parse(accel,&st->key,&st->mods);
+	gtk_accelerator_parse(accel,&gkey,&gmods);
+    } else {
+	gkey  = 0;
+	gmods = 0;
     }
 
-    /* FIXME: more details */
-    gtk_list_store_append(st_model, &iter);
-    gtk_list_store_set(st_model, &iter,
-		       ST_COL_NAME,  st->name,
-		       ST_COL_GROUP, group ? group->name : "-",
-		       ST_COL_DATA,  st,
-		       -1);
+    /* menu item */
+    gtk_tree_model_get(GTK_TREE_MODEL(st_model), iter,
+		       ST_DATA_MENU,  &menu, -1);
+    if (menu)
+	gtk_widget_destroy(menu);
 
-    st->menu = gtk_menu_item_new_with_label(st->name);
+    menu = gtk_menu_item_new_with_label(name);
     gtk_menu_shell_append(GTK_MENU_SHELL(group ? group->menu : control_st_menu),
-			  st->menu);
-    command_cb_add(GTK_MENU_ITEM(st->menu), 2, "setstation", st->name);
-    if (st->key)
-	gtk_widget_add_accelerator(st->menu, "activate",
+			  menu);
+    gtk_widget_show(menu);
+    command_cb_add(GTK_MENU_ITEM(menu), 2, "setstation", name);
+    if (gkey)
+	gtk_widget_add_accelerator(menu, "activate",
 				   control_accel_group,
-				   st->key, st->mods,
+				   gkey, gmods,
 				   GTK_ACCEL_VISIBLE);
 
-    list_add_tail(&st->global,&x11_stations);
-    if (group)
-	list_add_tail(&st->group,&group->stations);
+    /* update storage */
+    gtk_list_store_set(st_model, iter,
+		       ST_COL_NAME,     name,
+		       ST_COL_GROUP,    group ? group->name : NULL,
+		       ST_COL_HOTKEY,   keyname,
+		       ST_COL_CHANNEL,  cfg_get_str("stations", name, "channel"),
+		       ST_COL_TSID,     cfg_get_int("stations", name, "tsid", 0),
+		       ST_COL_PNR,      cfg_get_int("stations", name, "pnr",  0),
+		       ST_DATA_MENU,    menu,
+		       -1);
 }
 
 #if 0
@@ -547,6 +547,257 @@ static void x11_station_del(char *name)
 
 /* ------------------------------------------------------------------------ */
 
+static void station_response(GtkDialog *dialog,
+			    gint arg1,
+			    gpointer user_data)
+{
+    GtkWidget *menu,*item;
+    char *name,*group,*hotkey,*channel,*dvb;
+    int tsid,pnr;
+
+    if (arg1 == GTK_RESPONSE_OK || arg1 == GTK_RESPONSE_APPLY) {
+        name   = (char*)gtk_entry_get_text(GTK_ENTRY(station_name));
+	group  = (char*)gtk_entry_get_text(GTK_ENTRY(station_group_e));
+	hotkey = (char*)gtk_entry_get_text(GTK_ENTRY(station_hotkey));
+
+	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(station_ch_omenu));
+	item = gtk_menu_get_active(GTK_MENU(menu));
+        channel = g_object_get_data(G_OBJECT(item), "channel");
+	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(station_dvb_omenu));
+	item = gtk_menu_get_active(GTK_MENU(menu));
+	dvb = g_object_get_data(G_OBJECT(item), "dvb-pr");
+
+	if (0 == strlen(group))
+	    group = NULL;
+	if (0 == strlen(hotkey))
+	    hotkey = NULL;
+	if (dvb)
+	    sscanf(dvb,"%d-%d",&tsid,&pnr);
+	else
+	    tsid = 0, pnr = 0;
+
+	fprintf(stderr,"apply: name=\"%s\" group=\"%s\" hotkey=\"%s\""
+		" channel=%s tsid=%d pnr=%d\n",
+		name, group, hotkey, channel, tsid, pnr);
+
+	/* todo: sanity-check name against clashes, "", whatever ... */
+	cfg_set_str("stations", name, "group",   group);
+	cfg_set_str("stations", name, "key",     hotkey);
+	cfg_set_str("stations", name, "channel", channel);
+	cfg_set_int("stations", name, "tsid",    tsid);
+	cfg_set_int("stations", name, "pnr",     pnr);
+
+	if (0 == station_edit_iter.stamp)
+	    x11_station_add(&station_edit_iter);
+	x11_station_apply(&station_edit_iter, name);
+    }
+
+    if (arg1 != GTK_RESPONSE_APPLY)
+	gtk_widget_hide(GTK_WIDGET(dialog));
+}
+
+static void update_station_prop(GtkTreeIter *iter)
+{
+    GtkWidget *menu, *item;
+    struct st_group *gr;
+    struct list_head *head;
+    GList *groups;
+    char *list,*name,*net,*video;
+    char label[20];
+    int active,type;
+    char *sname   = NULL;
+    char *sgroup  = NULL;
+    char *shotkey = NULL;
+    char *channel = curr_channel;
+    int  tsid     = 0;
+    int  pnr      = 0;
+    char tsid_pnr[32];
+
+    /* text fields */
+    if (iter)
+	gtk_tree_model_get(GTK_TREE_MODEL(st_model), iter,
+			   ST_COL_NAME,    &sname,
+			   ST_COL_GROUP,   &sgroup,
+			   ST_COL_HOTKEY,  &shotkey,
+			   ST_COL_CHANNEL, &channel,
+			   ST_COL_TSID,    &tsid,
+			   ST_COL_PNR,     &pnr,
+			   -1);
+    snprintf(tsid_pnr,sizeof(tsid_pnr),"%d-%d",tsid,pnr);
+    gtk_entry_set_text(GTK_ENTRY(station_name),    sname   ? sname   : "");
+    gtk_entry_set_text(GTK_ENTRY(station_hotkey),  shotkey ? shotkey : "");
+
+    /* groups dropdown */
+    groups = NULL;
+    list_for_each(head, &ch_groups) {
+	gr = list_entry(head, struct st_group, list);
+	groups = g_list_append (groups, gr->name);
+    }
+    gtk_combo_set_popdown_strings(GTK_COMBO(station_group_c), groups);
+    g_list_free(groups);
+    gtk_entry_set_text(GTK_ENTRY(station_group_e), sgroup  ? sgroup  : "");
+    
+    /* analog channel menu */
+    menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(station_ch_omenu));
+    gtk_container_foreach(GTK_CONTAINER(menu),
+			  (GtkCallback)gtk_widget_destroy,NULL);
+    active = 0;
+    item = gtk_menu_item_new_with_label("none");
+    g_object_set_data_full(G_OBJECT(item),"channel",NULL,NULL);
+    gtk_menu_append(menu, item);
+    gtk_option_menu_set_history(GTK_OPTION_MENU(station_ch_omenu),active);
+    active++;
+    cfg_sections_for_each(freqtab, list) {
+	item = gtk_menu_item_new_with_label(list);
+	g_object_set_data_full(G_OBJECT(item),"channel",strdup(list),free);
+	gtk_menu_append(menu, item);
+	if (channel && 0 == strcmp(channel, list))
+	    gtk_option_menu_set_history(GTK_OPTION_MENU(station_ch_omenu),active);
+	active++;
+    }
+
+    /* digital dvb menu */
+    menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(station_dvb_omenu));
+    gtk_container_foreach(GTK_CONTAINER(menu),
+			  (GtkCallback)gtk_widget_destroy,NULL);
+    active = 0;
+    item = gtk_menu_item_new_with_label("none");
+    g_object_set_data_full(G_OBJECT(item),"dvb-pr",NULL,NULL);
+    gtk_menu_append(menu, item);
+    gtk_option_menu_set_history(GTK_OPTION_MENU(station_dvb_omenu),active);
+    active++;
+    cfg_sections_for_each("dvb-pr", list) {
+	net   = cfg_get_str("dvb-pr", list, "net");
+	name  = cfg_get_str("dvb-pr", list, "name");
+	video = cfg_get_str("dvb-pr", list, "video");
+	type  = cfg_get_int("dvb-pr", list, "type",0);
+	if (1 != type || NULL == video)
+	    continue;
+	snprintf(label,sizeof(label),"%s",name);
+	item = gtk_menu_item_new_with_label(label);
+	g_object_set_data_full(G_OBJECT(item),"dvb-pr",strdup(list),free);
+	gtk_menu_append(menu, item);
+	if (0 == strcmp(tsid_pnr, list))
+	    gtk_option_menu_set_history(GTK_OPTION_MENU(station_dvb_omenu),active);
+	active++;
+    }
+}
+
+static void create_station_prop(GtkWindow *parent)
+{
+    GtkWidget *frame,*bmenu;
+    GtkBox *vbox, *box, *hbox;
+	
+    station_dialog =
+	gtk_dialog_new_with_buttons("TV Station Properties", parent, 0,
+				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
+				    GTK_STOCK_APPLY,  GTK_RESPONSE_APPLY,
+				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+				    NULL);
+    gtk_dialog_set_default_response(GTK_DIALOG(station_dialog),
+				    GTK_RESPONSE_OK);
+    vbox = GTK_BOX(GTK_DIALOG(station_dialog)->vbox);
+
+    /* general */
+    frame = gtk_frame_new("General");
+    gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
+    gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
+    box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+    gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
+
+    hbox = gtk_add_hbox_with_label(box, "Name");
+    station_name = gtk_entry_new();
+    gtk_box_pack_start(hbox, station_name, TRUE, TRUE, 0);
+
+    hbox = gtk_add_hbox_with_label(box, "Group");
+    station_group_c = gtk_combo_new();
+    station_group_e = GTK_COMBO(station_group_c)->entry;
+    gtk_box_pack_start(hbox, station_group_c, TRUE, TRUE, 0);
+
+    hbox = gtk_add_hbox_with_label(box, "Hotkey");
+    station_hotkey = gtk_entry_new();
+    gtk_box_pack_start(hbox, station_hotkey, TRUE, TRUE, 0);
+
+    /* analog TV */
+    frame = gtk_frame_new("Analog TV");
+    gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
+    gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
+    box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+    gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
+
+    hbox = gtk_add_hbox_with_label(box, "Channel");
+    bmenu = gtk_menu_new();
+    station_ch_omenu = gtk_option_menu_new();
+    gtk_option_menu_set_menu(GTK_OPTION_MENU(station_ch_omenu),bmenu);
+    gtk_box_pack_start(hbox, station_ch_omenu, TRUE, TRUE, 0);
+
+    /* DVB */
+    frame = gtk_frame_new("Digital TV (DVB)");
+    gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
+    gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
+    box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+    gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
+
+    hbox = gtk_add_hbox_with_label(box, "TSID/PNR");
+    bmenu = gtk_menu_new();
+    station_dvb_omenu = gtk_option_menu_new();
+    gtk_option_menu_set_menu(GTK_OPTION_MENU(station_dvb_omenu),bmenu);
+    gtk_box_pack_start(hbox, station_dvb_omenu, TRUE, TRUE, 0);
+
+    g_signal_connect(station_dialog, "response",
+		     G_CALLBACK(station_response), NULL);
+}
+
+static void menu_cb_add_station(void)
+{
+    memset(&station_edit_iter,0,sizeof(station_edit_iter));
+    if (!station_dialog)
+	create_station_prop(GTK_WINDOW(control_win));
+    update_station_prop(NULL);
+    gtk_widget_show_all(station_dialog);
+}
+
+static void menu_cb_edit_station(void)
+{
+    GtkTreeSelection *selection;
+    GtkTreeModel *model;
+
+    selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(st_view));
+    if (!gtk_tree_selection_get_selected(selection, &model,
+					 &station_edit_iter))
+	return;
+    if (!station_dialog)
+	create_station_prop(GTK_WINDOW(control_win));
+    update_station_prop(&station_edit_iter);
+    gtk_widget_show_all(station_dialog);
+}
+
+static void menu_cb_save_stations(void)
+{
+    write_config_file("stations");
+}
+
+static void station_activate(GtkTreeView        *treeview,
+			     GtkTreePath        *path,
+			     GtkTreeViewColumn  *col,
+			     gpointer            userdata)
+{
+    GtkTreeModel *model;
+    GtkTreeIter   iter;
+    char *name;
+
+    model = gtk_tree_view_get_model(treeview);
+    if (gtk_tree_model_get_iter(model, &iter, path)) {
+	gtk_tree_model_get(model, &iter, ST_COL_NAME, &name, -1);
+	do_va_cmd(2,"setstation",name);
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+
 static GtkItemFactoryEntry menu_items[] = {
     {
 	/* --- File menu ----------------------------- */
@@ -566,6 +817,24 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = gtk_quit_cb,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_QUIT,
+    },{
+
+	/* --- Edit menu ----------------------------- */
+	.path        = "/_Edit",
+	.item_type   = "<Branch>",
+    },{
+	.path        = "/Edit/_Add Station ...",
+	.callback    = menu_cb_add_station,
+	.item_type   = "<Item>",
+    },{
+	.path        = "/Edit/_Edit Station ...",
+	.accelerator = "E",
+	.callback    = menu_cb_edit_station,
+	.item_type   = "<Item>",
+    },{
+	.path        = "/Edit/_Save Stations",
+	.callback    = menu_cb_save_stations,
+	.item_type   = "<Item>",
     },{
 
 	/* --- dynamic devices/stations menus -------- */
@@ -681,10 +950,13 @@ static GtkItemFactory *item_factory;
 
 static void init_channel_list(void)
 {
+    GtkTreeIter iter;
     char *list;
 
-    cfg_sections_for_each("stations",list)
-	x11_station_add(list);
+    cfg_sections_for_each("stations",list) {
+	x11_station_add(&iter);
+	x11_station_apply(&iter, list);
+    }
 }
 
 static void init_devices_list(void)
@@ -754,6 +1026,7 @@ void create_control(void)
     GtkWidget *vbox,*hbox,*menubar,*scroll;
     GtkWidget *handlebox,*toolbar,*icon;
     GtkCellRenderer *renderer;
+    GtkTreeViewColumn *col;
     int i;
 
     control_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -802,20 +1075,90 @@ void create_control(void)
     /* station list */
     st_view  = gtk_tree_view_new();
     st_model = gtk_list_store_new(ST_NUM_COLS,
-				  G_TYPE_STRING,
-				  G_TYPE_STRING,
-				  G_TYPE_POINTER);
+				  G_TYPE_STRING,   // nane
+				  G_TYPE_STRING,   // group
+				  G_TYPE_STRING,   // hotkey
+				  G_TYPE_STRING,   // channel
+				  G_TYPE_INT,      // tsid
+				  G_TYPE_INT,      // pnr
+				  G_TYPE_POINTER,  // widget
+				  G_TYPE_BOOLEAN); // active
     gtk_tree_view_set_model(GTK_TREE_VIEW(st_view),
 			    GTK_TREE_MODEL(st_model));
+    scroll = gtk_vscrollbar_new(gtk_tree_view_get_hadjustment(GTK_TREE_VIEW(st_view)));
+    g_signal_connect(st_view, "row-activated",
+		     G_CALLBACK(station_activate), NULL);
+
     renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "Name", renderer,
-	 "text", ST_COL_NAME, NULL);
+	 "text",        ST_COL_NAME,
+	 "weight-set",  ST_STATE_ACTIVE,
+	 NULL);
+
     renderer = gtk_cell_renderer_text_new();
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(st_view), -1, "Group", renderer,
-	 "text", ST_COL_GROUP, NULL);
-    scroll = gtk_vscrollbar_new(gtk_tree_view_get_hadjustment(GTK_TREE_VIEW(st_view)));
+	 "text", ST_COL_GROUP,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(st_view), -1, "Key", renderer,
+	 "text", ST_COL_HOTKEY,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(st_view), -1, "Ch", renderer,
+	 "text", ST_COL_CHANNEL,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(st_view), -1, "TSID", renderer,
+	 "text",    ST_COL_TSID,
+	 "visible", ST_COL_TSID,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(st_view), -1, "PNR", renderer,
+	 "text",    ST_COL_PNR,
+	 "visible", ST_COL_PNR,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(st_view), -1, "", renderer,
+	 NULL);
+
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(st_view), ST_COL_NAME);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(st_model), ST_COL_NAME,
+				    gtk_sort_iter_compare_str,
+                                    GINT_TO_POINTER(ST_COL_NAME), NULL);
+    gtk_tree_view_column_set_sort_column_id(col, ST_COL_NAME);
+
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(st_view), ST_COL_GROUP);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(st_model), ST_COL_GROUP,
+				    gtk_sort_iter_compare_str,
+                                    GINT_TO_POINTER(ST_COL_GROUP), NULL);
+    gtk_tree_view_column_set_sort_column_id(col, ST_COL_GROUP);
+
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(st_view), ST_COL_CHANNEL);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(st_model), ST_COL_CHANNEL,
+				    gtk_sort_iter_compare_str,
+                                    GINT_TO_POINTER(ST_COL_CHANNEL), NULL);
+    gtk_tree_view_column_set_sort_column_id(col, ST_COL_CHANNEL);
+
+    col = gtk_tree_view_get_column(GTK_TREE_VIEW(st_view), ST_COL_TSID);
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(st_model), ST_COL_TSID,
+				    gtk_sort_iter_compare_int,
+                                    GINT_TO_POINTER(ST_COL_TSID), NULL);
+    gtk_tree_view_column_set_sort_column_id(col, ST_COL_TSID);
 
     /* other widgets */
     control_status = gtk_widget_new(GTK_TYPE_LABEL,

@@ -2,7 +2,7 @@
 Type=Application
 Encoding=UTF-8
 Name=alexplore
-GenericName=DVB Channel Browser
+Comment=DVB Channel Browser & Scanner
 Exec=alexplore
 Terminal=no
 Categories=AudioVideo;TV

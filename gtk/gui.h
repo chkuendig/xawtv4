@@ -4,11 +4,17 @@
 
 #define TITLE_TIME          6000
 #define ONSCREEN_TIME       5000
+#define SPACING               12
 
 #define _(string) string
 
 /* ------------------------------------------------------------------- */
 /* gui-misc.c                                                          */
+
+#define THIS_IS_GPLv2							\
+  "This program is free software; you can redistribute it and/or modify\n" \
+  "it under the terms of the GNU General Public License version 2 as\n" \
+  "published by the Free Software Foundation.\n"
 
 extern void gtk_quit_cb(void);
 
@@ -17,12 +23,16 @@ extern gboolean gtk_wm_delete_quit(GtkWidget *widget, GdkEvent  *event,
 
 extern void gtk_about_box(GtkWindow *parent, char *name, char *version,
 			  char *text);
+extern GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text);
 
-#define THIS_IS_GPLv2 \
-  "This program is free software; you can redistribute it and/or modify\n" \
-  "it under the terms of the GNU General Public License version 2 as\n" \
-  "published by the Free Software Foundation.\n"
-
+gint gtk_sort_iter_compare_int(GtkTreeModel *model,
+			       GtkTreeIter  *a,
+			       GtkTreeIter  *b,
+			       gpointer      userdata);
+gint gtk_sort_iter_compare_str(GtkTreeModel *model,
+			       GtkTreeIter  *a,
+			       GtkTreeIter  *b,
+			       gpointer      userdata);
 
 /* ------------------------------------------------------------------- */
 /* gui-control.c                                                       */

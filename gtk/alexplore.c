@@ -219,44 +219,6 @@ static void activate(GtkTreeView        *treeview,
     }
 }
 
-static gint sort_iter_compare_int(GtkTreeModel *model,
-				  GtkTreeIter  *a,
-				  GtkTreeIter  *b,
-				  gpointer      userdata)
-{
-    gint sortcol = GPOINTER_TO_INT(userdata);
-    gint ret = 0;
-    int aa,bb;
-
-    gtk_tree_model_get(model, a, sortcol, &aa, -1);
-    gtk_tree_model_get(model, b, sortcol, &bb, -1);
-    if (aa < bb)
-	ret = -1;
-    if (aa > bb)
-	ret = 1;
-    return ret;
-}
-
-static gint sort_iter_compare_str(GtkTreeModel *model,
-				  GtkTreeIter  *a,
-				  GtkTreeIter  *b,
-				  gpointer      userdata)
-{
-    gint sortcol = GPOINTER_TO_INT(userdata);
-    char *aa,*bb;
-
-    gtk_tree_model_get(model, a, sortcol, &aa, -1);
-    gtk_tree_model_get(model, b, sortcol, &bb, -1);
-    if (NULL == aa && NULL == bb)
-	return 0;
-    if (NULL == aa)
-	return 1;
-    if (NULL == bb)
-	return -1;
-    return strcmp(aa,bb);
-}
-
-
 static void create_window(void)
 {
     GtkWidget *vbox,*hbox,*menubar,*scroll;
@@ -415,19 +377,19 @@ static void create_window(void)
 
     col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NAME);
     gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_NAME,
-				    sort_iter_compare_str,
+				    gtk_sort_iter_compare_str,
                                     GINT_TO_POINTER(ST_COL_NAME), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_NAME);
 
     col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_TSID);
     gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_TSID,
-				    sort_iter_compare_int,
+				    gtk_sort_iter_compare_int,
                                     GINT_TO_POINTER(ST_COL_TSID), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_TSID);
 
     col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_FREQ);
     gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_FREQ,
-				    sort_iter_compare_int,
+				    gtk_sort_iter_compare_int,
                                     GINT_TO_POINTER(ST_COL_FREQ), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_FREQ);
 
@@ -684,7 +646,7 @@ main(int argc, char *argv[])
 	fprintf(stderr,"no dvb device found\n");
 	exit(1);
     }
-    dvbmon = dvbmon_init(devs.dvb, 0);
+    dvbmon = dvbmon_init(devs.dvb, 2);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
 

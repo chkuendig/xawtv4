@@ -13,10 +13,13 @@ extern int mpeg_rate_n[16];
 extern int mpeg_rate_d[16];
 extern const char *mpeg_frame_s[];
 
+extern char *psi_charset[0x20];
+char *psi_service_type[0x100];
+
 /* ----------------------------------------------------------------------- */
 
-#define PSI_PROGS  16
-#define PSI_NEW    42  // initial version, valid range is 0 ... 32
+#define PSI_NEW     42  // initial version, valid range is 0 ... 32
+#define PSI_STR_MAX 64
 
 struct psi_stream {
     struct list_head     next;
@@ -24,7 +27,7 @@ struct psi_stream {
 
     /* network */
     int                  netid;
-    char                 net[64];
+    char                 net[PSI_STR_MAX];
 
     int                  frequency;
     int                  symbol_rate;
@@ -49,13 +52,13 @@ struct psi_program {
     int                  version;
 
     /* program data */
+    int                  type;
     int                  p_pid;             // program
     int                  v_pid;             // video
     int                  a_pid;             // audio
     int                  t_pid;             // teletext
-    int                  type;
-    char                 net[64];
-    char                 name[64];
+    char                 net[PSI_STR_MAX];
+    char                 name[PSI_STR_MAX];
 
     /* status info */
     int                  updated;

@@ -270,10 +270,14 @@ cfg_set_str(char *dname, char *sname, char *ename, const char *value)
 {
     struct cfg_domain  *domain  = NULL;
     struct cfg_section *section = NULL;
-    
-    domain  = cfg_get_domain(dname);
-    section = cfg_get_section(domain,sname);
-    cfg_set_entry(section,ename,value);
+
+    if (NULL == value) {
+	cfg_del_entry(dname, sname, ename);
+    } else {
+	domain  = cfg_get_domain(dname);
+	section = cfg_get_section(domain,sname);
+	cfg_set_entry(section,ename,value);
+    }
 }
 
 void

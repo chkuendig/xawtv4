@@ -86,17 +86,6 @@ static struct omenu m_hi[] = {
     { "auto", "999", 1 },
 };
 
-static void add_label(GtkBox *box, char *text)
-{
-    GtkWidget *label;
-    
-    label = gtk_widget_new(GTK_TYPE_LABEL,
-			   "label",  text,
-			   "xalign", 0.0,
-			   NULL);
-    gtk_box_pack_start(box, label, TRUE, TRUE, 0);
-}
-
 static GtkWidget *add_omenu(GtkBox *box, char *text,
 			    struct omenu *items, int len,
 			    int automagic)
@@ -119,10 +108,7 @@ static GtkWidget *add_omenu(GtkBox *box, char *text,
     if (-1 != a)
 	gtk_menu_set_active(GTK_MENU(menu),a);
 
-    hbox = GTK_BOX(gtk_hbox_new(TRUE, 10));
-    gtk_box_pack_start(box, GTK_WIDGET(hbox), TRUE, TRUE, 0);
-	
-    add_label(hbox,text);
+    hbox = gtk_add_hbox_with_label(box, text);
     omenu = gtk_option_menu_new();
     gtk_option_menu_set_menu(GTK_OPTION_MENU(omenu),menu);
     gtk_box_pack_start(hbox, omenu, TRUE, TRUE, 0);
@@ -134,6 +120,7 @@ static GtkWidget *add_omenu(GtkBox *box, char *text,
 /*                                                                              */
 
 GtkWidget *dvbtune_dialog;
+static GtkWidget *frame;
 static GtkWidget *frequency;
 static GtkWidget *symbol_rate;
 static GtkWidget *inversion;
@@ -150,10 +137,7 @@ static void add_frequency(GtkBox *box)
 {
     GtkBox *hbox;
 
-    hbox = GTK_BOX(gtk_hbox_new(TRUE, 10));
-    gtk_box_pack_start(box, GTK_WIDGET(hbox), TRUE, TRUE, 0);
-
-    add_label(hbox,"frequency");
+    hbox = gtk_add_hbox_with_label(box, "frequency");
     frequency = gtk_entry_new();
     gtk_box_pack_start(hbox, frequency, TRUE, TRUE, 0);
 }
@@ -162,10 +146,7 @@ static void add_symbol_rate(GtkBox *box)
 {
     GtkBox *hbox;
 
-    hbox = GTK_BOX(gtk_hbox_new(TRUE, 10));
-    gtk_box_pack_start(box, GTK_WIDGET(hbox), TRUE, TRUE, 0);
-
-    add_label(hbox,"symbol rate");
+    hbox = gtk_add_hbox_with_label(box, "symbol rate");
     symbol_rate = gtk_entry_new();
     gtk_box_pack_start(hbox, symbol_rate, TRUE, TRUE, 0);
 }
@@ -284,7 +265,7 @@ static void response(GtkDialog *dialog,
 
 void create_dvbtune(GtkWindow *parent)
 {
-    GtkBox *box;
+    GtkBox *box,*vbox;
     int32_t caps;
 
     dvbtune_dialog =
@@ -293,23 +274,34 @@ void create_dvbtune(GtkWindow *parent)
 				    GTK_STOCK_APPLY,  GTK_RESPONSE_APPLY,
 				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 				    NULL);
-    box = GTK_BOX(GTK_DIALOG(dvbtune_dialog)->vbox);
-    gtk_box_set_spacing(box,10);
+    gtk_dialog_set_default_response(GTK_DIALOG(dvbtune_dialog),
+				    GTK_RESPONSE_OK);
+
+    vbox = GTK_BOX(GTK_DIALOG(dvbtune_dialog)->vbox);
+    frame = gtk_frame_new(NULL);
+    gtk_container_set_border_width(GTK_CONTAINER(frame), SPACING);
+    gtk_box_pack_start(vbox, frame, TRUE, TRUE, 0);
+    box = GTK_BOX(gtk_vbox_new(TRUE, SPACING));
+    gtk_container_set_border_width(GTK_CONTAINER(box), SPACING);
+    gtk_container_add(GTK_CONTAINER(frame),GTK_WIDGET(box));
 
     add_frequency(box);
     caps = dvb_frontend_get_caps(devs.dvb);
     switch (dvb_frontend_get_type(devs.dvb)) {
     case FE_QPSK: /* DVB-S */
+	gtk_frame_set_label(GTK_FRAME(frame)," DVB-S ");
 	add_symbol_rate(box);
 	add_inversion(box, caps);
 	add_polarization(box);
 	break;
     case FE_QAM:  /* DVB-C */
+	gtk_frame_set_label(GTK_FRAME(frame)," DVB-C ");
 	add_symbol_rate(box);
 	add_inversion(box, caps);
 	add_modulation(box, caps);
 	break;
     case FE_OFDM: /* DVB-T */
+	gtk_frame_set_label(GTK_FRAME(frame)," DVB-T ");
 	add_inversion(box, caps);
 	add_bandwidth(box, caps);
 	add_code_rate(box, caps);

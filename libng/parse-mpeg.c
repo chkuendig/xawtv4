@@ -1,9 +1,15 @@
+/*
+ * parse mpeg program + transport streams.
+ * also can parse various TV stuff out of DVB TS streams.
+ *
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <iconv.h>
 
 #include "grab-ng.h"
 #include "parse-mpeg.h"
@@ -112,6 +118,50 @@ static const char *stream_type_s[] = {
 };
 
 /* ----------------------------------------------------------------------- */
+
+char *psi_charset[0x20] = {
+    [ 0x00 ... 0x1f ] = "reserved",
+    [ 0x00 ] = "ISO-8859-1",
+    [ 0x01 ] = "ISO-8859-5",
+    [ 0x02 ] = "ISO-8859-6",
+    [ 0x03 ] = "ISO-8859-7",
+    [ 0x04 ] = "ISO-8859-8",
+    [ 0x05 ] = "ISO-8859-9",
+    [ 0x06 ] = "ISO-8859-10",
+    [ 0x07 ] = "ISO-8859-11",
+    [ 0x08 ] = "ISO-8859-12",
+    [ 0x09 ] = "ISO-8859-13",
+    [ 0x0a ] = "ISO-8859-14",
+    [ 0x0b ] = "ISO-8859-15",
+    [ 0x10 ] = "fixme",
+    [ 0x11 ] = "UCS-2BE",        // correct?
+    [ 0x12 ] = "KSC5601-1987",   // Hmm, "iconf --list" hasn't this one
+    [ 0x13 ] = "GB2312",
+    [ 0x14 ] = "BIG5"
+};
+
+char *psi_service_type[0x100] = {
+    [ 0x00 ... 0xff ] = "reserved",
+    [ 0x80 ... 0xfe ] = "user defined",
+    [ 0x01 ] = "digital television service",
+    [ 0x02 ] = "digital radio sound service",
+    [ 0x03 ] = "teletext service",
+    [ 0x04 ] = "NVOD reference service",
+    [ 0x05 ] = "NVOD time-shifted service",
+    [ 0x06 ] = "mosaic service",
+    [ 0x07 ] = "PAL coded signal",
+    [ 0x08 ] = "SECAM coded signal",
+    [ 0x09 ] = "D/D2-MAC",
+    [ 0x0a ] = "FM Radio",
+    [ 0x0b ] = "NTSC coded signal",
+    [ 0x0c ] = "data broadcast service",
+    [ 0x0d ] = "reserved for CI",
+    [ 0x0e ] = "RCS Map",
+    [ 0x0f ] = "RCS FLS",
+    [ 0x10 ] = "DVB MHP service",
+};
+
+/* ----------------------------------------------------------------------- */
 /* handle psi_ structs                                                     */
 
 struct psi_info* psi_info_alloc(void)
@@ -122,6 +172,9 @@ struct psi_info* psi_info_alloc(void)
     memset(info,0,sizeof(*info));
     INIT_LIST_HEAD(&info->streams);
     INIT_LIST_HEAD(&info->programs);
+    info->pat_version = PSI_NEW;
+    info->sdt_version = PSI_NEW;
+    info->nit_version = PSI_NEW;
     return info;
 }
 
@@ -569,8 +622,70 @@ static unsigned int unbcd(unsigned int bcd)
     return ret;
 }
 
-static char parse_nit_desc(unsigned char *desc, int dlen,
-			   struct psi_stream *stream)
+static int iconv_string(char *from, char *to,
+			char *src, size_t len,
+			char *dst, size_t max)
+{
+    size_t ilen = (-1 != len) ? len : strlen(src);
+    size_t olen = max-1;
+    iconv_t ic;
+
+    ic = iconv_open(to,from);
+    if (NULL == ic)
+	return 0;
+
+    while (ilen > 0) {
+	if (-1 == iconv(ic,&src,&ilen,&dst,&olen)) {
+	    /* skip + quote broken byte unless we are out of space */
+	    if (E2BIG == errno)
+		break;
+	    if (olen < 4)
+		break;
+	    sprintf(dst,"\\x%02x",(int)(unsigned char)src[0]);
+	    src  += 1;
+	    dst  += 4;
+	    ilen -= 1;
+	    olen -= 4;
+	}
+    }
+    dst[0] = 0;
+    iconv_close(ic);
+    return max-1 - olen;
+}
+
+static void parse_string(unsigned char *src, int slen,
+			 unsigned char *dest, int dlen)
+{
+    int ch = 0;
+
+    if (src[0] < 0x20) {
+	ch = src[0];
+	src++;
+	slen--;
+    }
+    memset(dest,0,dlen);
+    iconv_string(psi_charset[ch], "UTF-8", src, slen, dest, dlen);
+}
+
+static char parse_nit_desc_1(unsigned char *desc, int dlen,
+			     char *dest, int max)
+{
+    int i,t,l;
+
+    for (i = 0; i < dlen; i += desc[i+1] +2) {
+	t = desc[i];
+	l = desc[i+1];
+
+	switch (t) {
+	case 0x40:
+	    parse_string(desc+i+2,l,dest,max);
+	    break;
+	}
+    }
+}
+
+static char parse_nit_desc_2(unsigned char *desc, int dlen,
+			     struct psi_stream *stream)
 {
     static char *bw[4] = {
 	[ 0 ] = "8",
@@ -629,11 +744,12 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
     unsigned int freq,rate,fec;
     int i,t,l;
 
-    for (i = 0; i < dlen;) {
+    for (i = 0; i < dlen; i += desc[i+1] +2) {
 	t = desc[i];
 	l = desc[i+1];
+
 	switch (t) {
-	case 0x43: /* nit dvb-s */
+	case 0x43: /* dvb-s */
 	    freq = mpeg_getbits(desc+i+2,  0, 32);
 	    rate = mpeg_getbits(desc+i+2, 56, 28);
 	    fec  = mpeg_getbits(desc+i+2, 85,  3);
@@ -642,7 +758,7 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
 	    stream->fec_inner     = ra_sc[fec];
 	    stream->polarization  = po[   mpeg_getbits(desc+i+2, 53, 2) ];
 	    break;
-	case 0x44: /* nit dvb-c */
+	case 0x44: /* dvb-c */
 	    freq = mpeg_getbits(desc+i+2,  0, 32);
 	    rate = mpeg_getbits(desc+i+2, 56, 28);
 	    fec  = mpeg_getbits(desc+i+2, 85,  3);
@@ -651,7 +767,7 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
 	    stream->fec_inner     = ra_sc[fec];
 	    stream->constellation = co_c[ mpeg_getbits(desc+i+2, 52, 4) ];
 	    break;
-	case 0x5a: /* nit dvb-t */
+	case 0x5a: /* dvb-t */
 	    unbcd(0x12345678);
 	    stream->frequency     = mpeg_getbits(desc+i+2,  0, 32) * 10;
 	    stream->bandwidth     = bw[   mpeg_getbits(desc+i+2, 33, 2) ];
@@ -663,57 +779,118 @@ static char parse_nit_desc(unsigned char *desc, int dlen,
 	    stream->transmission  = tr[   mpeg_getbits(desc+i+2, 54, 1) ];
 	    break;
 	}
-	i += 2+l;
     }
     return 0;
 }
 
-static void dump_desc(unsigned char *desc, int dlen)
+static void parse_pmt_desc(unsigned char *desc, int dlen,
+			   struct psi_program *program, int pid)
 {
-    int i,j,t,l;
+    int i,t,l;
 
-    for (i = 0; i < dlen;) {
+    for (i = 0; i < dlen; i += desc[i+1] +2) {
 	t = desc[i];
 	l = desc[i+1];
+
 	switch (t) {
-	case 0x0a: /* pmt */
-	    fprintf(stderr," lang=%3.3s",desc+2);
+	case 0x56:
+	    program->t_pid = pid;
 	    break;
-	case 0x56: /* pmt */
-	    fprintf(stderr," teletext");
+	}
+    }
+}
+
+static void parse_sdt_desc(unsigned char *desc, int dlen,
+			   struct psi_program *pr)
+{
+    int i,t,l;
+    char *name,*net;
+
+    for (i = 0; i < dlen; i += desc[i+1] +2) {
+	t = desc[i];
+	l = desc[i+1];
+
+	switch (t) {
+	case 0x48:
+	    pr->type = desc[i+2];
+	    pr->updated = 1;
+	    net = desc + i+3;
+	    name = net + net[0] + 1;
+	    parse_string(net+1,  net[0],  pr->net,  sizeof(pr->net));
+	    parse_string(name+1, name[0], pr->name, sizeof(pr->name));
 	    break;
-	case 0x59: /* pmt */
-	    fprintf(stderr," subtitles");
+	}
+    }
+}
+
+static void dump_data(unsigned char *data, int len)
+{
+    int i;
+    
+    for (i = 0; i < len; i++) {
+	if (isprint(data[i]))
+	    fprintf(stderr,"%c", data[i]);
+	else
+	    fprintf(stderr,"\\x%02x", (int)data[i]);
+    }
+}
+
+static void dump_desc(unsigned char *desc, int dlen)
+{
+    int i,t,l,l2;
+
+    for (i = 0; i < dlen; i += desc[i+1] +2) {
+	t = desc[i];
+	l = desc[i+1];
+
+	switch (t) {
+	case 0x0a: /* ??? (pmt) */
+	    fprintf(stderr," lang=%3.3s",desc+i+2);
 	    break;
-	case 0x6a: /* pmt */
+	case 0x45: /* vbi data (pmt) */
+	    fprintf(stderr," vbidata=");
+	    dump_data(desc+i+2,l);
+	    break;
+	case 0x52: /* stream identifier */
+	    fprintf(stderr," sid=%d",(int)desc[i+2]);
+	    break;
+	case 0x56: /* teletext (pmt) */
+	    fprintf(stderr," teletext=%3.3s",desc+i+2);
+	    break;
+	case 0x59: /* subtitles (pmt) */
+	    fprintf(stderr," subtitles=%3.3s",desc+i+2);
+	    break;
+	case 0x6a: /* ac3 (pmt) */
 	    fprintf(stderr," ac3");
 	    break;
 
-	case 0x40: /* nit */
-	    fprintf(stderr," name=%.*s",l,desc+2);
+	case 0x40: /* network name (nit) */
+	    fprintf(stderr," name=");
+	    dump_data(desc+i+2,l);
 	    break;
-	case 0x43: /* nit */
+	case 0x43: /* satellite delivery system (nit) */
 	    fprintf(stderr," dvb-s");
 	    break;
-	case 0x44: /* nit */
+	case 0x44: /* cable delivery system (nit) */
 	    fprintf(stderr," dvb-c");
 	    break;
-	case 0x5a: /* nit */
-	    fprintf(stderr," dvb-t freq=%d",mpeg_getbits(desc+i+2,0,32));
+	case 0x5a: /* terrestrial delivery system (nit) */
+	    fprintf(stderr," dvb-t");
 	    break;
 
+	case 0x48: /* service (sdt) */
+	    fprintf(stderr," service=%d,",desc[i+2]);
+	    l2 = desc[i+3];
+	    dump_data(desc+i+4,desc[i+3]);
+	    fprintf(stderr,",");
+	    dump_data(desc+i+l2+5,desc[i+l2+4]);
+	    break;
+	    
 	default:
 	    fprintf(stderr," %02x[",desc[i]);
-	    for (j = 0; j < l; j++) {
-		int byte = desc[i+j+2];
-		if (isprint(byte))
-		    fprintf(stderr,"%c", byte);
-		else
-		    fprintf(stderr,"\\x%02x", (int)byte);
-	    }
+	    dump_data(desc+i+2,l);
 	    fprintf(stderr,"]");
 	}
-	i += 2+l;
     }
 }
 
@@ -771,21 +948,6 @@ int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose)
     return len+4;
 }
 
-static void psi_2_checkdesc(struct psi_program *program, int pid,
-			    unsigned char *desc, int dlen)
-{
-    int i;
-
-    for (i = 0; i < dlen;) {
-	switch (desc[i]) {
-	case 0x56:
-	    program->t_pid = pid;
-	    break;
-	}
-	i += desc[i+1] +2;
-    }
-}
-
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose)
 {
     int pnr,version,current;
@@ -802,17 +964,20 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
     program->version = version;
     program->updated = 1;
 
-    if (verbose)
+    dlen = mpeg_getbits(data,84,12);
+    /* TODO: decode descriptor? */
+    if (verbose) {
 	fprintf(stderr,
 		"ts [pmt]: pnr %d ver %2d [%d/%d]  pcr 0x%04x  "
-		"pid 0x%04x  type %2d\n",
+		"pid 0x%04x  type %2d #",
 		pnr, version,
 		mpeg_getbits(data,48, 8),
 		mpeg_getbits(data,56, 8),
 		mpeg_getbits(data,69,13),
 		program->p_pid, program->type);
-    dlen = mpeg_getbits(data,84,12);
-    /* decode descriptor */
+	dump_desc(data + 96/8, dlen);
+	fprintf(stderr,"\n");
+    }
     j = 96 + dlen*8;
     while (j < len*8) {
 	type = mpeg_getbits(data,j,8);
@@ -822,22 +987,20 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
 	case 1:
 	case 2:
 	    /* video */
-	    if (program->v_pid != pid)
-		program->v_pid = pid;
+	    program->v_pid = pid;
 	    break;
 	case 3:
 	case 4:
 	    /* audio */
-	    if (program->a_pid != pid)
-		program->a_pid = pid;
+	    program->a_pid = pid;
 	    break;
 	case 6:
 	    /* private data */
-	    psi_2_checkdesc(program, pid, data + (j+40)/8, dlen);
+	    parse_pmt_desc(data + (j+40)/8, dlen, program, pid);
 	    break;
 	}
 	if (verbose > 1) {
-	    fprintf(stderr, "   pid 0x%04x => %-32s",
+	    fprintf(stderr, "   pid 0x%04x => %-32s #",
 		    pid, stream_type_s[type]);
 	    dump_desc(data + (j+40)/8, dlen);
 	    fprintf(stderr,"\n");
@@ -851,10 +1014,17 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
 
 int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose)
 {
+    static const char *running[] = {
+	[ 0       ] = "undefined",
+	[ 1       ] = "not running",
+	[ 2       ] = "starts soon",
+	[ 3       ] = "pausing",
+	[ 4       ] = "running",
+	[ 5 ... 8 ] = "reserved",
+    };
     struct psi_program *pr;
     int tsid,pnr,version,current;
-    int j,len,dlen,type;
-    char *net,*name;
+    int j,len,dlen,run,ca;
 
     len     = mpeg_getbits(data,12,12) + 3 - 4;
     tsid    = mpeg_getbits(data,24,16);
@@ -875,20 +1045,17 @@ int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose)
     j = 88;
     while (j < len*8) {
 	pnr  = mpeg_getbits(data,j,16);
+	run  = mpeg_getbits(data,j+24,3);
+	ca   = mpeg_getbits(data,j+27,1);
 	dlen = mpeg_getbits(data,j+28,12);
-	type = data[j/8 + 7];
-	net  = data + j/8 + 8;
-	name = net + net[0] + 1;
-	if (verbose > 1)
-	    fprintf(stderr,"   pnr %3d  type %2d  net [%*.*s]  name [%*.*s]\n",
-		    pnr, type, 
-		    net[0],  net[0],  net+1,
-		    name[0], name[0], name+1);
+	if (verbose > 1) {
+	    fprintf(stderr,"   pnr %3d ca %d %s #",
+		    pnr, ca, running[run]);
+	    dump_desc(data+j/8+5,dlen);
+	    fprintf(stderr,"\n");
+	}
 	pr = psi_program_get(info, tsid, pnr, 1);
-	pr->type = type;
-	pr->updated = 1;
-	strncpy(pr->net,  net+1,  net[0]);
-	strncpy(pr->name, name+1, name[0]);
+	parse_sdt_desc(data+j/8+5,dlen,pr);
 	j += 40 + dlen*8;
     }
     if (verbose > 1)
@@ -899,8 +1066,7 @@ int mpeg_parse_psi_sdt(struct psi_info *info, unsigned char *data, int verbose)
 int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 {
     struct psi_stream *stream;
-    char *name = NULL;
-    int nlen = 0;
+    char network[PSI_STR_MAX] = "";
     int id,version,current,len;
     int j,dlen,tsid;
 
@@ -914,21 +1080,15 @@ int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 	return len+4;
     info->nit_version = version;
 
-    if (verbose)
+    j = 80;
+    dlen = mpeg_getbits(data,68,12);
+    parse_nit_desc_1(data + j/8, dlen, network, sizeof(network));
+    if (verbose) {
 	fprintf(stderr,
-		"ts [nit]: id %3d ver %2d [%d/%d]\n",
+		"ts [nit]: id %3d ver %2d [%d/%d] #",
 		id, version,
 		mpeg_getbits(data,48, 8),
 		mpeg_getbits(data,56, 8));
-
-    j = 80;
-    dlen = mpeg_getbits(data,68,12);
-    if (data[j/8] == 0x40) {
-	nlen = data[j/8+1];
-	name = data+j/8+2;
-    }
-    if (verbose > 1) {
-	fprintf(stderr,"   network     :");
 	dump_desc(data + j/8, dlen);
 	fprintf(stderr,"\n");
     }
@@ -940,13 +1100,11 @@ int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 	j += 48;
 	stream = psi_stream_get(info, tsid, 1);
 	stream->updated = 1;
-	if (name) {
-	    strncpy(stream->net, name, nlen);
-	    stream->net[nlen] = '\0';
-	}
-	parse_nit_desc(data + j/8, dlen, stream);
+	if (network)
+	    strcpy(stream->net, network);
+	parse_nit_desc_2(data + j/8, dlen, stream);
 	if (verbose > 1) {
-	    fprintf(stderr,"      tsid %3d :", tsid);
+	    fprintf(stderr,"   tsid %3d #", tsid);
 	    dump_desc(data + j/8, dlen);
 	    fprintf(stderr,"\n");
 	}

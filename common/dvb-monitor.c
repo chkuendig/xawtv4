@@ -435,6 +435,8 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	if (!pr)
 	    return;
 	snprintf(section, sizeof(section), "%d-%d", tsid, pnr);
+	if (pr->type)
+	    cfg_set_int("dvb-pr", section, "type", pr->type);
 	if (pr->net[0] != '\0')
 	    cfg_set_str("dvb-pr", section, "net", pr->net);
 	if (pr->name[0] != '\0')

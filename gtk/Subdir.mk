@@ -2,8 +2,12 @@
 # targets to build
 TARGETS-gtk := \
 	gtk/pia \
-	gtk/xawtv \
+	gtk/xawtv
+
+ifeq ($(FOUND_DVB),yes)
+TARGETS-gtk += \
 	gtk/alexplore
+endif
 
 gtk/pia: \
 	gtk/pia.o \
