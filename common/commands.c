@@ -540,12 +540,18 @@ static int setfreqtab_handler(char *name, int argc, char **argv)
 
 static int volume_handler(char *name, int argc, char **argv)
 {
-    struct ng_attribute *attr;
-    int mute, volume;
+    struct ng_attribute *avol,*amute;
+    int mute = 0, volume = 0;
 
-    attr   = find_attr_by_id(ATTR_ID_VOLUME);
-    volume = attr_read(attr);
-    mute   = attr_read_id(ATTR_ID_MUTE);
+    avol   = find_attr_by_id(ATTR_ID_VOLUME);
+    amute  = find_attr_by_id(ATTR_ID_MUTE);
+    if (NULL == amute && NULL == avol)
+	return 0;
+
+    if (avol)
+	volume = attr_read(avol);
+    if (amute)
+	mute   = attr_read(amute);
     
     if (0 == argc)
 	goto display;
@@ -563,18 +569,21 @@ static int volume_handler(char *name, int argc, char **argv)
 	}
     } else {
 	/* volume */
-	volume = update_int(attr, volume, argv[0]);
+	if (avol)
+	    volume = update_int(avol, volume, argv[0]);
     }
 
-    attr_write(attr, volume, 1);
-    attr_write_id(ATTR_ID_MUTE,   mute);
+    if (avol)
+	attr_write(avol, volume, 1);
+    if (amute)
+	attr_write(amute, mute, 1);
 
  display:
     if (mute)
 	set_msg_str("volume","muted");
     else {
-	if (attr)
-	    set_msg_int(attr,volume);
+	if (avol)
+	    set_msg_int(avol,volume);
 	else
 	    set_msg_str("volume","unmuted");
     }

@@ -536,8 +536,19 @@ ng_dsp_driver_register(int magic, char *plugname, struct ng_dsp_driver *driver)
 int
 ng_mix_driver_register(int magic, char *plugname, struct ng_mix_driver *driver)
 {
+    struct list_head *item;
+    struct ng_mix_driver *drv;
+
     if (0 != ng_check_magic(magic,plugname,"mixer drv"))
 	return -1;
+
+    list_for_each(item,&ng_mix_drivers) {
+        drv = list_entry(item, struct ng_mix_driver, list);
+	if (drv->priority > driver->priority) {
+	    list_add_tail(&driver->list,&drv->list);
+	    return 0;
+	}
+    }
     list_add_tail(&driver->list,&ng_mix_drivers);
     return 0;
 }
@@ -613,7 +624,7 @@ ng_conv_find_match(unsigned int in, unsigned int out)
 
 /* --------------------------------------------------------------------- */
 
-int ng_vid_init(char *device, struct ng_devstate *dev)
+int ng_vid_init(struct ng_devstate *dev, char *device)
 {
     struct list_head *item;
     struct ng_vid_driver *drv;
@@ -648,7 +659,6 @@ int ng_vid_init(char *device, struct ng_devstate *dev)
 	fprintf(stderr,"vid-open: flags: %x\n", dev->flags);
 	
     INIT_LIST_HEAD(&dev->attrs);
-
     attr = dev->v->list_attrs(dev->handle);
     for (i = 0; attr && attr[i].name; i++) {
 	attr[i].dev   = dev;
@@ -658,7 +668,7 @@ int ng_vid_init(char *device, struct ng_devstate *dev)
     return 0;
 }
 
-int ng_dsp_init(char *device, struct ng_devstate *dev, int record)
+int ng_dsp_init(struct ng_devstate *dev, char *device, int record)
 {
     struct list_head *item;
     struct ng_dsp_driver *drv;
@@ -697,30 +707,46 @@ int ng_dsp_init(char *device, struct ng_devstate *dev, int record)
     return 0;
 }
 
-struct ng_attribute*
-ng_mix_init(char *device, char *channel)
+int ng_mix_init(struct ng_devstate *dev, char *device, char *control)
 {
     struct list_head *item;
-    struct ng_mix_driver *drv = NULL;
-    struct ng_attribute *attrs = NULL;
+    struct ng_mix_driver *drv;
+    struct ng_attribute *attr;
     void *handle;
-    
-    /* check all mixer drivers */
-    list_for_each(item, &ng_mix_drivers) {
+    int i, err = ENODEV;
+
+    /* check all dsp drivers */
+    list_for_each(item,&ng_mix_drivers) {
         drv = list_entry(item, struct ng_mix_driver, list);
 	if (ng_debug)
-	    fprintf(stderr,"mix-init: trying: %s... \n", drv->name);
-	if (NULL != (handle = drv->open(device))) {
-	    if (NULL != (attrs = drv->volctl(handle,channel)))
-		break;
-	    drv->close(handle);
-	}
+	    fprintf(stderr, "mix-open: trying: %s... \n", drv->name);
+	if (NULL != (handle = drv->init(device, control)))
+	    break;
+	if (errno)
+	    err = errno;
 	if (ng_debug)
-	    fprintf(stderr,"mix-init: failed: %s\n",drv->name);
+	    fprintf(stderr,"mix-open: failed: %s\n", drv->name);
     }
-    if (ng_debug && NULL != attrs)
-	fprintf(stderr,"mix-init: ok: %s\n",drv->name);
-    return attrs;
+    if (item == &ng_mix_drivers)
+	return err;
+    if (ng_debug)
+	fprintf(stderr,"mix-open: ok: %s\n",drv->name);
+
+    memset(dev,0,sizeof(*dev));
+    dev->type   = NG_DEV_MIX;
+    dev->m      = drv;
+    dev->handle = handle;
+    dev->device = dev->m->devname(dev->handle);
+
+    INIT_LIST_HEAD(&dev->attrs);
+    attr = dev->m->list_attrs(dev->handle);
+    for (i = 0; attr && attr[i].name; i++) {
+	attr[i].dev   = dev;
+	attr[i].group = dev->device;
+	list_add_tail(&attr[i].device_list,&dev->attrs);
+    }
+
+    return 0;
 }
 
 int ng_dev_fini(struct ng_devstate *dev)
@@ -736,7 +762,7 @@ int ng_dev_fini(struct ng_devstate *dev)
 	dev->a->fini(dev->handle);
 	break;
     case NG_DEV_MIX:
-	BUG_ON(1,"NG_DEV_MIX not implemented");
+	dev->m->fini(dev->handle);
 	break;
     }
     memset(dev,0,sizeof(*dev));
@@ -759,7 +785,7 @@ int ng_dev_open(struct ng_devstate *dev)
 	    rc = dev->a->open(dev->handle);
 	    break;
 	case NG_DEV_MIX:
-	    BUG_ON(1,"NG_DEV_MIX not implemented");
+	    rc = dev->m->open(dev->handle);
 	    break;
 	}
     }
@@ -789,7 +815,7 @@ int ng_dev_close(struct ng_devstate *dev)
 	    dev->a->close(dev->handle);
 	    break;
 	case NG_DEV_MIX:
-	    BUG_ON(1,"NG_DEV_MIX not implemented");
+	    dev->m->close(dev->handle);
 	    break;
 	}
     }

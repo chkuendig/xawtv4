@@ -417,12 +417,17 @@ struct ng_dsp_driver {
 
 struct ng_mix_driver {
     const char            *name;
+    int priority;
+
     struct ng_devinfo*    (*probe)(int debug);
     struct ng_devinfo*    (*channels)(char *device);
-    void*                 (*open)(char *device);
-    struct ng_attribute*  (*volctl)(void *handle, char *channel);
-    void                  (*close)(void *handle);
+    void*                 (*init)(char *device, char *control);
+    int                   (*open)(void *handle);
+    int                   (*close)(void *handle);
+    int                   (*fini)(void *handle);
+    char*                 (*devname)(void *handle);
 
+    struct ng_attribute*  (*list_attrs)(void *handle);
     struct list_head      list;
 };
 
@@ -585,10 +590,9 @@ struct ng_video_conv* ng_conv_find_to(unsigned int out, int *i);
 struct ng_video_conv* ng_conv_find_from(unsigned int out, int *i);
 struct ng_video_conv* ng_conv_find_match(unsigned int in, unsigned int out);
 
-int ng_vid_init(char *device, struct ng_devstate *dev);
-
-int ng_dsp_init(char *device, struct ng_devstate *dev, int record);
-struct ng_attribute* ng_mix_init(char *device, char *channel);
+int ng_vid_init(struct ng_devstate *dev, char *device);
+int ng_dsp_init(struct ng_devstate *dev, char *device, int record);
+int ng_mix_init(struct ng_devstate *dev, char *device, char *control);
 
 int ng_dev_fini(struct ng_devstate *dev);
 int ng_dev_open(struct ng_devstate *dev);

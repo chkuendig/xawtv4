@@ -7,6 +7,7 @@ struct devs {
     /* sound hardware */
     struct ng_devstate sndrec;
     struct ng_devstate sndplay;
+    struct ng_devstate mixer;
 
     /* vbi don't use libng */
     char *vbidev;

@@ -345,13 +345,14 @@ v4l2_add_attr(struct v4l2_handle *h, struct v4l2_queryctrl *ctl,
 	    if (v4l2_attr[i].v4l2 == ctl->id)
 		break;
 	if (i != NUM_ATTR) {
-	    h->attr[h->nattr].id  = v4l2_attr[i].id;
+	    h->attr[h->nattr].id   = v4l2_attr[i].id;
 	} else {
-	    h->attr[h->nattr].id  = private_ids++;
+	    h->attr[h->nattr].id   = private_ids++;
 	}
-	h->attr[h->nattr].name    = ctl->name;
-	h->attr[h->nattr].priv    = ctl;
-	h->attr[h->nattr].defval  = ctl->default_value;
+	h->attr[h->nattr].name     = ctl->name;
+	h->attr[h->nattr].priority = 2;
+	h->attr[h->nattr].priv     = ctl;
+	h->attr[h->nattr].defval   = ctl->default_value;
 	switch (ctl->type) {
 	case V4L2_CTRL_TYPE_INTEGER:
 	    h->attr[h->nattr].type    = ATTR_TYPE_INTEGER;

@@ -250,20 +250,21 @@ v4l_add_attr(struct v4l_handle *h, int id, int type,
 {
     h->attr = realloc(h->attr,(h->nattr+2) * sizeof(struct ng_attribute));
     memset(h->attr+h->nattr,0,sizeof(struct ng_attribute)*2);
-    h->attr[h->nattr].id      = id;
-    h->attr[h->nattr].type    = type;
-    h->attr[h->nattr].defval  = defval;
-    h->attr[h->nattr].choices = choices;
+    h->attr[h->nattr].id       = id;
+    h->attr[h->nattr].priority = 2;
+    h->attr[h->nattr].type     = type;
+    h->attr[h->nattr].defval   = defval;
+    h->attr[h->nattr].choices  = choices;
     if (ATTR_TYPE_INTEGER == type) {
-	h->attr[h->nattr].min = 0;
-	h->attr[h->nattr].max = 65535;
+	h->attr[h->nattr].min  = 0;
+	h->attr[h->nattr].max  = 65535;
     }
     if (id < ATTR_ID_COUNT)
 	h->attr[h->nattr].name = ng_attr_to_desc[id];
 
-    h->attr[h->nattr].read    = v4l_read_attr;
-    h->attr[h->nattr].write   = v4l_write_attr;
-    h->attr[h->nattr].handle  = h;
+    h->attr[h->nattr].read     = v4l_read_attr;
+    h->attr[h->nattr].write    = v4l_write_attr;
+    h->attr[h->nattr].handle   = h;
     h->nattr++;
 }
 

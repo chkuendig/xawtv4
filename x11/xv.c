@@ -152,12 +152,13 @@ xv_add_attr(struct xv_handle *h, int id, int type,
 	    /* ignore this one */
 	    return;
 	if (NULL != xvattr[i].atom) {
-	    h->attr[h->nattr].id      = xvattr[i].id;
-	    h->attr[h->nattr].type    = xvattr[i].type;
-	    h->attr[h->nattr].priv    = at;
+	    h->attr[h->nattr].id       = xvattr[i].id;
+	    h->attr[h->nattr].priority = 2;
+	    h->attr[h->nattr].type     = xvattr[i].type;
+	    h->attr[h->nattr].priv     = at;
 	    if (ATTR_TYPE_INTEGER == h->attr[h->nattr].type) {
-		h->attr[h->nattr].min = at->min_value;
-		h->attr[h->nattr].max = at->max_value;
+		h->attr[h->nattr].min  = at->min_value;
+		h->attr[h->nattr].max  = at->max_value;
 	    }
 	} else {
 	    /* unknown */

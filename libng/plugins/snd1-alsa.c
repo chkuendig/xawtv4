@@ -402,6 +402,38 @@ static struct ng_devinfo* ng_alsa_probe(int record, int verbose)
 
 /* ------------------------------------------------------------------- */
 
+static int mixer_read_attr(struct ng_attribute *attr);
+static void mixer_write_attr(struct ng_attribute *attr, int val);
+
+struct mixer_handle {
+    char                 *device;
+    snd_mixer_t          *mixer;
+    snd_mixer_elem_t     *elem;
+    struct ng_attribute  *attrs;
+};
+
+static struct ng_attribute mixer_attrs[] = {
+    {
+	.id       = ATTR_ID_MUTE,
+	.name     = "mute",
+	.priority = 1,
+	.type     = ATTR_TYPE_BOOL,
+	.read     = mixer_read_attr,
+	.write    = mixer_write_attr,
+    },{
+	.id       = ATTR_ID_VOLUME,
+	.name     = "volume",
+	.priority = 1,
+	.type     = ATTR_TYPE_INTEGER,
+	.min      = 0,
+	.max      = 100,
+	.read     = mixer_read_attr,
+	.write    = mixer_write_attr,
+    },{
+	/* end of list */
+    }
+};
+
 static struct ng_devinfo* mixer_probe(int verbose)
 {
     snd_ctl_t            *ctl;
@@ -489,13 +521,150 @@ mixer_channels(char *device)
     return NULL;
 }
 
+static void*
+mixer_init(char *device, char *control)
+{
+    struct mixer_handle *h;
+    int i,c,n;
+
+    h = malloc(sizeof(*h));
+    if (NULL == h)
+	return NULL;
+    memset(h,0,sizeof(*h));
+    h->device = strdup(device);
+
+    if (0 != snd_mixer_open(&h->mixer,0))
+	goto err;
+    if (0 != snd_mixer_attach(h->mixer, device))
+	goto err;
+    if (0 != snd_mixer_selem_register(h->mixer, NULL, NULL))
+	goto err;
+    if (0 != snd_mixer_load(h->mixer))
+	goto err;
+
+    n = 0;
+    c = atoi(control);
+    for (h->elem = snd_mixer_first_elem(h->mixer); NULL != h->elem;
+	 h->elem = snd_mixer_elem_next(h->elem)) {
+	if (!snd_mixer_selem_is_active(h->elem))
+	    continue;
+	if (snd_mixer_selem_is_enumerated(h->elem))
+	    continue;
+	if (!snd_mixer_selem_has_playback_volume(h->elem) &&
+	    !snd_mixer_selem_has_capture_volume(h->elem))
+	    continue;
+
+	if (c == n)
+	    break;
+	n++;
+    }
+    if (NULL == h->elem)
+	goto err;
+
+    h->attrs = malloc(sizeof(mixer_attrs));
+    memcpy(h->attrs,mixer_attrs,sizeof(mixer_attrs));
+    for (i = 0; h->attrs[i].name != NULL; i++) {
+	h->attrs[i].handle = h;
+	if (h->attrs[i].id == ATTR_ID_VOLUME) {
+	    long min,max;
+	    snd_mixer_selem_get_playback_volume_range(h->elem, 
+						      &min,&max);
+	    h->attrs[i].min = min;
+	    h->attrs[i].max = max;
+	}
+    }
+    return h;
+
+ err:
+    if (h->mixer)
+	snd_mixer_close(h->mixer);
+    free(h->device);
+    free(h);
+    return NULL;
+}
+
+static int
+mixer_fini(void *handle)
+{
+    struct mixer_handle *h = handle;
+
+    snd_mixer_close(h->mixer);
+    free(h->device);
+    free(h);
+    return 0;
+}
+
+static int
+mixer_read_attr(struct ng_attribute *attr)
+{
+    struct mixer_handle *h = attr->handle;
+    long vol;
+    int enabled;
+
+    switch (attr->id) {
+    case ATTR_ID_VOLUME:
+	snd_mixer_selem_get_playback_volume(h->elem, SND_MIXER_SCHN_MONO, &vol);
+	return vol;
+    case ATTR_ID_MUTE:
+	snd_mixer_selem_get_playback_switch(h->elem, SND_MIXER_SCHN_MONO, &enabled);
+	return !enabled;
+    default:
+	return -1;
+    }
+}
+
+static void
+mixer_write_attr(struct ng_attribute *attr, int val)
+{
+    struct mixer_handle *h = attr->handle;
+
+    switch (attr->id) {
+    case ATTR_ID_VOLUME:
+	snd_mixer_selem_set_playback_volume_all(h->elem, val);
+	break;
+    case ATTR_ID_MUTE:
+	snd_mixer_selem_set_playback_switch_all(h->elem, !val);
+	break;
+    }
+}
+
+static int mixer_open(void *handle)
+{
+    return 0;
+}
+
+static int mixer_close(void *handle)
+{
+    return 0;
+}
+
+static char*
+mixer_devname(void *handle)
+{
+    struct mixer_handle *h = handle;
+
+    return h->device;
+}
+
+static struct ng_attribute* mixer_list_attrs(void *handle)
+{
+    struct mixer_handle *h = handle;
+    
+    return h->attrs;
+}
+
 struct ng_mix_driver alsa_mixer = {
-    .name      = "alsa",
-    .probe     = mixer_probe,
-    .channels  = mixer_channels,
-//    .open      = mixer_open,
-//    .volctl    = mixer_volctl,
-//    .close     = mixer_close,
+    .name       = "alsa",
+    .priority   = 2,
+
+    .probe      = mixer_probe,
+    .channels   = mixer_channels,
+    .init       = mixer_init,
+    .open       = mixer_open,
+    .close      = mixer_close,
+    .fini       = mixer_fini,
+    .devname    = mixer_devname,
+    .list_attrs = mixer_list_attrs,
 };
 
 static struct ng_dsp_driver alsa_dsp = {

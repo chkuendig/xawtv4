@@ -9,6 +9,7 @@
  *
  */
 #include "config.h"
+#define _GNU_SOURCE       /* for memmem() */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -490,6 +491,8 @@ static void* mpeg_ts_open(char *moviename)
 		    continue;
 		h->afmt.fmtid = AUDIO_MP3;
 		h->afmt.rate  = mpeg_get_audio_rate(hdr);
+		if (ng_debug)
+		    fprintf(stderr,"mpeg ts: unaligned audio\n");
 	    }
 	    break;
 	}
@@ -526,7 +529,19 @@ static void* mpeg_ts_open(char *moviename)
 	    if (h->init_offset < pos)
 		h->init_offset = pos;
 	    off = mpeg_parse_pes_packet(h,h->ts.data, &h->video_pts, &aligned);
-	    mpeg_get_video_fmt(h, h->ts.data+off);
+	    if (aligned) {
+		mpeg_get_video_fmt(h, h->ts.data+off);
+	    } else {
+		// must search for header
+		char *hdr = NULL;
+
+		if (1 /* ng_debug */)
+		    fprintf(stderr,"mpeg ts: unaligned video\n");
+		hdr = memmem(h->ts.data+off,     h->ts.size-off,
+			     "\x00\x00\x01\xb3", 4);
+		if (hdr)
+		    mpeg_get_video_fmt(h, hdr);
+	    }
 	    if (VIDEO_NONE != h->vfmt.fmtid)
 		break;
 	}

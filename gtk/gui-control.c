@@ -200,9 +200,10 @@ attr_x11_update_ctrl(struct ng_attribute *attr, int value)
 
     if (x11->value == value)
 	return;
-    
-    fprintf(stderr,"%s: %s %d => %d\n",__FUNCTION__,
-	    attr->name,x11->value,value);
+
+    if (debug)
+	fprintf(stderr,"%s: %s %d => %d\n",__FUNCTION__,
+		attr->name,x11->value,value);
     x11->value = value;
     switch (attr->type) {
     case ATTR_TYPE_INTEGER:
@@ -250,9 +251,10 @@ static guint on_timer;
 void create_onscreen(void)
 {
     GdkColormap *cmap;
-    GdkColor black = { .red = 0x0000, .green = 0x0001, .blue = 0x0000 };
+    GdkColor black = { .red = 0x1111, .green = 0x1111, .blue = 0x1111 };
     GdkColor green = { .red = 0x0000, .green = 0xffff, .blue = 0x0000 };
     PangoFontDescription *font;
+    GtkRcStyle *style;
     
     on_win   = gtk_window_new(GTK_WINDOW_POPUP);
     on_label = gtk_widget_new(GTK_TYPE_LABEL,
@@ -268,14 +270,19 @@ void create_onscreen(void)
     gdk_colormap_alloc_color(cmap, &green, FALSE, TRUE);
     font = pango_font_description_from_string("led fixed 36");
 
+    style = gtk_widget_get_modifier_style(on_label);
+    style->font_desc = font;
 #if 0
-    /* Hmm, bg doesn't work ... */
-    gtk_widget_modify_bg(on_label, GTK_STATE_INSENSITIVE, &black);
-    gtk_widget_modify_fg(on_label, GTK_STATE_INSENSITIVE, &green);
+    /* why the heck that doesn't work ??? */
+    style->bg_pixmap_name[GTK_STATE_INSENSITIVE] = strdup("<none>");
+    style->fg[GTK_STATE_INSENSITIVE]   = green;
+    style->bg[GTK_STATE_INSENSITIVE]   = black;
 #else
-    gtk_widget_modify_fg(on_label, GTK_STATE_INSENSITIVE, &black);
+    style->fg[GTK_STATE_INSENSITIVE]   = black;
 #endif
-    gtk_widget_modify_font(on_label, font);
+    style->color_flags[GTK_STATE_INSENSITIVE] |=
+	GTK_RC_FG | GTK_RC_BG;
+    gtk_widget_modify_style(on_label,style);
 }
 
 static gboolean popdown_onscreen(gpointer data)

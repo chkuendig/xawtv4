@@ -123,8 +123,10 @@ Hints for using pia
 
  pia also has a -dvb switch to put it into dvb playback mode.  This is
  intented mainly for trouble-shooting / debugging purposes.  The -dvb
- switch expects a station name as argument, and pia will lookup the
- station in /etc/vdr/channels.conf.
+ switch expects a station name as argument and will lookup the station
+ in xawtv's config files.  You can also use the -vdr switch, pia will
+ lookup the station in /etc/vdr/channels.conf (+diseqc.conf in case of
+ DVB-S) then.
 
 
 Enjoy,

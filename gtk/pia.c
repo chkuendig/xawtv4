@@ -33,6 +33,7 @@
 #include "devs.h"
 #include "dvb-tuning.h"
 #include "parseconfig.h"
+#include "tv-config.h"
 #include "commands.h"
 #include "av-sync.h"
 #include "gui.h"
@@ -54,6 +55,7 @@ static XVisualInfo vinfo;
 #define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_DVB	       	O_CMDLINE, "dvb"
+#define O_CMD_VDR	       	O_CMDLINE, "vdr"
 
 #define O_CMD_XVIDEO	       	O_CMDLINE, "xvideo"
 #define O_CMD_OPENGL	       	O_CMDLINE, "opengl"
@@ -68,6 +70,7 @@ static XVisualInfo vinfo;
 #define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
 #define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 #define GET_CMD_DVB()		cfg_get_bool(O_CMD_DVB,   	0)
+#define GET_CMD_VDR()		cfg_get_bool(O_CMD_VDR,   	0)
 
 #define GET_CMD_XVIDEO()	cfg_get_bool(O_CMD_XVIDEO,   	1)
 #define GET_CMD_OPENGL()       	cfg_get_bool(O_CMD_OPENGL,     	1)
@@ -94,18 +97,18 @@ struct cfg_cmdline cmd_opts[] = {
 	.letter   = 'd',
 	.cmdline  = "debug",
 	.option   = { O_CMD_DEBUG },
-	.value    = "1",
-	.desc     = "enable debug output",
-    },{
-	.cmdline  = "dd",
-	.option   = { O_CMD_DEBUG },
-	.value    = "2",
-	.desc     = "more debug output",
+	.needsarg = 1,
+	.desc     = "set debug level",
     },{
 	.cmdline  = "dvb",
 	.option   = { O_CMD_DVB },
 	.value    = "1",
-	.desc     = "enable dvb mode",
+	.desc     = "enable dvb mode (xawtv station list)",
+    },{
+	.cmdline  = "vdr",
+	.option   = { O_CMD_VDR },
+	.value    = "1",
+	.desc     = "enable dvb mode (vdr station list)",
 
     },{
 	.cmdline  = "dsp",
@@ -226,7 +229,7 @@ static void play_file(char *filename)
 	gtk_window_set_title(GTK_WINDOW(toplevel),filename);
 
     /* open file */
-    if (GET_CMD_DVB()) {
+    if (GET_CMD_DVB() || GET_CMD_VDR()) {
 #ifdef HAVE_DVB
 	/* dvb hack */
 	struct dvb_state *dvb = NULL;
@@ -238,9 +241,30 @@ static void play_file(char *filename)
 	}
 	dvb_debug = 1;
 	dvb = dvb_init_nr(0);
-	if (dvb) {
+	if (NULL == dvb) {
+	    fprintf(stderr,"can't open dvb device\n");
+	    exit(1);
+	}
+
+	if (GET_CMD_DVB()) {
+	    int tsid,pnr;
+	    
+	    read_config();
+	    tsid = cfg_get_int("stations",filename,"tsid", 0);
+	    pnr  = cfg_get_int("stations",filename,"pnr",  0);
+	    if (0 == tsid || 0 == pnr) {
+		fprintf(stderr, "looking up station \"%s\" failed\n",
+			filename);
+		exit(1);
+	    }
+	    if (-1 == dvb_tune(dvb, tsid, pnr)) {
+		fprintf(stderr,"tuning \"%s\" (tsid %d, pnr %d) failed [xawtv]\n",
+			filename,tsid,pnr);
+		exit(1);
+	    }
+	} else if (GET_CMD_VDR()) {
 	    if (-1 == dvb_tune_vdr(dvb, filename)) {
-		fprintf(stderr,"tuning failed\n");
+		fprintf(stderr,"tuning \"%s\" failed [vdr]\n",filename);
 		exit(1);
 	    }
 	}
@@ -449,7 +473,7 @@ int main(int argc, char *argv[])
 	return 0;
     }
     ng_init();
-    ng_dsp_init(cfg_get_str(O_CMD_DSP), &devs.sndplay, 0);
+    ng_dsp_init(&devs.sndplay, cfg_get_str(O_CMD_DSP), 0);
 
     /* play files */
     if (GET_CMD_DVB()) {

@@ -785,7 +785,7 @@ parse_args(int *argc, char **argv)
 
     if (GET_CMD_HW_LS()) {
 	fprintf(stderr,"\n");
-	device_ls_devs(0);
+	device_ls_devs(GET_CMD_VERBOSE());
 	exit(0);
     }
 

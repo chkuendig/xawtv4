@@ -115,7 +115,8 @@ static void device_print(char *name)
 #endif
     device_print_line(name, "sndrec",  1);
     device_print_line(name, "sndplay", 1);
-    // FIXME: mixer
+    device_print_line(name, "mixer",   0);
+    device_print_line(name, "control", 0);
 }
 
 static int device_probe_video(char *device)
@@ -134,7 +135,7 @@ static int device_probe_video(char *device)
 	    return 0;
 	}
     }
-    if (0 != (err = ng_vid_init(device, &dev))) {
+    if (0 != (err = ng_vid_init(&dev, device))) {
 	if (EBUSY == err) {
 	    /* device busy -- ignore failure and don't change anything */
 	    if (debug)
@@ -489,11 +490,13 @@ int device_fini()
     device_attrs_del(&devs.video);
     device_attrs_del(&devs.sndplay);
     device_attrs_del(&devs.sndrec);
+    device_attrs_del(&devs.mixer);
 
     /* close devices */
     ng_dev_fini(&devs.video);
     ng_dev_fini(&devs.sndrec);
     ng_dev_fini(&devs.sndplay);
+    ng_dev_fini(&devs.mixer);
 
 #ifdef HAVE_DVB
     if (devs.dvb) {
@@ -506,7 +509,7 @@ int device_fini()
 
 int device_init(char *name)
 {
-    char *device, *list;
+    char *device, *control, *list;
     int err;
 
     memset(&devs,0,sizeof(devs));
@@ -526,7 +529,7 @@ int device_init(char *name)
     /* video4linux */
     device = cfg_get_str("devs", name, "video");
     if (NULL != device && 0 != strcasecmp(device,"none")) {
-	err = ng_vid_init(device, &devs.video);
+	err = ng_vid_init(&devs.video, device);
 	if (err)
 	    goto oops;
     }
@@ -545,14 +548,20 @@ int device_init(char *name)
     
     /* sound */
     device = cfg_get_str("devs", name, "sndrec");
-    ng_dsp_init(device, &devs.sndrec, 1);
+    ng_dsp_init(&devs.sndrec, device, 1);
     device = cfg_get_str("devs", name, "sndplay");
-    ng_dsp_init(device, &devs.sndplay, 0);
+    ng_dsp_init(&devs.sndplay, device, 0);
+    device  = cfg_get_str("devs", name, "mixer");
+    control = cfg_get_str("devs", name, "control");
+    if (NULL != device  && 0 != strcasecmp(device, "none") &&
+	NULL != control && 0 != strcasecmp(control,"none"))
+	ng_mix_init(&devs.mixer, device, control);
 
     /* init attributes */
     device_attrs_add(&devs.video);
     device_attrs_add(&devs.sndplay);
     device_attrs_add(&devs.sndrec);
+    device_attrs_add(&devs.mixer);
     return 0;
 
  oops:

@@ -16,6 +16,7 @@
 
 #define FILE_BUF_MIN       (512*1024)
 #define FILE_BUF_MAX    (8*1024*1024)
+#define FILE_BLKSIZE        (16*1024)
 
 int  ng_mpeg_vpid    = 0;
 int  ng_mpeg_apid    = 0;
@@ -380,6 +381,8 @@ unsigned char* mpeg_get_data(struct mpeg_handle *h, off_t pos, size_t size)
 	    return NULL;
 	/* read data */
 	rdbytes  = h->balloc - h->bsize;
+	if (rdbytes > FILE_BLKSIZE)
+	    rdbytes = FILE_BLKSIZE;
 	rdbytes -= rdbytes % TS_SIZE;
 	rc = read(h->fd, h->buffer + h->bsize, rdbytes);
 	switch (rc) {
@@ -590,6 +593,7 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
 {
     unsigned char *buf;
     size_t size;
+    off_t start = *pos;
 
     /* read header */
     for (;;) {
@@ -629,6 +633,10 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
 	if (buf[3] == packet)
 	    return size;
 	*pos += size;
+
+	/* don't search unlimited ... */
+	if (*pos - start > FILE_BUF_MIN)
+	    return 0;
     }
 }
 
@@ -1184,8 +1192,9 @@ int mpeg_find_ts_packet(struct mpeg_handle *h, int wanted, off_t *pos)
 {
     unsigned char *packet;
     int asize = 0;
+    off_t start;
 
-    for (;;*pos += TS_SIZE) {
+    for (start = *pos; *pos - start < FILE_BUF_MIN; *pos += TS_SIZE) {
 	memset(&h->ts, 0, sizeof(h->ts));
 	packet = mpeg_get_data(h, *pos, TS_SIZE);
 	if (NULL == packet) {
@@ -1244,4 +1253,5 @@ int mpeg_find_ts_packet(struct mpeg_handle *h, int wanted, off_t *pos)
 		    h->ts.cont, h->ts.size, asize);
 	return 0;
     }
+    return -1;
 }

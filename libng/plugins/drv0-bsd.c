@@ -182,6 +182,7 @@ static struct ng_attribute bsd_attr[] = {
     {
 	.id       = ATTR_ID_COUNT+1,
 	.name     = "audio",
+	.priority = 2,
 	.type     = ATTR_TYPE_CHOICE,
 	.choices  = audio,
 	.read     = bsd_read_attr,
@@ -189,6 +190,7 @@ static struct ng_attribute bsd_attr[] = {
     },{
 	.id       = ATTR_ID_NORM,
 	.name     = "norm",
+	.priority = 2,
 	.type     = ATTR_TYPE_CHOICE,
 	.choices  = norms,
 	.read     = bsd_read_attr,
@@ -196,6 +198,7 @@ static struct ng_attribute bsd_attr[] = {
     },{
 	.id       = ATTR_ID_INPUT,
 	.name     = "input",
+	.priority = 2,
 	.type     = ATTR_TYPE_CHOICE,
 	.choices  = inputs,
 	.read     = bsd_read_attr,
@@ -203,12 +206,14 @@ static struct ng_attribute bsd_attr[] = {
     },{
 	.id       = ATTR_ID_MUTE,
 	.name     = "mute",
+	.priority = 2,
 	.type     = ATTR_TYPE_BOOL,
 	.read     = bsd_read_attr,
 	.write    = bsd_write_attr,
     },{
 	.id       = ATTR_ID_HUE,
 	.name     = "hue",
+	.priority = 2,
 	.type     = ATTR_TYPE_INTEGER,
 	.min      = BT848_HUEREGMIN,
 	.max      = BT848_HUEREGMAX,
@@ -217,6 +222,7 @@ static struct ng_attribute bsd_attr[] = {
     },{
 	.id       = ATTR_ID_BRIGHT,
 	.name     = "bright",
+	.priority = 2,
 	.type     = ATTR_TYPE_INTEGER,
 	.min      = BT848_BRIGHTREGMIN,
 	.max      = BT848_BRIGHTREGMAX,
@@ -225,6 +231,7 @@ static struct ng_attribute bsd_attr[] = {
     },{
 	.id       = ATTR_ID_CONTRAST,
 	.name     = "contrast",
+	.priority = 2,
 	.type     = ATTR_TYPE_INTEGER,
 	.min      = BT848_CONTRASTREGMIN,
 	.max      = BT848_CONTRASTREGMAX,
@@ -233,6 +240,7 @@ static struct ng_attribute bsd_attr[] = {
     },{
 	.id       = ATTR_ID_COLOR,
 	.name     = "color",
+	.priority = 2,
 	.type     = ATTR_TYPE_INTEGER,
 	.min      = BT848_CHROMAREGMIN,
 	.max      = BT848_CHROMAREGMAX,

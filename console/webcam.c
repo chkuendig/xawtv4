@@ -369,7 +369,7 @@ grab_init(void)
     int i;
 
     /* open device */
-    if (0 != ng_vid_init(device,&dev)) {
+    if (0 != ng_vid_init(&dev,device)) {
 	fprintf(stderr,"no grabber device available\n");
 	exit(1);
     }

@@ -34,22 +34,27 @@ static int mixer_read_attr(struct ng_attribute *attr);
 static void mixer_write_attr(struct ng_attribute *attr, int val);
 
 struct mixer_handle {
-    int  mix;
+    char *device;
+    char *control;
+    int  fd;
     int  volctl;
     int  volume;
     int  muted;
+    struct ng_attribute *attrs;
 };
 
 static struct ng_attribute mixer_attrs[] = {
     {
 	.id       = ATTR_ID_MUTE,
 	.name     = "mute",
+	.priority = 1,
 	.type     = ATTR_TYPE_BOOL,
 	.read     = mixer_read_attr,
 	.write    = mixer_write_attr,
     },{
 	.id       = ATTR_ID_VOLUME,
 	.name     = "volume",
+	.priority = 1,
 	.type     = ATTR_TYPE_INTEGER,
 	.min      = 0,
 	.max      = 100,
@@ -60,49 +65,65 @@ static struct ng_attribute mixer_attrs[] = {
     }
 };
 
-static void
+static int
+mixer_open(void *handle)
+{
+    struct mixer_handle *h = handle;
+
+    BUG_ON(-1 != h->fd, "mixer already open");
+    if (-1 == (h->fd = ng_chardev_open(h->device, O_RDONLY, OSS_MAJOR, 1)))
+	return -1;
+    return 0;
+}
+
+static int
 mixer_close(void *handle)
 {
     struct mixer_handle *h = handle;
 
-    if (-1 != h->mix)
-	close(h->mix);
+    BUG_ON(-1 == h->fd, "mixer not open");
+    close(h->fd);
+    h->fd = -1;
+    return 0;
+}
+
+static int
+mixer_fini(void *handle)
+{
+    struct mixer_handle *h = handle;
+
+    BUG_ON(-1 != h->fd,"mixer still open");
+    free(h->device);
+    free(h->control);
     free(h);
+    return 0;
 }
 
 static void*
-mixer_open(char *device)
+mixer_init(char *device, char *control)
 {
     struct mixer_handle *h;
-
-    h = malloc(sizeof(*h));
-    memset(h,0,sizeof(*h));
-    h->mix    = -1;
-    h->volctl = -1;
-
-    if (-1 == (h->mix = ng_chardev_open(device, O_RDONLY, OSS_MAJOR, 1)))
-	goto err;
-    return h;
-
- err:
-    mixer_close(h);
-    return NULL;
-}
-
-static struct ng_attribute*
-mixer_volctl(void *handle, char *channel)
-{
-    struct mixer_handle *h = handle;
-    struct ng_attribute *attrs;
     int i, devmask;
 
-    if (-1 == ioctl(h->mix,MIXER_READ(SOUND_MIXER_DEVMASK),&devmask)) {
-	fprintf(stderr,"oss mixer read devmask: %s",strerror(errno));
+    h = malloc(sizeof(*h));
+    if (NULL == h)
 	return NULL;
+    memset(h,0,sizeof(*h));
+    h->fd      = -1;
+    h->volctl  = -1;
+    h->device  = strdup(device);
+    h->control = strdup(control);
+
+    if (-1 == mixer_open(h))
+	goto fail1;
+
+    if (-1 == ioctl(h->fd,MIXER_READ(SOUND_MIXER_DEVMASK),&devmask)) {
+	fprintf(stderr,"oss mixer read devmask: %s",strerror(errno));
+	goto fail2;
     }
     for (i = 0; i < SOUND_MIXER_NRDEVICES; i++) {
-	if ((1<<i) & devmask && strcasecmp(names[i],channel) == 0) {
-	    if (-1 == ioctl(h->mix,MIXER_READ(i),&h->volume)) {
+	if ((1<<i) & devmask && strcasecmp(names[i],h->control) == 0) {
+	    if (-1 == ioctl(h->fd,MIXER_READ(i),&h->volume)) {
 		fprintf(stderr,"oss mixer  read volume: %s",strerror(errno));
 		return NULL;
 	    } else {
@@ -112,20 +133,28 @@ mixer_volctl(void *handle, char *channel)
     }
 
     if (-1 == h->volctl) {
-	fprintf(stderr,"oss mixer: '%s' not found, available:", channel);
+	fprintf(stderr,"oss mixer: '%s' not found, available:", control);
 	for (i = 0; i < SOUND_MIXER_NRDEVICES; i++)
 	    if ((1<<i) & devmask)
 		fprintf(stderr," '%s'",names[i]);
 	fprintf(stderr,"\n");
-	return NULL;
+	goto fail2;
     }
 
-    attrs = malloc(sizeof(mixer_attrs));
-    memcpy(attrs,mixer_attrs,sizeof(mixer_attrs));
-    for (i = 0; attrs[i].name != NULL; i++)
-	attrs[i].handle = h;
-    
-    return attrs;
+    h->attrs = malloc(sizeof(mixer_attrs));
+    memcpy(h->attrs,mixer_attrs,sizeof(mixer_attrs));
+    for (i = 0; h->attrs[i].name != NULL; i++) {
+	h->attrs[i].handle = h;
+    }
+
+    mixer_close(h);
+    return h;
+
+fail2:
+    mixer_close(h);
+fail1:
+    mixer_fini(h);
+    return NULL;
 }
 
 static int
@@ -136,8 +165,9 @@ mixer_read_attr(struct ng_attribute *attr)
 
     switch (attr->id) {
     case ATTR_ID_VOLUME:
-	if (-1 == ioctl(h->mix,MIXER_READ(h->volctl),&h->volume))
-	    perror("oss mixer read volume");
+	if (!h->muted)
+	    if (-1 == ioctl(h->fd,MIXER_READ(h->volctl), &h->volume))
+		perror("oss mixer read volume");
 	vol = h->volume & 0x7f;
 	return vol;
     case ATTR_ID_MUTE:
@@ -156,7 +186,7 @@ mixer_write_attr(struct ng_attribute *attr, int val)
     case ATTR_ID_VOLUME:
 	val &= 0x7f;
 	h->volume = val | (val << 8);
-	if (-1 == ioctl(h->mix,MIXER_WRITE(h->volctl),&h->volume))
+	if (-1 == ioctl(h->fd,MIXER_WRITE(h->volctl),&h->volume))
 	    perror("oss mixer write volume");
 	h->muted = 0;
 	break;
@@ -164,12 +194,12 @@ mixer_write_attr(struct ng_attribute *attr, int val)
 	h->muted = val;
 	if (h->muted) {
 	    int zero = 0;
-	    if (-1 == ioctl(h->mix,MIXER_READ(h->volctl),&h->volume))
+	    if (-1 == ioctl(h->fd,MIXER_READ(h->volctl),&h->volume))
 		perror("oss mixer read volume");
-	    if (-1 == ioctl(h->mix,MIXER_WRITE(h->volctl),&zero))
+	    if (-1 == ioctl(h->fd,MIXER_WRITE(h->volctl),&zero))
 		perror("oss mixer write volume");
 	} else {
-	    if (-1 == ioctl(h->mix,MIXER_WRITE(h->volctl),&h->volume))
+	    if (-1 == ioctl(h->fd,MIXER_WRITE(h->volctl),&h->volume))
 		perror("oss mixer write volume");
 	}
 	break;
@@ -228,13 +258,33 @@ mixer_channels(char *device)
     return info;
 }
 
+static char*
+mixer_devname(void *handle)
+{
+    struct mixer_handle *h = handle;
+
+    return h->device;
+}
+
+static struct ng_attribute* mixer_list_attrs(void *handle)
+{
+    struct mixer_handle *h = handle;
+    
+    return h->attrs;
+}
+
 struct ng_mix_driver oss_mixer = {
-    .name      = "oss",
-    .probe     = mixer_probe,
-    .channels  = mixer_channels,
-    .open      = mixer_open,
-    .volctl    = mixer_volctl,
-    .close     = mixer_close,
+    .name       = "oss",
+    .priority   = 3,
+
+    .probe      = mixer_probe,
+    .channels   = mixer_channels,
+    .init       = mixer_init,
+    .open       = mixer_open,
+    .close      = mixer_close,
+    .fini       = mixer_fini,
+    .devname    = mixer_devname,
+    .list_attrs = mixer_list_attrs,
 };
 
 /* ------------------------------------------------------------------- */

@@ -463,6 +463,7 @@ write_toc(char *wavfile, char *tocfile)
 		fl/(75*60), (fl/75)%60, fl%75);
     }
     fclose(fp);
+    return 0;
 }
 
 static int
