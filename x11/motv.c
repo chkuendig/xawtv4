@@ -503,6 +503,7 @@ new_freqtab(void)
     Cardinal nchildren;
     XmStringTable tab;
     char *channel;
+    char *freqtab = freqtab_get();
     int i;
 
     /* update menu */
