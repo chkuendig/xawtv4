@@ -6,6 +6,9 @@
 /* Define to 1 if you have the <alsa/asoundlib.h> header file. */
 #undef HAVE_ALSA_ASOUNDLIB_H
 
+/* Define to 1 if you have the <dev/bktr/ioctl_bt848.h> header file. */
+#undef HAVE_DEV_BKTR_IOCTL_BT848_H
+
 /* Define to 1 if you have the <dev/ic/bt8xx.h> header file. */
 #undef HAVE_DEV_IC_BT8XX_H
 
@@ -39,6 +42,9 @@
 /* "have opengl" */
 #undef HAVE_GL
 
+/* Define to 1 if you have the `iconv_open' function. */
+#undef HAVE_ICONV_OPEN
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -68,9 +74,6 @@
 
 /* Define to 1 if you have the <linux/joystick.h> header file. */
 #undef HAVE_LINUX_JOYSTICK_H
-
-/* Define to 1 if you have the <machine/ioctl_bt848.h> header file. */
-#undef HAVE_MACHINE_IOCTL_BT848_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H

@@ -868,7 +868,9 @@ struct ng_devinfo* dvb_probe(int debug)
     n = 0;
     for (i = 0; i < 4; i++) {
 	snprintf(device,sizeof(device),"/dev/dvb/adapter%d/frontend0",i);
-	fd = ng_chardev_open(device, O_RDONLY | O_NONBLOCK, 250, debug);
+	fd = ng_chardev_open(device, O_RDONLY | O_NONBLOCK, 212, debug);
+	if (-1 == fd)
+	    fd = ng_chardev_open(device, O_RDONLY | O_NONBLOCK, 250, debug);
 	if (-1 == fd)
 	    continue;
 	if (-1 == ioctl(fd, FE_GET_INFO, &feinfo)) {

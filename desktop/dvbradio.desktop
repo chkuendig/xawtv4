@@ -4,4 +4,4 @@ Encoding=UTF-8
 Name=dvbradio
 Exec=dvbradio
 Terminal=no
-Categories=AudioVideo;Radio
+Categories=AudioVideo;Tuner

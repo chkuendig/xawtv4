@@ -110,7 +110,7 @@ dnl ---------------------------------------------------------------------
 dnl Checks for functions
 
 AC_EGREP_HEADER(sockaddr_storage,sys/socket.h,AC_DEFINE(HAVE_SOCKADDR_STORAGE,1,"have ipv6"))
-AC_CHECK_HEADERS(getopt.h soundcard.h unistd.h sys/select.h sys/soundcard.h alsa/asoundlib.h linux/joystick.h dev/ic/bt8xx.h machine/ioctl_bt848.h)
+AC_CHECK_HEADERS(getopt.h soundcard.h unistd.h sys/select.h sys/soundcard.h alsa/asoundlib.h linux/joystick.h dev/bktr/ioctl_bt848.h dev/ic/bt8xx.h)
 
 if test "$enable_dvb" != "no"; then
     AC_CHECK_HEADER(linux/dvb/dmx.h,
@@ -119,7 +119,7 @@ else
     echo "*** dvb disabled"
 fi
 
-AC_CHECK_FUNCS(ftello fseeko getpt getnameinfo getopt_long strcasestr dlopen)
+AC_CHECK_FUNCS(ftello fseeko getpt getnameinfo getopt_long strcasestr dlopen iconv_open)
 AC_SUBST(DLFLAGS)
 DLFLAGS=""
 if test "$ac_cv_func_dlopen" = "no"; then
@@ -131,6 +131,12 @@ if test -z "`echo __ELF__ | $CC -E - | grep __ELF__`"; then
   DLFLAGS="$DLFLAGS -Wl,-E"
 else
   AC_MSG_RESULT(no)
+fi
+
+AC_SUBST(ICONV_LIBS)
+ICONV_LIBS=""
+if test "$ac_cv_func_iconv_open" = "no"; then
+  AC_CHECK_LIB(iconv,iconv_open, [ ICONV_LIBS="-liconv" ] )
 fi
 
 AC_CHECK_LIB(pthread,pthread_create,LIBPTHREAD="-lpthread")

@@ -83,8 +83,8 @@ console/fbtv     : LDLIBS  += \
 	$(FS_LIBS) -ljpeg -lm
 console/ttv          : LDLIBS  += $(THREAD_LIBS) $(AA_LIBS) -ljpeg -lm
 console/scantv       : LDLIBS  += $(THREAD_LIBS) $(VBI_LIBS) -ljpeg
-console/streamer     : LDLIBS  += $(THREAD_LIBS) -ljpeg -lm
-console/webcam       : LDLIBS  += $(THREAD_LIBS) -ljpeg -lm
+console/streamer     : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) -ljpeg -lm
+console/webcam       : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) -ljpeg -lm
 console/radio        : LDLIBS  += $(CURSES_LIBS)
 console/record       : LDLIBS  += $(CURSES_LIBS) $(OSS_LIBS)
 console/dump-mixers  : LDLIBS  += $(OSS_LIBS)

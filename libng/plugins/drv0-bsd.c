@@ -1,7 +1,7 @@
 /*
  * interface to the bsd bktr driver
  *
- *   (c) 2000,01 Gerd Knorr <kraxel@bytesex.org>
+ *   (c) 2000-04 Gerd Knorr <kraxel@bytesex.org>
  *
  */
 #include "config.h"
@@ -21,10 +21,11 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-#ifdef HAVE_DEV_IC_BT8XX_H
+#if defined(HAVE_DEV_IC_BT8XX_H)
 # include <dev/ic/bt8xx.h>
-#endif
-#ifdef HAVE_MACHINE_IOCTL_BT848_H
+#elsif defined(HAVE_DEV_BKTR_IOCTL_BT848_H)
+# include <dev/bktr/ioctl_bt848.h>
+#else
 # include <machine/ioctl_bt848.h>
 # include <machine/ioctl_meteor.h>
 #endif
@@ -84,9 +85,11 @@ static struct ng_attribute* bsd_attrs(void *handle);
 static int     bsd_read_attr(struct ng_attribute*);
 static void    bsd_write_attr(struct ng_attribute*, int val);
 
+#if 0
 static int   bsd_setupfb(void *handle, struct ng_video_fmt *fmt, void *base);
 static int   bsd_overlay(void *handle, struct ng_video_fmt *fmt, int x, int y,
 			 struct OVERLAY_CLIP *oc, int count, int aspect);
+#endif
 
 /* capture */
 static void catchsignal(int signal);
@@ -116,8 +119,10 @@ struct ng_vid_driver bsd_driver = {
     .capabilities  = bsd_flags,
     .list_attrs    = bsd_attrs,
 
+#if 0
     .setupfb       = bsd_setupfb,
     .overlay       = bsd_overlay,
+#endiif
 
     .setformat     = bsd_setformat,
     .startvideo    = bsd_startvideo,
@@ -556,7 +561,6 @@ static int bsd_flags(void *handle)
 {
     int ret = 0;
 
-    ret |= CAN_OVERLAY;
     ret |= CAN_CAPTURE;
     ret |= CAN_TUNE;
     return ret;
@@ -714,6 +718,7 @@ static int bsd_tuned(void *handle)
 /* ---------------------------------------------------------------------- */
 /* overlay                                                                */
 
+#if 0
 static void
 set_overlay(struct bsd_handle *h, int state)
 {
@@ -814,6 +819,7 @@ static int bsd_overlay(void *handle, struct ng_video_fmt *fmt, int x, int y,
     set_overlay(h,h->ov_enabled);
     return 0;
 }
+#endif
 
 /* ---------------------------------------------------------------------- */
 /* capture                                                                */
