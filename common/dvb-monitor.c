@@ -234,7 +234,7 @@ static void table_open(struct dvbmon *dm, struct table *tab)
     if (tab->once && dm->tabfds >= dm->tablimit)
 	return;
 
-    tab->fd = dvb_demux_req_section(dm->dvb, -1, tab->pid, tab->sec,
+    tab->fd = dvb_demux_req_section(dm->dvb, -1, tab->pid, tab->sec, 0xff,
 				    tab->once, dm->timeout);
     if (-1 == tab->fd)
 	return;
@@ -325,8 +325,8 @@ static void table_del(struct dvbmon *dm, int pid, int sec)
 
 static void table_refresh(struct dvbmon *dm, struct table *tab)
 {
-    tab->fd = dvb_demux_req_section(dm->dvb, tab->fd, tab->pid, tab->sec,
-				    0, dm->timeout);
+    tab->fd = dvb_demux_req_section(dm->dvb, tab->fd, tab->pid,
+				    tab->sec, 0xff, 0, dm->timeout);
     if (-1 == tab->fd) {
 	fprintf(stderr,"%s: failed\n",__FUNCTION__);
 	g_source_remove(tab->id);

@@ -714,15 +714,15 @@ void dvb_demux_filter_release(struct dvb_state *h)
     ng_mpeg_apid = 0;
 }
 
-int dvb_demux_req_section(struct dvb_state *h, int fd, int pid, int sec,
-			  int oneshot, int timeout)
+int dvb_demux_req_section(struct dvb_state *h, int fd, int pid,
+			  int sec, int mask, int oneshot, int timeout)
 {
     struct dmx_sct_filter_params filter;
     
     memset(&filter,0,sizeof(filter));
     filter.pid              = pid;
     filter.filter.filter[0] = sec;
-    filter.filter.mask[0]   = 0xff;
+    filter.filter.mask[0]   = mask;
     filter.timeout          = timeout * 1000;
     filter.flags            = DMX_IMMEDIATE_START | DMX_CHECK_CRC;
     if (oneshot)
@@ -914,8 +914,8 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     int pat = 0;
 
     if (names)
-	sdt = dvb_demux_req_section(dvb, -1, 0x11, 0x42, 1, 60);
-    pat = dvb_demux_req_section(dvb, -1, 0x00, 0x00, 1, 20);
+	sdt = dvb_demux_req_section(dvb, -1, 0x11, 0x42, 0xff, 1, 60);
+    pat = dvb_demux_req_section(dvb, -1, 0x00, 0x00, 0xff, 1, 20);
 
     /* program association table */
     if (dvb_demux_get_section(pat, buf, sizeof(buf)) < 0)
@@ -926,7 +926,7 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     /* program maps */
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);
-	pr->fd = dvb_demux_req_section(dvb, -1, pr->p_pid, 2, 1, 20);
+	pr->fd = dvb_demux_req_section(dvb, -1, pr->p_pid, 2, 0xff, 1, 20);
     }
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);

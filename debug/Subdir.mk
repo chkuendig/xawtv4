@@ -9,7 +9,8 @@ TARGETS-debug += \
 endif
 ifeq ($(FOUND_DVB),yes)
 TARGETS-debug += \
-	debug/dvb-signal
+	debug/dvb-signal \
+	debug/epg
 endif
 ifeq ($(FOUND_ALSA),yes)
 TARGETS-debug += \
@@ -22,14 +23,25 @@ debug/dvb-signal: \
 	$(OBJS-common-dvb) \
 	libng/libng.a
 
+debug/epg: \
+	debug/epg.o \
+	common/devs.o \
+	common/parseconfig.o \
+	common/dvb-monitor.o \
+	$(OBJS-common-dvb) \
+	libng/libng.a
+
 debug/xvideo:     debug/xvideo.o
 debug/sysfs:      debug/sysfs.o
 debug/alsamixer:  debug/alsamixer.o
+
+debug/epg.o      : CFLAGS  += $(shell pkg-config --cflags glib-2.0 libxml-2.0)
 
 debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
 debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)
 
 debug/dvb-signal : LDFLAGS += $(DLFLAGS)
+debug/epg        : LDFLAGS += $(DLFLAGS) $(shell pkg-config --libs glib-2.0 libxml-2.0)
 
 # poor mans malloc debugging
 CFLAGS           += -fno-omit-frame-pointer

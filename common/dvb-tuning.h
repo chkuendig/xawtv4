@@ -37,8 +37,8 @@ void dvb_demux_filter_setup(struct dvb_state *h, int video, int audio);
 int  dvb_demux_filter_apply(struct dvb_state *h);
 void dvb_demux_filter_release(struct dvb_state *h);
 
-int dvb_demux_req_section(struct dvb_state *h, int fd, int pid, int sec,
-			  int oneshot, int timeout);
+int dvb_demux_req_section(struct dvb_state *h, int fd, int pid,
+			  int sec, int mask, int oneshot, int timeout);
 int dvb_demux_get_section(int fd, unsigned char *buf, int len);
 
 int dvb_get_transponder_info(struct dvb_state *dvb,

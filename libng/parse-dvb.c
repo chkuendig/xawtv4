@@ -61,8 +61,8 @@ static int iconv_string(char *from, char *to,
     return max-1 - olen;
 }
 
-static void parse_string(unsigned char *src, int slen,
-			 unsigned char *dest, int dlen)
+void mpeg_parse_psi_string(unsigned char *src, int slen,
+			   unsigned char *dest, int dlen)
 {
     int ch = 0;
 
@@ -86,7 +86,7 @@ static void parse_nit_desc_1(unsigned char *desc, int dlen,
 
 	switch (t) {
 	case 0x40:
-	    parse_string(desc+i+2,l,dest,max);
+	    mpeg_parse_psi_string(desc+i+2,l,dest,max);
 	    break;
 	}
     }
@@ -207,8 +207,8 @@ static void parse_sdt_desc(unsigned char *desc, int dlen,
 	    pr->updated = 1;
 	    net = desc + i+3;
 	    name = net + net[0] + 1;
-	    parse_string(net+1,  net[0],  pr->net,  sizeof(pr->net));
-	    parse_string(name+1, name[0], pr->name, sizeof(pr->name));
+	    mpeg_parse_psi_string(net+1,  net[0],  pr->net,  sizeof(pr->net));
+	    mpeg_parse_psi_string(name+1, name[0], pr->name, sizeof(pr->name));
 	    break;
 	}
     }
@@ -321,45 +321,3 @@ int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 	fprintf(stderr,"\n");
     return len+4;
 }
-
-int mpeg_parse_psi_eit(void *fixme, unsigned char *data, int verbose)
-{
-    int id,version,current,len;
-    int j,dlen,tsid,nid;
-
-    len     = mpeg_getbits(data,12,12) + 3 - 4;
-    id      = mpeg_getbits(data,24,16);
-    version = mpeg_getbits(data,42,5);
-    current = mpeg_getbits(data,47,1);
-    if (!current)
-	return len+4;
-
-    tsid = mpeg_getbits(data,64,16);
-    nid  = mpeg_getbits(data,80,16);
-    fprintf(stderr,
-	    "ts [eit]: id %3d ver %2d tsid %d nid %d [%d/%d]\n",
-	    id, version, tsid, nid,
-	    mpeg_getbits(data,48, 8),
-	    mpeg_getbits(data,56, 8));
-
-    j = 112;
-    while (j < len*8) {
-	fprintf(stderr,"  id %d day %d time %06x du %06x r %d ca %d  #",
-		mpeg_getbits(data,j,16),
-		mpeg_getbits(data,j+16,16),
-		mpeg_getbits(data,j+32,24),
-		mpeg_getbits(data,j+56,24),
-		mpeg_getbits(data,j+80,3),
-		mpeg_getbits(data,j+83,1));
-	dlen = mpeg_getbits(data,j+84,12);
-	j += 96;
-	// dump_desc(data + j/8, dlen);
-	fprintf(stderr,"\n");
-	j += 8*dlen;
-    }
-    
-    if (verbose > 1)
-	fprintf(stderr,"\n");
-    return len+4;
-}
-
