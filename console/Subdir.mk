@@ -87,8 +87,8 @@ console/streamer     : LDLIBS  += $(THREAD_LIBS) -ljpeg -lm
 console/webcam       : LDLIBS  += $(THREAD_LIBS) -ljpeg -lm
 console/radio        : LDLIBS  += $(CURSES_LIBS)
 console/record       : LDLIBS  += $(CURSES_LIBS) $(OSS_LIBS)
-+console/dump-mixers : LDLIBS  += $(OSS_LIBS)
-console/v4l-conf     : LDLIBS  += $(ATHENA_LIBS)
+console/dump-mixers  : LDLIBS  += $(OSS_LIBS)
+console/v4l-conf     : LDLIBS  += $(X11_LIBS)
 
 # linker flags
 console/fbtv     : LDFLAGS += $(DLFLAGS)

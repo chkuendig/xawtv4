@@ -40,8 +40,9 @@ LIB_FLAGS	:= -I. -I./vbistuff -I./x11 \
 		   -I$(srcdir)/libng -Llibng
 
 # X11 stuff
-ATHENA_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@ @ATHENA@
-MOTIF_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@ -lXm -lXmu -lXt @X_PRE_LIBS@ \
+X11_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@
+ATHENA_LIBS	:= $(X11_LIBS) @ATHENA@
+MOTIF_LIBS	:= $(X11_LIBS) -lXm -lXmu -lXt @X_PRE_LIBS@ \
 		   -lXp -lXpm -lXext -lX11 @X_EXTRA_LIBS@
 
 # gtk2 stuff
