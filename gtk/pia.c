@@ -493,6 +493,7 @@ int main(int argc, char *argv[])
     cfg_parse_cmdline(&argc,argv,cmd_opts);
     debug = GET_CMD_DEBUG();
     ng_debug = GET_CMD_DEBUG();
+    ng_log_bad_stream = GET_CMD_DEBUG();
     if (GET_CMD_HELP()) {
 	usage(argv[0]);
 	return 0;

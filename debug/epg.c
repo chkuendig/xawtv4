@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr,"no dvb device found\n");
 	exit(1);
     }
-    devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
+    devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 1, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_tsid,NULL);
     eit = eit_add_watch(devs.dvb, 0x50,0xf0, verbose, 1);

@@ -74,7 +74,110 @@ struct cfg_cmdline cmd_opts_only[] = {
     }
 };
 
+/* ----------------------------------------------------------------------- */
+
+static int exit_application;
+
+static void termsig(int signal)
+{
+    exit_application++;
+}
+
+static void ignore_sig(int signal)
+{
+    /* nothing */
+}
+
+static void siginit(void)
+{
+    struct sigaction act,old;
+
+    memset(&act,0,sizeof(act));
+    sigemptyset(&act.sa_mask);
+
+    act.sa_handler = termsig;
+    sigaction(SIGINT,  &act, &old);
+    sigaction(SIGTERM, &act, &old);
+    sigaction(SIGTERM, &act, &old);
+
+    act.sa_handler = ignore_sig;
+    sigaction(SIGALRM, &act, &old);
+}
+
 /* ------------------------------------------------------------------------ */
+
+static int timeout = 20;
+static int current;
+
+static void dvbwatch_tty(struct psi_info *info, int event,
+			 int tsid, int pnr, void *data)
+{
+    struct psi_program *pr;
+
+    switch (event) {
+    case DVBMON_EVENT_SWITCH_TS:
+	fprintf(stderr,"  tsid  %5d\n",tsid);
+	current = tsid;
+	break;
+    case DVBMON_EVENT_UPDATE_PR:
+	pr = psi_program_get(info, tsid, pnr, 0);
+	if (!pr)
+	    return;
+	if (tsid != current)
+	    return;
+	if (pr->type != 1)
+	    return;
+	if (0 == pr->v_pid)
+	    return;
+	if (pr->name[0] == '\0')
+	    return;
+	/* Hmm, get duplicates :-/ */
+	fprintf(stderr,"    pnr %5d  %s\n",
+		pr->pnr, pr->name);
+    }
+}
+
+static void tty_scan()
+{
+    GMainContext *context = g_main_context_default();
+    time_t tuned;
+    char *sec;
+    char *name;
+
+    sec = cfg_sections_first("dvb-ts");
+    if (NULL == sec)
+	fprintf(stderr,"Oops, have no starting point yet.\n");
+    for (;sec;) {
+	/* tune */
+	name = cfg_get_str("dvb-ts",sec,"name");
+	fprintf(stderr,"Tuning tsid %s ...\n", sec);
+	if (0 != dvb_frontend_tune(devs.dvb, "dvb-ts", sec))
+	    break;
+	current = 0;
+
+ 	/* fish data */
+	tuned = time(NULL);
+	while (!exit_application && time(NULL) - tuned < timeout) {
+	    alarm(timeout/3);
+	    g_main_context_iteration(context,TRUE);
+	}
+	if (!current) {
+	    fprintf(stderr,"Hmm, no data received. Frontend is%s locked.\n",
+		    dvb_frontend_is_locked(devs.dvb) ? "" : " not");
+	}
+	if (exit_application) {
+	    fprintf(stderr,"Ctrl-C seen, stopping here.\n");
+	    break;
+	}
+
+	/* more not-yet seen transport streams? */
+	cfg_set_sflags("dvb-ts",sec,1,1);
+	cfg_sections_for_each("dvb-ts",sec) {
+	    if (!cfg_get_sflags("dvb-ts",sec))
+		break;
+	}
+    }
+}
 
 static void
 usage(void)
@@ -112,7 +215,7 @@ main(int argc, char *argv[])
     device_init(cfg_get_str(O_CMD_DEVICE));
     if (NULL == devs.dvb)
 	gtk_panic_box(have_x11, "No DVB device found.\n");
-    devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
+    devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, have_x11, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
@@ -124,14 +227,14 @@ main(int argc, char *argv[])
 	dvbscan_show_window();
 	if (!debug)
  	    gtk_redirect_stderr_to_gui(GTK_WINDOW(dvbscan_win));
+	gtk_main();
     } else {
 	/* enter tty mode */
-	fprintf(stderr,"can't open display\n");
-	fprintf(stderr,"non-x11 support not there yet, sorry\n");
-	exit(1);
+	fprintf(stderr,"scanning ...\n");
+	dvbmon_add_callback(devs.dvbmon,dvbwatch_tty,NULL);
+	siginit();
+	tty_scan();
     }
-
-    gtk_main();
     fprintf(stderr,"bye...\n");
 
     write_config_file("dvb-ts");

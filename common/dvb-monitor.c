@@ -342,7 +342,7 @@ static void table_refresh(struct dvbmon *dm, struct table *tab)
 /* external interface                                                            */
 
 struct dvbmon*
-dvbmon_init(struct dvb_state *dvb, int verbose, int others, int pmts)
+dvbmon_init(struct dvb_state *dvb, int verbose, int o_nit, int o_sdt, int pmts)
 {
     struct dvbmon *dm;
 
@@ -354,7 +354,7 @@ dvbmon_init(struct dvb_state *dvb, int verbose, int others, int pmts)
 
     dm->verbose  = verbose;
     dm->tabdebug = 0;
-    dm->tablimit = (others ? 5 : 3) + pmts;
+    dm->tablimit = 3 + (o_nit ? 1 : 0) + (o_sdt ? 1 : 0) + pmts;
     dm->timeout  = 60;
     dm->dvb      = dvb;
     dm->info     = psi_info_alloc();
@@ -364,10 +364,10 @@ dvbmon_init(struct dvb_state *dvb, int verbose, int others, int pmts)
 	table_add(dm, "pat",   0x00, 0x00, 0);
 	table_add(dm, "nit",   0x10, 0x40, 0);
 	table_add(dm, "sdt",   0x11, 0x42, 0);
-	if (others) {
+	if (o_nit)
 	    table_add(dm, "nit",   0x10, 0x41, 0);
+	if (o_sdt)
 	    table_add(dm, "sdt",   0x11, 0x46, 0);
-	}
     } else {
 	fprintf(stderr,"dvbmon: hwinit FAILED\n");
     }

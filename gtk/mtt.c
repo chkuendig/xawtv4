@@ -215,7 +215,7 @@ main(int argc, char **argv)
 	if (dvbmode) {
 	    vbi_set_pid(vbi, pid);
 	    dvb    = dvb_init(device);
-	    dvbmon = dvbmon_init(dvb, debug, 0, 2);
+	    dvbmon = dvbmon_init(dvb, debug, 0, 0, 2);
 	}
 #endif
 	ch = g_io_channel_unix_new(vbi->fd);

@@ -249,7 +249,7 @@ grabber_init(char *dev)
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
 	display_mode = DISPLAY_DVB;
-	devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
+	devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 1, 2);
 	dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
 	eit = eit_add_watch(devs.dvb, 0x4e,0xff, 0, 0);
 //	eit = eit_add_watch(devs.dvb, 0x50,0xf0, 0, 0);

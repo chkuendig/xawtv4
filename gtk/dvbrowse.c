@@ -211,7 +211,7 @@ main(int argc, char *argv[])
     device_init(cfg_get_str(O_CMD_DEVICE));
     if (NULL == devs.dvb)
 	gtk_panic_box(1, "No DVB device found.\n");
-    devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
+    devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 1, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_tsid,NULL);
 //  eit = eit_add_watch(devs.dvb, 0x4e,0xff, 0, 0);

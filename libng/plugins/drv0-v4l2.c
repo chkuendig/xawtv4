@@ -970,7 +970,7 @@ v4l2_stop_streaming(struct v4l2_handle *h)
 	    ng_waiton_video_buf(&h->buf_me[i]);
 	if (ng_debug)
 	    print_bufinfo(&h->buf_v4l2[i]);
-	if (-1 == munmap(h->buf_me[i].data,h->buf_me[i].size))
+	if (-1 == munmap(h->buf_me[i].data,h->buf_v4l2[i].length))
 	    perror("munmap");
     }
     h->queue = 0;
