@@ -17,6 +17,8 @@
 
 #include "grab-ng.h"
 #include "parseconfig.h"
+#include "struct-dump.h"
+#include "struct-dvb.h"
 #include "dvb.h"
 
 int dvb_debug = 0;
@@ -75,118 +77,6 @@ static fe_hierarchy_t fe_vdr_hierarchy[] = {
 };
 
 /* ----------------------------------------------------------------------- */
-/* map enums to human-readable names                                       */
-
-static char *fe_type[] = {
-    [ FE_QPSK ] = "QPSK (dvb-s)",
-    [ FE_QAM  ] = "QAM  (dvb-c)",
-    [ FE_OFDM ] = "OFDM (dvb-t)",
-};
-
-static char *fe_status[] = {
-    "signal",
-    "carrier",
-    "viterbi",
-    "sync",
-    "lock",
-    "timeout",
-    "reinit",
-};
-
-static char *fe_caps[] = {
-    "FE_CAN_INVERSION_AUTO",
-    "FE_CAN_FEC_1_2",
-    "FE_CAN_FEC_2_3",
-    "FE_CAN_FEC_3_4",
-
-    "FE_CAN_FEC_4_5",
-    "FE_CAN_FEC_5_6",
-    "FE_CAN_FEC_6_7",
-    "FE_CAN_FEC_7_8",
-
-    "FE_CAN_FEC_8_9",
-    "FE_CAN_FEC_AUTO",
-    "FE_CAN_QPSK",
-    "FE_CAN_QAM_16",
-    
-    "FE_CAN_QAM_32",
-    "FE_CAN_QAM_64",
-    "FE_CAN_QAM_128",
-    "FE_CAN_QAM_256",
-    
-    "FE_CAN_QAM_AUTO",
-    "FE_CAN_TRANSMISSION_MODE_AUTO",
-    "FE_CAN_BANDWIDTH_AUTO",
-    "FE_CAN_GUARD_INTERVAL_AUTO",
-    
-    "FE_CAN_HIERARCHY_AUTO",
-    "?","?","?",
-
-    "?","?","?","?",
-
-    "?",
-    "FE_CAN_RECOVER",
-    "FE_CAN_CLEAN_SETUP",
-    "FE_CAN_MUTE_TS",
-};
-
-static char *fe_name_bandwidth[] = {
-    [ BANDWIDTH_AUTO  ] = "auto",
-    [ BANDWIDTH_8_MHZ ] = "8 MHz",
-    [ BANDWIDTH_7_MHZ ] = "7 MHz",
-    [ BANDWIDTH_6_MHZ ] = "6 MHz",
-};
-
-static char *fe_name_rates[] = {
-    [ FEC_AUTO ] = "auto",
-    [ FEC_1_2  ] = "1/2",
-    [ FEC_2_3  ] = "2/3",
-    [ FEC_3_4  ] = "3/4",
-    [ FEC_4_5  ] = "4/5",
-    [ FEC_5_6  ] = "5/6",
-    [ FEC_6_7  ] = "6/7",
-    [ FEC_7_8  ] = "7/8",
-    [ FEC_8_9  ] = "8/9",
-};
-
-static char *fe_name_modulation[] = {
-    [ QAM_AUTO ] = "auto",
-    [ QAM_16   ] = "16",
-    [ QAM_32   ] = "32",
-    [ QAM_64   ] = "64",
-    [ QAM_128  ] = "128",
-    [ QAM_256  ] = "256",
-};
-
-static char *fe_name_transmission[] = {
-    [ TRANSMISSION_MODE_AUTO ] = "auto",
-    [ TRANSMISSION_MODE_2K   ] = "2k",
-    [ TRANSMISSION_MODE_8K   ] = "8k",
-};
-
-static char *fe_name_guard[] = {
-    [ GUARD_INTERVAL_AUTO ] = "auto",
-    [ GUARD_INTERVAL_1_4  ] = "1/4",
-    [ GUARD_INTERVAL_1_8  ] = "1/8",
-    [ GUARD_INTERVAL_1_16 ] = "1/16",
-    [ GUARD_INTERVAL_1_32 ] = "1/32",
-};
-
-static char *fe_name_hierarchy[] = {
-    [ HIERARCHY_AUTO ] = "auto",
-    [ HIERARCHY_NONE ] = "none",
-    [ HIERARCHY_1 ]    = "1",
-    [ HIERARCHY_2 ]    = "2",
-    [ HIERARCHY_4 ]    = "3",
-};
-
-static char *fe_name_inversion[] = {
-    [ INVERSION_OFF  ] = "off",
-    [ INVERSION_ON   ] = "on",
-    [ INVERSION_AUTO ] = "auto",
-};
-
-/* ----------------------------------------------------------------------- */
 
 struct demux_filter {
     int                              fd;
@@ -212,15 +102,27 @@ struct dvb_state {
 /* ----------------------------------------------------------------------- */
 /* handle diseqc                                                           */
 
+static int
+xioctl(int fd, int cmd, void *arg, int mayfail)
+{
+    int rc;
+
+    rc = ioctl(fd,cmd,arg);
+    if (0 == rc && !dvb_debug)
+	return rc;
+    if (mayfail && errno == mayfail && !dvb_debug)
+	return rc;
+    print_ioctl(stderr,ioctls_dvb,"dvb ioctl: ",cmd,arg);
+    fprintf(stderr,": %s\n",(rc == 0) ? "ok" : strerror(errno));
+    return rc;
+}
+
 static int exec_diseqc(int fd, char *action)
 {
     struct dvb_diseqc_master_cmd cmd;
     int wait,len,done;
     int c0,c1,c2,c3;
 
-    if (dvb_debug)
-	fprintf(stderr,"diseqc:");
-    
     for (done = 0; !done;) {
 	switch (*action) {
 	case '\0':
@@ -231,42 +133,24 @@ static int exec_diseqc(int fd, char *action)
 	    /* ignore */
 	    break;
 	case 't':
-	    if (dvb_debug)
-		fprintf(stderr, " tone-off");
-	    if (ioctl(fd, FE_SET_TONE, SEC_TONE_OFF) == -1)
-		perror("dvb sat: ioctl FE_SET_TONE");
+	    xioctl(fd, FE_SET_TONE, (void*)SEC_TONE_OFF, 0);
 	    break;
 	case 'T':
-	    if (dvb_debug)
-		fprintf(stderr, " tone-on");
-	    if (ioctl(fd, FE_SET_TONE, SEC_TONE_ON) == -1)
-		perror("dvb sat: ioctl FE_SET_TONE");
+	    xioctl(fd, FE_SET_TONE, (void*)SEC_TONE_ON, 0);
 	    break;
 	case 'v':
-	    if (dvb_debug)
-		fprintf(stderr, " 13V");
-	    if (ioctl(fd, FE_SET_VOLTAGE, SEC_VOLTAGE_13) == -1)
-		perror("dvb sat: ioctl FE_SET_VOLTAGE");
+	    xioctl(fd, FE_SET_VOLTAGE, (void*)SEC_VOLTAGE_13, 0);
 	    break;
 	case 'V':
-	    if (dvb_debug)
-		fprintf(stderr, " 18V");
-	    if (ioctl(fd, FE_SET_VOLTAGE, SEC_VOLTAGE_18) == -1)
-		perror("dvb sat: ioctl FE_SET_VOLTAGE");
+	    xioctl(fd, FE_SET_VOLTAGE, (void*)SEC_VOLTAGE_18, 0);
 	    break;
 	case 'a':
 	case 'A':
-	    if (dvb_debug)
-		fprintf(stderr, " mini-a");
-	    if (ioctl(fd, FE_DISEQC_SEND_BURST, SEC_MINI_A) == -1)
-		perror("dvb sat: ioctl FE_DISEQC_SEND_BURST");
+	    xioctl(fd, FE_DISEQC_SEND_BURST, (void*)SEC_MINI_A, 0);
 	    break;
 	case 'b':
 	case 'B':
-	    if (dvb_debug)
-		fprintf(stderr, " mini-b");
-	    if (ioctl(fd, FE_DISEQC_SEND_BURST, SEC_MINI_B) == -1)
-		perror("dvb sat: ioctl FE_DISEQC_SEND_BURST");
+	    xioctl(fd, FE_DISEQC_SEND_BURST, (void*)SEC_MINI_B, 0);
 	    break;
 	case '[':
 	    if (4 == sscanf(action+1,"%x %x %x %x%n",
@@ -277,9 +161,8 @@ static int exec_diseqc(int fd, char *action)
 		cmd.msg[3] = c3;
 		cmd.msg_len = 4;
 		if (dvb_debug)
-		    fprintf(stderr, " cmd-%x-%x-%x-%x", c0, c1, c2, c3);
-		if (ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd) == -1)
-		    perror("dvb sat: ioctl FE_DISEQC_SEND_MASTER_CMD");
+		    fprintf(stderr, "dvb: cmd %x %x %x %x\n", c0, c1, c2, c3);
+		xioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd, 0);
 		action += len+1;
 	    }
 	    break;
@@ -287,7 +170,7 @@ static int exec_diseqc(int fd, char *action)
 	case 'W':
 	    if (1 == sscanf(action+1,"%d%n",&wait,&len)) {
 		if (dvb_debug)
-		    fprintf(stderr, " wait-%d",wait);
+		    fprintf(stderr, "dvb: wait %d msec\n",wait);
 		usleep(wait*1000);
 		action += len;
 	    }
@@ -299,9 +182,6 @@ static int exec_diseqc(int fd, char *action)
 	}
 	action++;
     }
-    
-    if (dvb_debug)
-	fprintf(stderr,"\n");
     return 0;
 }
 
@@ -348,6 +228,7 @@ static int dvb_frontend_open(struct dvb_state *h)
 int dvb_frontend_tune(struct dvb_state *h, char *name)
 {
     char *diseqc;
+    char *action;
     int lof;
     int val;
 
@@ -361,7 +242,10 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	    fprintf(stderr,"no diseqc info for \"%s\"\n",name);
 	    return -1;
 	}
-	exec_diseqc(h->fd,cfg_get_str("diseqc", diseqc, "action"));
+	action = cfg_get_str("diseqc", diseqc, "action");
+	if (dvb_debug)
+	    fprintf(stderr,"diseqc action: \"%s\"\n",action);
+	exec_diseqc(h->fd,action);
 
 	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
 	val = cfg_get_int("dvb", name, "frequency", 0);
@@ -377,12 +261,12 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	    fprintf(stderr,"dvb fe: tuning freq=%d+%d, inv=%s "
 		    "symbol_rate=%d fec_inner=%s\n",
 		    lof, h->p.frequency / 1000,
-		    fe_name_inversion [ h->p.inversion ],
+		    dvb_fe_inversion [ h->p.inversion ],
 		    h->p.u.qpsk.symbol_rate,
-		    fe_name_rates [ h->p.u.qpsk.fec_inner ]);
+		    dvb_fe_rates [ h->p.u.qpsk.fec_inner ]);
 	}
-
 	break;
+
     case FE_QAM:
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val;
@@ -399,11 +283,11 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	    fprintf(stderr,"dvb fe: tuning freq=%d, inv=%d "
 		    "symbol_rate=%d fec_inner=%s modulation=%s\n",
 		    h->p.frequency, h->p.inversion, h->p.u.qam.symbol_rate,
-		    fe_name_rates      [ h->p.u.qam.fec_inner  ],
-		    fe_name_modulation [ h->p.u.qam.modulation ]);
+		    dvb_fe_rates      [ h->p.u.qam.fec_inner  ],
+		    dvb_fe_modulation [ h->p.u.qam.modulation ]);
 	}
-
 	break;
+
     case FE_OFDM:
 	val = cfg_get_int("dvb", name, "frequency", 0);
 	h->p.frequency = val * 1000;
@@ -430,13 +314,13 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 		    "bandwidth=%s code_rate=[%s-%s] constellation=%s "
 		    "transmission=%s guard=%s hierarchy=%s\n",
 		    h->p.frequency, h->p.inversion,
-		    fe_name_bandwidth    [ h->p.u.ofdm.bandwidth             ],
-		    fe_name_rates        [ h->p.u.ofdm.code_rate_HP          ],
-		    fe_name_rates        [ h->p.u.ofdm.code_rate_LP          ],
-		    fe_name_modulation   [ h->p.u.ofdm.constellation         ],
-		    fe_name_transmission [ h->p.u.ofdm.transmission_mode     ],
-		    fe_name_guard        [ h->p.u.ofdm.guard_interval        ],
-		    fe_name_hierarchy    [ h->p.u.ofdm.hierarchy_information ]);
+		    dvb_fe_bandwidth    [ h->p.u.ofdm.bandwidth             ],
+		    dvb_fe_rates        [ h->p.u.ofdm.code_rate_HP          ],
+		    dvb_fe_rates        [ h->p.u.ofdm.code_rate_LP          ],
+		    dvb_fe_modulation   [ h->p.u.ofdm.constellation         ],
+		    dvb_fe_transmission [ h->p.u.ofdm.transmission_mode     ],
+		    dvb_fe_guard        [ h->p.u.ofdm.guard_interval        ],
+		    dvb_fe_hierarchy    [ h->p.u.ofdm.hierarchy_information ]);
 	}
 	break;
     }
@@ -450,10 +334,8 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	}
     }
 
-    if (-1 == ioctl(h->fd,FE_SET_FRONTEND,&h->p)) {
-	perror("dvb fe: ioctl FE_SET_FRONTEND");
+    if (-1 == xioctl(h->fd,FE_SET_FRONTEND,&h->p, 0))
 	return -1;
-    }
     memcpy(&h->plast, &h->p, sizeof(h->plast));
     return 0;
 }
@@ -482,9 +364,9 @@ void dvb_frontend_status_print(struct dvb_state *h)
     
     fprintf(stderr,"dvb fe: %7d %7d %7d %7d | ",
 	    ber, snr, signal, ublocks);
-    for (i = 0; i < sizeof(fe_status)/sizeof(fe_status[0]); i++)
+    for (i = 0; i < 32; i++)
 	if (status & (1 << i))
-	    fprintf(stderr," %s",fe_status[i]);
+	    fprintf(stderr," %s",dvb_fe_status[i]);
     fprintf(stderr,"\n");
 }
 
@@ -495,7 +377,7 @@ int dvb_frontend_is_locked(struct dvb_state *h)
     if (-1 == dvb_frontend_open(h))
 	return 0;
     if (-1 == ioctl(h->fd, FE_READ_STATUS, &status)) {
-	perror("dvb fe: FE_READ_STATUS");
+	perror("dvb fe: ioctl FE_READ_STATUS");
 	return 0;
     }
     return (status & FE_HAS_LOCK);
@@ -565,7 +447,7 @@ int dvb_demux_station_filter(struct dvb_state *h, char *name)
 	    goto oops;
 	}
     }
-    if (-1 == ioctl(h->video.fd,DMX_SET_PES_FILTER,&h->video.filter)) {
+    if (-1 == xioctl(h->video.fd,DMX_SET_PES_FILTER,&h->video.filter,0)) {
 	fprintf(stderr,"dvb mux: [video %d] ioctl DMX_SET_PES_FILTER: %s\n",
 		ng_mpeg_vpid, strerror(errno));
 	goto oops;
@@ -579,17 +461,17 @@ int dvb_demux_station_filter(struct dvb_state *h, char *name)
 	    goto oops;
 	}
     }
-    if (-1 == ioctl(h->audio.fd,DMX_SET_PES_FILTER,&h->audio.filter)) {
+    if (-1 == xioctl(h->audio.fd,DMX_SET_PES_FILTER,&h->audio.filter,0)) {
 	fprintf(stderr,"dvb mux: [audio %d] ioctl DMX_SET_PES_FILTER: %s\n",
 		ng_mpeg_apid, strerror(errno));
 	goto oops;
     }
 
-    if (-1 == ioctl(h->video.fd,DMX_START,NULL)) {
+    if (-1 == xioctl(h->video.fd,DMX_START,NULL,0)) {
 	perror("dvb mux: [video] ioctl DMX_START");
 	goto oops;
     }
-    if (-1 == ioctl(h->audio.fd,DMX_START,NULL)) {
+    if (-1 == xioctl(h->audio.fd,DMX_START,NULL,0)) {
 	perror("dvb mux: [audio] ioctl DMX_START");
 	goto oops;
     }
@@ -602,12 +484,12 @@ int dvb_demux_station_filter(struct dvb_state *h, char *name)
 void dvb_demux_station_release(struct dvb_state *h)
 {
     if (-1 != h->audio.fd) {
-	ioctl(h->audio.fd,DMX_STOP,NULL);
+	xioctl(h->audio.fd,DMX_STOP,NULL,0);
 	close(h->audio.fd);
 	h->audio.fd = -1;
     }
     if (-1 != h->video.fd) {
-	ioctl(h->video.fd,DMX_STOP,NULL);
+	xioctl(h->video.fd,DMX_STOP,NULL,0);
 	close(h->video.fd);
 	h->video.fd = -1;
     }
@@ -633,7 +515,7 @@ int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot)
 		pid, h->demux, strerror(errno));
 	goto oops;
     }
-    if (-1 == ioctl(fd, DMX_SET_FILTER, &filter)) {
+    if (-1 == xioctl(fd, DMX_SET_FILTER, &filter, 0)) {
 	fprintf(stderr,"dvb mux: [pid %d] ioctl DMX_SET_PES_FILTER: %s\n",
 		pid, strerror(errno));
 	goto oops;
@@ -692,18 +574,9 @@ struct dvb_state* dvb_init(char *adapter)
 	goto oops;
     }
 
-    if (-1 == ioctl(h->fd, FE_GET_INFO, &h->info)) {
+    if (-1 == xioctl(h->fd, FE_GET_INFO, &h->info, 0)) {
 	perror("dvb fe: ioctl FE_GET_INFO");
 	goto oops;
-    }
-    if (dvb_debug) {
-	int i;
-
-	fprintf(stderr,"dvb fe: %s: %s\n",
-		fe_type[h->info.type], h->info.name);
-	for (i = 0; i < sizeof(fe_caps)/sizeof(fe_caps[0]); i++)
-	    if (h->info.caps & ((int32_t)1 << i))
-		fprintf(stderr,"dvb fe caps: %s\n",fe_caps[i]);
     }
 
     dvb_frontend_release(h);

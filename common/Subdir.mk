@@ -1,5 +1,8 @@
 ifeq ($(FOUND_DVB),yes)
-OBJS-dvb := common/dvb.o
+OBJS-dvb := \
+	common/dvb.o \
+	structs/struct-dvb.o \
+	structs/struct-dump.o
 endif
 
 OBJS-common-capture := \

@@ -23,7 +23,7 @@ debug/probe: \
 debug/dvb-signal: \
 	debug/dvb-signal.o \
 	common/parseconfig.o \
-	common/dvb.o \
+	$(OBJS-dvb) \
 	libng/libng.a
 
 debug/xvideo: debug/xvideo.o

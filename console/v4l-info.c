@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,10 +14,15 @@
 
 #include "videodev.h"
 #include "videodev2.h"
+#ifdef HAVE_DVB
+# include <linux/dvb/frontend.h>
+# include <linux/dvb/dmx.h>
+#endif
 
 #include "struct-dump.h"
 #include "struct-v4l.h"
 #include "struct-v4l2.h"
+#include "struct-dvb.h"
 
 /* --------------------------------------------------------------------- */
 /* v4l(1)                                                                */
@@ -261,6 +268,24 @@ static int dump_v4l2(int fd, int tab)
 }
 
 /* --------------------------------------------------------------------- */
+/* dvb                                                                   */
+
+#ifdef HAVE_DVB
+static int dump_dvb(int fd, int tab)
+{
+	struct dvb_frontend_info info;
+	
+	printf("general info\n");
+	memset(&info,0,sizeof(info));
+	if (-1 == ioctl(fd,FE_GET_INFO,&info))
+		return -1;
+	printf("    FE_GET_INFO\n");
+	print_struct(stdout,desc_frontend_info,&info,"",tab);
+	printf("\n");
+}
+#endif
+
+/* --------------------------------------------------------------------- */
 /* main                                                                  */
 
 int main(int argc, char *argv[])
@@ -278,6 +303,15 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"open %s: %s\n",device,strerror(errno));
 		exit(1);
 	};
+
+#ifdef HAVE_DVB
+	if (-1 != ioctl(fd,FE_GET_INFO,dummy)) {
+		printf("\n### dvb frontend device info [%s] ###\n",device);
+		dump_dvb(fd,tab);
+		//ok = 1;
+		return 0;
+	}
+#endif
 
 	if (-1 != ioctl(fd,VIDIOC_QUERYCAP,dummy)) {
 		printf("\n### v4l2 device info [%s] ###\n",device);

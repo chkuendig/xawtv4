@@ -73,10 +73,12 @@ int print_struct(FILE *fp, struct struct_desc *desc, void *data,
 			}
 			return 0; /* FIXME */
 		}
-		if (tab)
-			fprintf(fp,"\t%-24s: ",name);
-		else
-			fprintf(fp,"%s=",name);
+		if (desc[i].type != PADDING) {
+			if (tab)
+				fprintf(fp,"\t%-24s: ",name);
+			else
+				fprintf(fp,"%s=",name);
+		}
 		switch (desc[i].type) {
 		case STRING:
 			fprintf(fp,"\"%-.*s\"",desc[i].length,ptr);
@@ -239,7 +241,7 @@ int print_ioctl(FILE *fp, struct ioctl_desc *ioctls, char *prefix,
 	if (desc) {
 		print_struct(fp,desc,ptr,"",0);
 	} else {
-		fprintf(stderr,"???");
+		fprintf(stderr,"%p",ptr);
 	}
 	fprintf(fp,")");
 	return 0;

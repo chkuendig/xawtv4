@@ -61,7 +61,8 @@ console/v4l-info: \
 	console/v4l-info.o \
 	structs/struct-dump.o \
 	structs/struct-v4l.o \
-	structs/struct-v4l2.o
+	structs/struct-v4l2.o \
+	structs/struct-dvb.o
 
 console/radio: \
 	console/radio.o \

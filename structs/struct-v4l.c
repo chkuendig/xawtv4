@@ -218,6 +218,7 @@ struct struct_desc desc_video_audio[] = {{
 	.name   = "treble",
 },{
 	.type   = PADDING,
+	.name   = "pad",
 	.length = 2,
 },{
 	.type   = BITS32,
