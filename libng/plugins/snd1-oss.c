@@ -105,13 +105,17 @@ mixer_init(char *device, char *control)
     struct mixer_handle *h;
     int i, devmask;
 
+    if (device && 0 != strncmp(device,"/dev/",5))
+	return NULL;
+    if (NULL == control)
+	return NULL;
     h = malloc(sizeof(*h));
     if (NULL == h)
 	return NULL;
     memset(h,0,sizeof(*h));
     h->fd      = -1;
     h->volctl  = -1;
-    h->device  = strdup(device);
+    h->device  = strdup(device ? device : ng_dev.mixer);
     h->control = strdup(control);
 
     if (-1 == mixer_open(h))

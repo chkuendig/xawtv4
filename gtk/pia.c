@@ -210,6 +210,7 @@ static void window_setup(struct media_stream *mm,
     if (first) {
 	gtk_window_resize(GTK_WINDOW(toplevel),ww,wh);
 	gtk_widget_show_all(toplevel);
+	gtk_unclutter(video);
 	first = 0;
     } else {
 	/* window present -- resize */
@@ -385,10 +386,13 @@ static void fullscreen_cb(void)
     static int on = 0;
 
     on = !on;
-    if (on)
+    if (on) {
 	gtk_window_fullscreen(GTK_WINDOW(toplevel));
-    else
+	gtk_screensaver_disable(dpy);
+    } else {
 	gtk_window_unfullscreen(GTK_WINDOW(toplevel));
+	gtk_screensaver_enable(dpy);
+    }
 }
 
 static void next_cb(void)

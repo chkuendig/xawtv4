@@ -505,7 +505,8 @@ mixer_channels(char *device)
 	snd_mixer_selem_get_id(elem,sid);
 	info = realloc(info,sizeof(*info) * (n+2));
 	memset(info+n,0,sizeof(*info)*2);
-	snprintf(info[n].device, sizeof(info[n].device), "%d", n);
+	snprintf(info[n].device, sizeof(info[n].device), "%s",
+		 snd_mixer_selem_id_get_name(sid));
 	snprintf(info[n].name, sizeof(info[n].name), "%s [%s%s]",
 		 snd_mixer_selem_id_get_name(sid),
 		 snd_mixer_selem_has_playback_volume(elem) ? "play" : "",
@@ -525,24 +526,28 @@ static void*
 mixer_init(char *device, char *control)
 {
     struct mixer_handle *h;
-    int i,c,n;
+    snd_mixer_selem_id_t *sid;
+    int i,c;
 
+    if (device && 0 == strncmp(device,"/dev/",5))
+	return NULL;
     h = malloc(sizeof(*h));
     if (NULL == h)
 	return NULL;
     memset(h,0,sizeof(*h));
-    h->device = strdup(device);
+    h->device = strdup(device ? device : "hw");
+
+    snd_mixer_selem_id_alloca(&sid);
 
     if (0 != snd_mixer_open(&h->mixer,0))
 	goto err;
-    if (0 != snd_mixer_attach(h->mixer, device))
+    if (0 != snd_mixer_attach(h->mixer, h->device))
 	goto err;
     if (0 != snd_mixer_selem_register(h->mixer, NULL, NULL))
 	goto err;
     if (0 != snd_mixer_load(h->mixer))
 	goto err;
 
-    n = 0;
     c = atoi(control);
     for (h->elem = snd_mixer_first_elem(h->mixer); NULL != h->elem;
 	 h->elem = snd_mixer_elem_next(h->elem)) {
@@ -554,9 +559,9 @@ mixer_init(char *device, char *control)
 	    !snd_mixer_selem_has_capture_volume(h->elem))
 	    continue;
 
-	if (c == n)
+	snd_mixer_selem_get_id(h->elem,sid);
+	if (0 == strcasecmp(snd_mixer_selem_id_get_name(sid),control))
 	    break;
-	n++;
     }
     if (NULL == h->elem)
 	goto err;

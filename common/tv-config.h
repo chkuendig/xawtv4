@@ -98,6 +98,7 @@ const char* int_to_str(int n, struct STRTAB *tab);
 #define O_REC_RATE		O_RECORD, "rate"
 #define O_REC_BUFCOUNT		O_RECORD, "bufcount"
 #define O_REC_THREADS		O_RECORD, "threads"
+#define O_REC_DESTDIR		O_RECORD, "destdir"
 
 #define GET_REC_FPS()		cfg_get_int(O_REC_FPS,		10)
 #define GET_REC_RATE()		cfg_get_int(O_REC_RATE,		44100)

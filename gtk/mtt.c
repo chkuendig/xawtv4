@@ -25,6 +25,7 @@
 #include <sys/time.h>
 
 #include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
 #include "grab-ng.h"

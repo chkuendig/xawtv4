@@ -1,3 +1,4 @@
+
 /*
  * x11 helper functions -- blit frames to the screen
  *
@@ -144,6 +145,37 @@ struct blit_video_buf_priv {
     int                    tw,th;
 #endif
 };
+
+/* ------------------------------------------------------------------------ */
+
+static void blit_ratio(struct ng_video_buf *buf,
+		       int *wx, int *wy, int *ww, int *wh)
+{
+    struct blit_video_buf_priv *p = buf->priv;
+    struct blit_handle *h = p->blit;
+    *wx = 0;
+    *wy = 0;
+    *ww = h->width;
+    *wh = h->height;
+
+    switch (buf->info.ratio) {
+    case NG_RATIO_UNSPEC:
+	ng_ratio_fixup(ww, wh, wx, wy);
+	break;
+    case NG_RATIO_SQUARE:
+	ng_ratio_fixup2(ww, wh, wx, wy, buf->fmt.width, buf->fmt.height, 0);
+	break;
+    case NG_RATIO_3_4:
+	ng_ratio_fixup2(ww, wh, wx, wy, 4, 3, 0);
+	break;
+    case NG_RATIO_9_16:
+	ng_ratio_fixup2(ww, wh, wx, wy, 16, 9, 0);
+	break;
+    case NG_RATIO_2dot21:
+	ng_ratio_fixup2(ww, wh, wx, wy, 221, 100, 0);
+	break;
+    }
+}
 
 /* ------------------------------------------------------------------------ */
 /* plain X11 stuff                                                          */
@@ -551,28 +583,9 @@ static void xv_blit(struct ng_video_buf *buf)
 {
     struct blit_video_buf_priv *p = buf->priv;
     struct blit_handle *h = p->blit;
-    int wx = 0;
-    int wy = 0;
-    int ww = h->width;
-    int wh = h->height;
+    int wx,wy,ww,wh;
 
-    switch (buf->info.ratio) {
-    case NG_RATIO_UNSPEC:
-	ng_ratio_fixup(&ww, &wh, &wx, &wy);
-	break;
-    case NG_RATIO_SQUARE:
-	ng_ratio_fixup2(&ww, &wh, &wx, &wy, buf->fmt.width, buf->fmt.height, 0);
-	break;
-    case NG_RATIO_3_4:
-	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 4, 3, 0);
-	break;
-    case NG_RATIO_9_16:
-	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 16, 9, 0);
-	break;
-    case NG_RATIO_2dot21:
-	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 221, 100, 0);
-	break;
-    }
+    blit_ratio(buf,&wx,&wy,&ww,&wh);
     if (p->shm)
 	XvShmPutImage(h->dpy, im_port,
 		      h->win, h->gc, p->xvimage,
@@ -631,6 +644,18 @@ struct {
 	fmt:  GL_BGRA_EXT,
 	type: GL_UNSIGNED_BYTE,
 	ext:  "GL_EXT_bgra",
+    },
+#endif
+#if 0 /* def GL_EXT_MESA_ycbcr_texture -- untested ... */
+    [ VIDEO_YUYV ] = {
+	fmt:  YCBCR_422_MESA,
+	type: UNSIGNED_SHORT_8_8_MESA,
+	ext:  "GL_EXT_MESA_ycbcr_texture",
+    },
+    [ VIDEO_UYVY ] = {
+	fmt:  YCBCR_422_MESA,
+	type: UNSIGNED_SHORT_8_8_REV_MESA,
+	ext:  "GL_EXT_MESA_ycbcr_texture",
     },
 #endif
 };
@@ -719,7 +744,12 @@ static void gl_blit(struct ng_video_buf *buf)
     struct blit_video_buf_priv *p = buf->priv;
     struct blit_handle *h = p->blit;
     float x,y;
+    int wx,wy,ww,wh;
 
+    blit_ratio(buf,&wx,&wy,&ww,&wh);
+
+    /* TODO: clear window bg */
+    
     glBindTexture(GL_TEXTURE_2D, p->tex);
     glTexSubImage2D(GL_TEXTURE_2D, 0,
 		    0,0, buf->fmt.width,buf->fmt.height,
@@ -732,10 +762,10 @@ static void gl_blit(struct ng_video_buf *buf)
     glEnable(GL_TEXTURE_2D);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
     glBegin(GL_QUADS);
-    glTexCoord2f(0,y);  glVertex3f(0,0,0);
-    glTexCoord2f(0,0);  glVertex3f(0,h->height,0);
-    glTexCoord2f(x,0);  glVertex3f(h->width,h->height,0);
-    glTexCoord2f(x,y);  glVertex3f(h->width,0,0);
+    glTexCoord2f(0,y);  glVertex3f(wx,    wy,    0);
+    glTexCoord2f(0,0);  glVertex3f(wx,    wy+wh, 0);
+    glTexCoord2f(x,0);  glVertex3f(wx+ww, wy+wh, 0);
+    glTexCoord2f(x,y);  glVertex3f(wx+ww, wy,    0);
     glEnd();
     glXSwapBuffers(h->dpy, h->win);
     glDisable(GL_TEXTURE_2D);

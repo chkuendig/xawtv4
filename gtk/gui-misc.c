@@ -6,6 +6,9 @@
 #include <string.h>
 
 #include <X11/Xlib.h>
+#ifdef HAVE_LIBXDPMS
+# include <X11/extensions/dpms.h>
+#endif
 
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
@@ -13,6 +16,7 @@
 
 #include "list.h"
 #include "commands.h"
+#include "xscreensaver.h"
 #include "gui.h"
 
 /* ---------------------------------------------------------------------------- */
@@ -72,6 +76,148 @@ GtkWidget *gtk_build_toolbar(struct toolbarbutton *btns, int count,
 				    user_data);
     }
     return toolbar;
+}
+
+/* ---------------------------------------------------------------------------- */
+
+static int screensaver_off = 0;
+static int timeout, interval, prefer_blanking, allow_exposures;
+#ifdef HAVE_LIBXDPMS
+static BOOL dpms_on;
+CARD16 dpms_state;
+int dpms_dummy;
+#endif
+static Window xscreensaver_window;
+static guint xscreensaver_timer;
+
+static gboolean xscreensaver_timefunc(gpointer data)
+{
+    Display *dpy = data;
+
+    if (debug)
+	fprintf(stderr,"xscreensaver_timefunc\n");
+    xscreensaver_send_deactivate(dpy, xscreensaver_window);
+    return TRUE;
+}
+
+void gtk_screensaver_disable(Display *dpy)
+{
+    if (screensaver_off)
+	return;
+    screensaver_off = 1;
+
+    XGetScreenSaver(dpy,&timeout,&interval,
+		    &prefer_blanking,&allow_exposures);
+    XSetScreenSaver(dpy,0,0,DefaultBlanking,DefaultExposures);
+#ifdef HAVE_LIBXDPMS
+    if ((DPMSQueryExtension(dpy, &dpms_dummy, &dpms_dummy)) && 
+	(DPMSCapable(dpy))) {
+	DPMSInfo(dpy, &dpms_state, &dpms_on);
+	DPMSDisable(dpy); 
+    }
+#endif
+
+    xscreensaver_init(dpy);
+    xscreensaver_window = xscreensaver_find_window(dpy, NULL);
+    if (xscreensaver_window) {
+	if (debug)
+	    fprintf(stderr,"xscreensaver window is 0x%lx\n",xscreensaver_window);
+	xscreensaver_timer = g_timeout_add(50 * 1000, xscreensaver_timefunc,
+					   dpy);
+    } else {
+	if (debug)
+	    fprintf(stderr,"xscreensaver not running\n");
+    }
+}
+
+void gtk_screensaver_enable(Display *dpy)
+{
+    if (!screensaver_off)
+	return;
+    screensaver_off = 0;
+
+    XSetScreenSaver(dpy,timeout,interval,prefer_blanking,allow_exposures);
+#ifdef HAVE_LIBXDPMS
+    if ((DPMSQueryExtension(dpy, &dpms_dummy, &dpms_dummy)) && 
+	(DPMSCapable(dpy)) && (dpms_on)) {
+	DPMSEnable(dpy);
+    }
+#endif
+
+    if (xscreensaver_timer)
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(), xscreensaver_timer));
+    xscreensaver_window = 0;
+    xscreensaver_timer  = 0;
+}
+
+/* ---------------------------------------------------------------------------- */
+
+struct unclutter {
+    GtkWidget  *widget;
+    GdkCursor  *on,*off;
+    guint      timer;
+    int        idle;
+    int        hidden;
+};
+
+static gboolean unclutter_timefunc(gpointer data)
+{
+    struct unclutter *u = data;
+
+    u->idle++;
+    if (!u->hidden && u->idle > 5) {
+	u->hidden = 1;
+	if (debug)
+	    fprintf(stderr,"%s hide\n",__FUNCTION__);
+	gdk_window_set_cursor(u->widget->window, u->off);
+    }
+    return TRUE;
+}
+
+static gboolean
+unclutter_mouse(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+    struct unclutter *u = data;
+
+    if (u->hidden) {
+	u->hidden = 0;
+	if (debug)
+	    fprintf(stderr,"%s: show\n",__FUNCTION__);
+	gdk_window_set_cursor(u->widget->window, u->on);
+    }
+    u->idle = 0;
+    return FALSE;
+}
+
+static GdkCursor* empty_cursor(void)
+{
+    static unsigned char bits[32];
+    GdkCursor *cursor;
+    GdkPixmap *pixmap;
+    GdkColor fg = { 0, 0, 0, 0 };
+    GdkColor bg = { 0, 0, 0, 0 };
+ 
+    pixmap = gdk_bitmap_create_from_data(NULL, bits, 16, 16);
+    cursor = gdk_cursor_new_from_pixmap(pixmap, pixmap, &fg, &bg, 0, 0);
+    gdk_pixmap_unref(pixmap);
+    return cursor;
+}
+
+void gtk_unclutter(GtkWidget *widget)
+{
+    struct unclutter *u;
+
+    u = malloc(sizeof(*u));
+    memset(u,0,sizeof(*u));
+
+    u->widget = widget;
+    u->on     = gdk_cursor_new(GDK_LEFT_PTR);
+    u->off    = empty_cursor();
+    u->timer  = g_timeout_add(1 * 1000, unclutter_timefunc, u);
+    gtk_widget_add_events(widget, GDK_POINTER_MOTION_MASK);
+    g_signal_connect(widget, "motion-notify-event",
+		     G_CALLBACK(unclutter_mouse), u);
 }
 
 /* ---------------------------------------------------------------------------- */

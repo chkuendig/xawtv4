@@ -535,12 +535,13 @@ static void* mpeg_ts_open(char *moviename)
 		// must search for header
 		char *hdr = NULL;
 
-		if (1 /* ng_debug */)
-		    fprintf(stderr,"mpeg ts: unaligned video\n");
 		hdr = memmem(h->ts.data+off,     h->ts.size-off,
 			     "\x00\x00\x01\xb3", 4);
-		if (hdr)
+		if (hdr) {
 		    mpeg_get_video_fmt(h, hdr);
+		    if (ng_debug)
+			fprintf(stderr,"mpeg ts: unaligned video\n");
+		}
 	    }
 	    if (VIDEO_NONE != h->vfmt.fmtid)
 		break;

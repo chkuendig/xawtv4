@@ -83,6 +83,11 @@ struct cfg_cmdline cmd_opts_record[] = {
 	.needsarg = 1,
 	.desc     = "number of compression threads (for capture)",
     },{
+	.cmdline  = "destdir",
+	.option   = { O_REC_DESTDIR },
+	.needsarg = 1,
+	.desc     = "destination directory for movies",
+    },{
 	/* end of list */
     }
 };

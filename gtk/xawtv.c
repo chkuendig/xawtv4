@@ -282,6 +282,26 @@ set_property(void)
 			line, len);
 }
 
+static char* record_filename(char *ext)
+{
+    static char filename[256];
+    struct tm *tm;
+    time_t t;
+    char ts[32];
+    char *dest;
+    int len = 0;
+
+    dest = cfg_get_str(O_REC_DESTDIR);
+    time(&t);
+    tm = localtime(&t);
+    strftime(ts,sizeof(ts),"%Y%m%d-%H%M%S",tm);
+    if (dest)
+	len = snprintf(filename,sizeof(filename),"%s/",dest);
+    snprintf(filename+len, sizeof(filename)-len, "record-%s-%s.%s",
+	     curr_station ? curr_station : "unknown", ts, ext);
+    return filename;
+}
+
 /* ------------------------------------------------------------------------ */
 /* hooks                                                                    */
 
@@ -448,6 +468,14 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     if (afmt)
 	av_media_setup_audio_reader(&mm,afmt);
 
+    /* recording */
+    if (recording) {
+	struct ng_writer *wr = ng_find_writer_name("mpeg");
+	char *recfile = record_filename("mpeg");
+	if (wr)
+	    av_media_start_recording(&mm, wr, recfile);
+    }
+
     /* go playback stuff */
     av_media_mainloop(context, &mm);
 
@@ -455,6 +483,8 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     BUG_ON(NULL != mm.as,"mm.as isn't NULL");
     BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
     mm.reader->rd_close(mm.rhandle);
+    if (mm.writer)
+	av_media_stop_recording(&mm);
 
     if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
     return;
@@ -917,15 +947,7 @@ main(int argc, char *argv[])
 	fprintf(stderr,"main: mapping main window ...\n");
     gtk_widget_set_size_request(GTK_WIDGET(main_win), 320, 240);
     gtk_widget_show_all(main_win);
-#if 0
-    create_pointers(app_shell);
-    create_bitmaps(app_shell);
-    XDefineCursor(dpy, XtWindow(app_shell), left_ptr);
-
-    /* mouse pointer magic */
-    XtAddEventHandler(tv, PointerMotionMask, True, mouse_event, NULL);
-    mouse_event(tv,NULL,NULL,NULL);
-#endif
+    gtk_unclutter(video);
 
     /* set some values */
     if (NULL != (freqtab = cfg_get_str(O_FREQTAB)))

@@ -15,6 +15,7 @@ gtk/pia: \
 	gtk/av-sync.o \
 	gtk/blit.o \
 	gtk/gui-misc.o \
+	gtk/xscreensaver.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture)
 
@@ -24,6 +25,7 @@ gtk/xawtv: \
 	gtk/blit.o \
 	gtk/gui-misc.o \
 	gtk/gui-control.o \
+	gtk/xscreensaver.o \
 	x11/xv.o \
 	x11/atoms.o \
 	common/parseconfig.o \
@@ -34,6 +36,7 @@ gtk/mtt: \
 	gtk/mtt.o \
 	gtk/gui-misc.o \
 	gtk/gui-teletext.o \
+	gtk/xscreensaver.o \
 	console/vbi-tty.o \
 	common/vbi-data.o \
 	common/vbi-dvb.o \
@@ -45,6 +48,7 @@ gtk/alexplore: \
 	gtk/alexplore.o \
 	gtk/gui-misc.o \
 	gtk/gui-dvbtune.o \
+	gtk/xscreensaver.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture) \
 	$(OBJS-glib-dvb)

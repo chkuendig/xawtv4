@@ -115,7 +115,7 @@ static void device_print(char *name)
 #endif
     device_print_line(name, "sndrec",  1);
     device_print_line(name, "sndplay", 1);
-    device_print_line(name, "mixer",   0);
+    device_print_line(name, "mixer",   1);
     device_print_line(name, "control", 0);
 }
 
@@ -226,6 +226,7 @@ static int device_probe_dvb(char *device)
 	    sprintf(name,"%s - #%d",h,i++);
 	}
 	cfg_set_str("devs", name, "dvb", device);
+	cfg_set_str("devs", name, "control", "pcm");
 	if (debug)
 	    fprintf(stderr,"%s: %s: add\n",__FUNCTION__,device);
     }
@@ -553,8 +554,7 @@ int device_init(char *name)
     ng_dsp_init(&devs.sndplay, device, 0);
     device  = cfg_get_str("devs", name, "mixer");
     control = cfg_get_str("devs", name, "control");
-    if (NULL != device  && 0 != strcasecmp(device, "none") &&
-	NULL != control && 0 != strcasecmp(control,"none"))
+    if (NULL != control && 0 != strcasecmp(control,"none"))
 	ng_mix_init(&devs.mixer, device, control);
 
     /* init attributes */
@@ -657,7 +657,7 @@ print_mix(struct ng_mix_driver *mix, int verbose)
 	if (verbose) {
 	    elem = mix->channels(info[i].device);
 	    for (j = 0; elem && 0 != strlen(elem[j].name); j++)
-		fprintf(stderr,"      %-14s - %s\n",
+		fprintf(stderr,"    %-24s    %s\n",
 			elem[j].device, elem[j].name);
 	}
     }

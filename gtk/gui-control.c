@@ -26,6 +26,7 @@ int           fs;
 
 char          *curr_station;
 char          *pick_device_new;
+int           recording;
 
 GtkWidget     *main_win;
 GtkWidget     *control_win;
@@ -46,6 +47,8 @@ static GtkWidget     *control_dev_menu;
 static GtkWidget     *control_freq_menu;
 static GtkWidget     *control_attr_bool_menu;
 static GtkWidget     *control_attr_choice_menu;
+
+extern Display       *dpy;
 
 /* ------------------------------------------------------------------------ */
 
@@ -326,13 +329,29 @@ static void menu_cb_setdevice(GtkMenuItem *menuitem, gchar *string)
     command_pending++;
 }
 
+static void menu_cb_start_stop_record()
+{
+    if (debug)
+	fprintf(stderr,"%s\n", __FUNCTION__);
+    command_pending++;
+    if (recording) {
+	recording = 0;
+	display_message("recording stopped");
+    } else {
+	recording = 1;
+	display_message("recording started");
+    }
+}
+
 void menu_cb_fullscreen(void)
 {
     fs = !fs;
-    if (fs)
+    if (fs) {
 	gtk_window_fullscreen(GTK_WINDOW(main_win));
-    else {
+	gtk_screensaver_disable(dpy);
+    } else {
 	gtk_window_unfullscreen(GTK_WINDOW(main_win));
+	gtk_screensaver_enable(dpy);
 
 	/* hide osd */
 	gtk_widget_hide(on_win);
@@ -891,11 +910,13 @@ static GtkItemFactoryEntry menu_items[] = {
 	/* --- File menu ----------------------------- */
 	.path        = "/_File",
 	.item_type   = "<Branch>",
+#if 0
     },{
 	.path        = "/File/_Record ...",
 	.accelerator = "<control>R",
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_SAVE,
+#endif
     },{
 	.path        = "/File/sep1",
 	.item_type   = "<Separator>",
@@ -970,6 +991,11 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/_Fullscreen",
 	.accelerator = "F",
 	.callback    = menu_cb_fullscreen,
+	.item_type   = "<Item>",
+    },{
+	.path        = "/Commands/Start/stop _recording",
+	.accelerator = "R",
+	.callback    = menu_cb_start_stop_record,
 	.item_type   = "<Item>",
     },{
 	.path        = "/Commands/sep1",
@@ -1217,6 +1243,11 @@ static struct toolbarbutton toolbaritems[] = {
 	.text     = "mute",
 	.tooltip  = "mute sound",
 	.callback = menu_cb_mute,
+#if 0
+    },{
+	.text     = "stop",
+	.stock    = GTK_STOCK_STOP,
+#endif
     },{
 	/* nothing */
     },{

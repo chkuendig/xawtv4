@@ -37,6 +37,10 @@ extern GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text);
 extern GtkWidget *gtk_build_toolbar(struct toolbarbutton *btns, int count,
 				    void *user_data);
 
+void gtk_screensaver_disable(Display *dpy);
+void gtk_screensaver_enable(Display *dpy);
+void gtk_unclutter(GtkWidget *widget);
+
 gint gtk_sort_iter_compare_int(GtkTreeModel *model,
 			       GtkTreeIter  *a,
 			       GtkTreeIter  *b,
@@ -53,6 +57,7 @@ extern int           fs;
 
 extern char          *curr_station;
 extern char          *pick_device_new;
+extern int           recording;
 
 extern GtkWidget     *control_win;
 extern GtkWidget     *main_win;
