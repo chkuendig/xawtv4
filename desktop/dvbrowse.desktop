@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=dvbrowse
+Exec=dvbrowse
+Comment=DVB EPG Browser
+Terminal=no
+Categories=AudioVideo;Tuner
