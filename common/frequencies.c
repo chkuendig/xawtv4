@@ -156,23 +156,3 @@ void freq_newtab(int n)
 	    freq_readlist(&chanlists[n].list,0,chanlists[n].filename);
     chantab = n;
 }
-
-int freq_lookup(char *channel)
-{
-    int i;
-
-    i = find_channel(channel);
-    if (-1 == i)
-	return -1;
-    return chanlist[i].freq*16/1000;
-}
-
-char* channel_jump(char *channel, int where)
-{
-    int i;
-
-    i = find_channel(channel);
-    if (-1 == i)
-	return NULL;
-    return chanlist[(i + where) % chancount].name;
-}

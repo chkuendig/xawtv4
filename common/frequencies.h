@@ -105,5 +105,3 @@ extern struct STRTAB      *chanlist_names;
 /* --------------------------------------------------------------------- */
 
 void freq_newtab(int n);
-int freq_lookup(char *channel);
-char* channel_jump(char *channel, int where);

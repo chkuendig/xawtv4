@@ -467,9 +467,8 @@ static int audio_fill(struct media_stream *mm)
     return 0;
 }
 
-void av_media_mainloop(struct media_stream *mm)
+void av_media_mainloop(GMainContext *context, struct media_stream *mm)
 {
-    GMainContext *context = g_main_context_default();
     GPollFunc poll = g_main_context_get_poll_func(context);
     gint priority,timeout,ngtk,npoll,rc;
     GPollFD fds[32];

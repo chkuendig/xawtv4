@@ -76,6 +76,8 @@ int freqtab_lookup(char *channel)
 {
     int freq;
 
+    if (NULL == freqtab)
+	return -1;
     freq = cfg_get_int(freqtab, channel, "freq", 0);
     if (0 == freq)
 	return -1;
@@ -90,7 +92,7 @@ static int cf2freq(char *name, int fine)
     
     if (-1 == (freq = freqtab_lookup(name))) {
 	fprintf(stderr,"tune analog: channel \"%s\" not found in table \"%s\"\n",
-		name, freqtab ? freqtab : "unset");
+		name, freqtab ? freqtab : "(unset)");
 	return -1;
     }
     return freq+fine;

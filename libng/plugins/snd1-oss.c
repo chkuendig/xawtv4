@@ -480,13 +480,12 @@ oss_bufread(int fd,char *buffer,int blocksize)
 	    if (EINTR == errno)
 		continue;
 	    perror("oss: read");
-	    exit(1);
+	    return;
 	}
 	count += rc;
 	if (count == blocksize)
 	    return;
     }
-    fprintf(stderr,"#");
 }
 
 static struct ng_audio_buf*

@@ -35,12 +35,13 @@
 #include "parseconfig.h"
 #include "commands.h"
 #include "av-sync.h"
+#include "gui.h"
 
 /* ------------------------------------------------------------------------ */
 
 int debug = 0;
 
-GtkWidget *toplevel,*video,*menu;
+static GtkWidget *toplevel,*video,*menu;
 static Display *dpy;
 static Visual *visual;
 static XVisualInfo vinfo;
@@ -302,7 +303,7 @@ static void play_file(char *filename)
 	av_media_reader_audio(&mm,afmt);
 
     /* go playback stuff */
-    av_media_mainloop(&mm);
+    av_media_mainloop(g_main_context_default(), &mm);
 
     /* cleanup */
     BUG_ON(NULL != mm.as,"mm.as isn't NULL");
@@ -321,18 +322,9 @@ static void play_file(char *filename)
 
 /* ------------------------------------------------------------------------ */
 
-static gboolean wm_delete(GtkWidget *widget,
-			  GdkEvent  *event,
-			  gpointer   data)
-{
-    command_pending++;
-    exit_application++;
-    return TRUE;
-}
-
-static gboolean button(GtkWidget *widget,
-		       GdkEventButton *event,
-		       gpointer user_data)
+static gboolean mouse_button(GtkWidget *widget,
+			     GdkEventButton *event,
+			     gpointer user_data)
 {
     if (3 == event->button) {
 	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
@@ -358,17 +350,11 @@ static void next_cb(void)
     command_pending++;
 }
 
-static void quit_cb(void)
-{
-    command_pending++;
-    exit_application++;
-}
-
 static GtkItemFactoryEntry menu_items[] = {
     { "/_Next",       "space", next_cb,       0, "<Item>"       },
     { "/_Fullscreen", "F",     fullscreen_cb, 0, "<Item>"       },
     { "/qsep",        NULL,    NULL,          0, "<Separator>"  },
-    { "/_Quit",       "Q",     quit_cb,       0, "<StockItem>", GTK_STOCK_QUIT },
+    { "/_Quit",       "Q",     gtk_quit_cb,   0, "<StockItem>", GTK_STOCK_QUIT },
 };
 static gint nmenu_items = sizeof (menu_items)/sizeof (menu_items[0]);
 
@@ -418,9 +404,11 @@ int main(int argc, char *argv[])
 	gtk_widget_add_events(video,GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
 	menu = create_menu(toplevel);
 	gtk_container_add(GTK_CONTAINER(toplevel), video);
-	g_signal_connect(toplevel, "delete-event", G_CALLBACK(wm_delete), NULL);
+	g_signal_connect(toplevel, "delete-event",
+			 G_CALLBACK(gtk_wm_delete_quit), NULL);
 	g_signal_connect(video, "expose-event", G_CALLBACK(resize), NULL);
-	g_signal_connect(video, "button-release-event", G_CALLBACK(button), NULL);
+	g_signal_connect(video, "button-release-event",
+			 G_CALLBACK(mouse_button), NULL);
 
 	/* X11 */
 	dpy = gdk_x11_display_get_xdisplay(gtk_widget_get_display(video));

@@ -143,6 +143,16 @@ int command_pending;
 int exit_application;
 static LIST_HEAD(cmd_queue);
 
+static void print_command(char *prefix, int argc, char **argv)
+{
+    int i;
+    
+    fprintf(stderr,"%s:",prefix);
+    for (i = 0; i < argc; i++)
+	fprintf(stderr," \"%s\"",argv[i]);
+    fprintf(stderr,"\n");
+}
+
 static void
 run_command(int argc, char **argv)
 {
@@ -151,6 +161,8 @@ run_command(int argc, char **argv)
     for (i = 0; commands[i].name != NULL; i++)
 	if (0 == strcasecmp(commands[i].name,argv[0]))
 	    break;
+    if (debug)
+	print_command("qexec",argc,argv);
     commands[i].handler(argv[0],argc-1,argv+1);
 }
 
@@ -172,10 +184,12 @@ void queue_run(void)
 {
     struct command *cmd;
     int i;
-    
+
+    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
     for (;;) {
 	if (list_empty(&cmd_queue)) {
 	    command_pending = 0;
+	    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
 	    return;
 	}
 	cmd = list_entry(cmd_queue.next, struct command, next);
@@ -213,13 +227,6 @@ do_command(int argc, char **argv)
 	fprintf(stderr,"do_command: no argument\n");
 	return;
     }
-    if (debug) {
-	fprintf(stderr,"cmd:");
-	for (i = 0; i < argc; i++) {
-	    fprintf(stderr," \"%s\"",argv[i]);
-	}
-	fprintf(stderr,"\n");
-    }
 
     for (i = 0; commands[i].name != NULL; i++)
 	if (0 == strcasecmp(commands[i].name,argv[0]))
@@ -234,8 +241,12 @@ do_command(int argc, char **argv)
     }
 
     if (commands[i].queue) {
+	if (debug)
+	    print_command("queue",argc,argv);
 	queue_add(argc,argv);
     } else {
+	if (debug)
+	    print_command("exec",argc,argv);
 	commands[i].handler(argv[0],argc-1,argv+1);
     }
 }
@@ -400,6 +411,7 @@ static int tuning_handler(char *name, int argc, char **argv)
 	    display_message("grabber busy");
 	return -1;
     }
+    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
 
     if (0 == strcasecmp("setfreq",name))
 	newfreq = (unsigned long)(atof(argv[0])*16);
@@ -479,6 +491,8 @@ static int tuning_handler(char *name, int argc, char **argv)
 	mute = NULL;
 
     /* ... switch ... */
+    if (debug) fprintf(stderr,"%s: station=%s channel=%s freq=%d\n",
+		       __FUNCTION__,newstation,newchannel,newfreq);
     if (newstation) {
 	tune_station(newstation);
     } else if (newchannel) {
@@ -496,6 +510,7 @@ static int tuning_handler(char *name, int argc, char **argv)
 	usleep(20000);
 	attr_write(mute,0,0);
     }
+    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
     return 0;
 }
 

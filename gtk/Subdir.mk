@@ -1,18 +1,29 @@
 
 # targets to build
 TARGETS-gtk := \
-	gtk/pia
+	gtk/pia \
+	gtk/xawtv
 
 gtk/pia: \
 	gtk/pia.o \
 	gtk/av-sync.o \
 	gtk/blit.o \
+	gtk/gui-misc.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture)
 
-gtk/pia : CFLAGS  += $(GTK_CFLAGS)
-gtk/pia : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) -ljpeg -lm
-gtk/pia : LDFLAGS += $(DLFLAGS)
+gtk/xawtv: \
+	gtk/xawtv.o \
+	gtk/av-sync.o \
+	gtk/blit.o \
+	gtk/gui-misc.o \
+	gtk/gui-control.o \
+	common/parseconfig.o \
+	$(OBJS-common-capture)
+
+$(TARGETS-gtk) : CFLAGS  += $(GTK_CFLAGS)
+$(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) -ljpeg -lm
+$(TARGETS-gtk) : LDFLAGS += $(DLFLAGS)
 
 
 ifeq ($(FOUND_GTK),yes)

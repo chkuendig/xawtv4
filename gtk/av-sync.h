@@ -92,4 +92,4 @@ void av_media_reader_audio(struct media_stream *mm,
 			struct ng_audio_fmt *afmt);
 void av_media_reader_video(struct media_stream *mm);
 void av_media_grab_video(struct media_stream *mm, GtkWidget *widget);
-void av_media_mainloop(struct media_stream *mm);
+void av_media_mainloop(GMainContext *context, struct media_stream *mm);
