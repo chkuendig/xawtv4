@@ -592,7 +592,9 @@ void dvbscan_create_window(int s)
 
     /* db menu */
     scan_database(item_factory, dvb_frontend_get_type(devs.dvb),
-		  "/usr/share/dvb");
+		  "/usr/share/dvb");  // SuSE
+    scan_database(item_factory, dvb_frontend_get_type(devs.dvb),
+		  "/usr/share/doc/dvb-utils/examples/scan"); // Debian
 
     /* toolbar */
     toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
