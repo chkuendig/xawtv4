@@ -756,6 +756,7 @@ static void* mp3_open(char *filename)
 {
     struct mp3_handle *h;
     unsigned char header[16];
+    unsigned int id3;
     
     if (NULL == (h = malloc(sizeof(*h))))
 	return NULL;
@@ -769,7 +770,26 @@ static void* mp3_open(char *filename)
 	return NULL;
     }
     read(h->fd,header,sizeof(header));
-    lseek(h->fd,SEEK_SET,0);
+    lseek(h->fd,0,SEEK_SET);
+
+    if (0 == strncmp(header, "ID3", 3)) {
+	/* skip ID3 tag */
+	id3  = header[9];
+	id3 |= (unsigned int)header[8] << 7;
+	id3 |= (unsigned int)header[7] << 14;
+	id3 |= (unsigned int)header[6] << 21;
+	id3 += 10;
+	if (ng_debug)
+	    fprintf(stderr,"mpeg: skip ID3v2 tag [size=0x%x]\n",id3);
+	lseek(h->fd,id3,SEEK_SET);
+	read(h->fd,header,sizeof(header));
+	lseek(h->fd,id3,SEEK_SET);
+	if (0xff != header[0]) {
+	    fprintf(stderr,"mpeg: no mpeg header after ID3v2 tag\n");
+	    free(h);
+	    return NULL;
+	}
+    }
 
     h->afmt.fmtid = AUDIO_MP3;
     h->afmt.rate  = mpeg_get_audio_rate(header);
@@ -852,10 +872,10 @@ struct ng_reader mp3_reader = {
     .name       = "mp3",
     .desc       = "MPEG audio (layer iii)",
 
-    /*            mpg1-l3     mpg2-l3    */
-    .magic	= { "\xff\xfb", "\xff\xf3" },
-    .moff       = {  0,         0          },
-    .mlen       = {  2,         2          },
+    /*            mpg1-l3     mpg2-l3       with td3 tag */
+    .magic	= { "\xff\xfb", "\xff\xf3", "ID3" },
+    .moff       = {  0,         0         , 0     },
+    .mlen       = {  2,         2         , 3     },
     
     .rd_open    = mp3_open,
     .rd_vfmt    = mp3_vfmt,
