@@ -186,24 +186,24 @@ static int exec_diseqc(int fd, char *action)
     return 0;
 }
 
-static char *find_diseqc(char *name)
+static char *find_diseqc(char *domain, char *section)
 {
-    char *source = cfg_get_str("dvb", name, "source");
-    char *pol    = cfg_get_str("dvb", name, "polarization");
-    int  freq    = cfg_get_int("dvb", name, "frequency",0);
+    char *source = cfg_get_str(domain, section, "source");
+    char *pol    = cfg_get_str(domain, section, "polarization");
+    int  freq    = cfg_get_int(domain, section, "frequency",0);
     char *list,*check;
 
     if (dvb_debug)
 	fprintf(stderr,"diseqc lookup: source=\"%s\" pol=\"%s\" freq=%d\n",
 		source,pol,freq);
-    cfg_sections_for_each("diseqc",list) {
-	check = cfg_get_str("diseqc", list, "source");
+    cfg_sections_for_each("vdr-diseqc",list) {
+	check = cfg_get_str("vdr-diseqc", list, "source");
 	if (!check || !source || 0 != (strcasecmp(check,source)))
 	    continue;
-	check = cfg_get_str("diseqc", list, "polarization");
+	check = cfg_get_str("vdr-diseqc", list, "polarization");
 	if (!check || !pol || 0 != (strcasecmp(check,pol)))
 	    continue;
-	if (freq < cfg_get_int("diseqc", list, "lsof", 0))
+	if (freq < cfg_get_int("vdr-diseqc", list, "lsof", 0))
 	    return list;
     }
     return NULL;
@@ -238,7 +238,14 @@ void dvb_frontend_release(struct dvb_state *h, int write)
     }
 }
 
-int dvb_frontend_tune(struct dvb_state *h, char *name)
+static void dvb_tune_fixups(struct dvb_state *h)
+{
+    if (!(h->info.caps & FE_CAN_INVERSION_AUTO) &&
+	h->p.inversion == INVERSION_AUTO)
+	h->p.inversion = INVERSION_OFF;
+}
+
+int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
 {
     char *diseqc;
     char *action;
@@ -255,26 +262,27 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	 *   - kernel API uses kHz here.
 	 *   - /etc/vdr/channel.conf + diseqc.conf use MHz
 	 */
-	diseqc = find_diseqc(name);
+	diseqc = find_diseqc(domain,section);
 	if (!diseqc) {
-	    fprintf(stderr,"no diseqc info for \"%s\"\n",name);
+	    fprintf(stderr,"no diseqc info for \"%s\"\n", section);
 	    return -1;
 	}
 	action = cfg_get_str("diseqc", diseqc, "action");
 	if (dvb_debug)
-	    fprintf(stderr,"diseqc action: \"%s\"\n",action);
+	    fprintf(stderr,"diseqc action: \"%s\"\n", action);
 	exec_diseqc(h->fdwr,action);
 
 	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
-	val = cfg_get_int("dvb", name, "frequency", 0);
+	val = cfg_get_int(domain, section, "frequency", 0);
 	h->p.frequency = val - lof;
-	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
+	val = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
 
-	val = cfg_get_int("dvb", name, "symbol_rate", 0);
+	val = cfg_get_int(domain, section, "symbol_rate", 0);
 	h->p.u.qpsk.symbol_rate = val * 1000;
 	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
 
+	dvb_tune_fixups(h);
 	if (dvb_debug) {
 	    fprintf(stderr,"dvb fe: tuning freq=%d+%d MHz, inv=%s "
 		    "symbol_rate=%d fec_inner=%s\n",
@@ -292,23 +300,26 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 	 *   - kernel API uses Hz here.
 	 *   - /etc/vdr/channel.conf allows Hz, kHz and MHz
 	 */
-	val = cfg_get_int("dvb", name, "frequency", 0);
+	val = cfg_get_int(domain, section, "frequency", 0);
 	h->p.frequency = val;
 	while (h->p.frequency && h->p.frequency < 1000000)
 	    h->p.frequency *= 1000;
-	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
+	val = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
 	
-	val = cfg_get_int("dvb", name, "symbol_rate", 0);
+	val = cfg_get_int(domain, section, "symbol_rate", 0);
 	h->p.u.qam.symbol_rate = val;
 	h->p.u.qam.fec_inner = FEC_AUTO; // FIXME
-	val = cfg_get_int("dvb", name, "modulation", 0);
+	val = cfg_get_int(domain, section, "modulation", 0);
 	h->p.u.qam.modulation = fe_vdr_modulation [ val ];
 
+	dvb_tune_fixups(h);
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%d "
+	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%s "
 		    "symbol_rate=%d fec_inner=%s modulation=%s\n",
-		    h->p.frequency, h->p.inversion, h->p.u.qam.symbol_rate,
+		    h->p.frequency,
+		    dvb_fe_inversion  [ h->p.inversion       ],
+		    h->p.u.qam.symbol_rate,
 		    dvb_fe_rates      [ h->p.u.qam.fec_inner  ],
 		    dvb_fe_modulation [ h->p.u.qam.modulation ]);
 	}
@@ -316,33 +327,35 @@ int dvb_frontend_tune(struct dvb_state *h, char *name)
 
     case FE_OFDM:
 	/* DVB-T  --  same as DVB-C */
-	val = cfg_get_int("dvb", name, "frequency", 0);
-	h->p.frequency = val * 1000;
+	val = cfg_get_int(domain, section, "frequency", 0);
+	h->p.frequency = val;
 	while (h->p.frequency && h->p.frequency < 1000000)
 	    h->p.frequency *= 1000;
-	val = cfg_get_int("dvb", name, "inversion", INVERSION_AUTO);
+	val = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
 	h->p.inversion = val;
-
-	val = cfg_get_int("dvb", name, "bandwidth", BANDWIDTH_AUTO);
+	
+	val = cfg_get_int(domain, section, "bandwidth", BANDWIDTH_AUTO);
 	h->p.u.ofdm.bandwidth = fe_vdr_bandwidth [ val ];
-	val = cfg_get_int("dvb", name, "code_rate_high", 0);
+	val = cfg_get_int(domain, section, "code_rate_high", 0);
 	h->p.u.ofdm.code_rate_HP = fe_vdr_rates [ val ];
-	val = cfg_get_int("dvb", name, "code_rate_low", 0);
+	val = cfg_get_int(domain, section, "code_rate_low", 0);
 	h->p.u.ofdm.code_rate_LP = fe_vdr_rates [ val ];
-	val = cfg_get_int("dvb", name, "modulation", 0);
+	val = cfg_get_int(domain, section, "modulation", 0);
 	h->p.u.ofdm.constellation = fe_vdr_modulation [ val ];
-	val = cfg_get_int("dvb", name, "transmission", 0);
+	val = cfg_get_int(domain, section, "transmission", 0);
 	h->p.u.ofdm.transmission_mode = fe_vdr_transmission [ val ];
-	val= cfg_get_int("dvb", name, "guard_intervall", GUARD_INTERVAL_AUTO);
+	val= cfg_get_int(domain, section, "guard_intervall", GUARD_INTERVAL_AUTO);
 	h->p.u.ofdm.guard_interval = fe_vdr_guard [ val ];
-	val = cfg_get_int("dvb", name, "hierarchy", HIERARCHY_AUTO);
+	val = cfg_get_int(domain, section, "hierarchy", HIERARCHY_AUTO);
 	h->p.u.ofdm.hierarchy_information = fe_vdr_hierarchy [ val ];
 
+	dvb_tune_fixups(h);
 	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%d "
+	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%s "
 		    "bandwidth=%s code_rate=[%s-%s] constellation=%s "
 		    "transmission=%s guard=%s hierarchy=%s\n",
-		    h->p.frequency, h->p.inversion,
+		    h->p.frequency,
+		    dvb_fe_inversion    [ h->p.inversion                    ],
 		    dvb_fe_bandwidth    [ h->p.u.ofdm.bandwidth             ],
 		    dvb_fe_rates        [ h->p.u.ofdm.code_rate_HP          ],
 		    dvb_fe_rates        [ h->p.u.ofdm.code_rate_LP          ],
@@ -433,16 +446,24 @@ int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout)
     return -1;
 }
 
+int dvb_frontend_get_biterr(struct dvb_state *h)
+{
+    uint32_t ber = 0;
+
+    ioctl(h->fdro, FE_READ_BER, &ber);
+    return ber;
+}
+
 /* ----------------------------------------------------------------------- */
 /* handle dvb demux                                                        */
 
-int dvb_demux_station_filter(struct dvb_state *h, char *name)
+int dvb_demux_station_filter(struct dvb_state *h, char *domain, char *section)
 {
-    ng_mpeg_vpid = cfg_get_int("dvb",name,"video_pid",0);
-    ng_mpeg_apid = cfg_get_int("dvb",name,"audio_pid",0);
+    ng_mpeg_vpid = cfg_get_int(domain, section, "video_pid",0);
+    ng_mpeg_apid = cfg_get_int(domain, section, "audio_pid",0);
     if (dvb_debug)
 	fprintf(stderr,"dvb mux: dvb ts pids for \"%s\": video=%d audio=%d\n",
-		name,ng_mpeg_vpid,ng_mpeg_apid);
+		section, ng_mpeg_vpid,ng_mpeg_apid);
     
     h->video.filter.pid      = ng_mpeg_vpid;
     h->video.filter.input    = DMX_IN_FRONTEND;
@@ -522,7 +543,7 @@ int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot)
     filter.filter.filter[0] = sec;
     filter.filter.mask[0]   = 0xff;
     filter.timeout          = 60 * 1000;
-    filter.flags            = DMX_IMMEDIATE_START;
+    filter.flags            = DMX_IMMEDIATE_START | DMX_CHECK_CRC;
     if (oneshot)
 	filter.flags       |= DMX_ONESHOT;
 
@@ -609,9 +630,9 @@ struct dvb_state* dvb_init_nr(int adapter)
     return dvb_init(path);
 }
 
-int dvb_tune(struct dvb_state *h, char *name)
+int dvb_tune(struct dvb_state *h, char *domain, char *section)
 {
-    if (0 != dvb_frontend_tune(h,name)) {
+    if (0 != dvb_frontend_tune(h,domain,section)) {
 	fprintf(stderr,"dvb: frontend tuning failed\n");
 	return -1;
     }
@@ -619,7 +640,7 @@ int dvb_tune(struct dvb_state *h, char *name)
 	fprintf(stderr,"dvb: frontend doesn't lock\n");
 	return -1;
     }
-    if (0 != dvb_demux_station_filter(h,name)) {
+    if (0 != dvb_demux_station_filter(h,domain,section)) {
 	fprintf(stderr,"dvb: pid filter setup failed\n");
 	return -1;
     }
@@ -864,12 +885,12 @@ static void __init vdr_init(void)
     fp = fopen("/etc/vdr/channels.conf","r");
     if (NULL == fp)
 	return;
-    parse_vdr_channels("dvb",fp);
+    parse_vdr_channels("vdr-channels",fp);
     fclose(fp);
 
     fp = fopen("/etc/vdr/diseqc.conf","r");
     if (NULL == fp)
 	return;
-    parse_vdr_diseqc("diseqc",fp);
+    parse_vdr_diseqc("vdr-diseqc",fp);
     fclose(fp);
 }

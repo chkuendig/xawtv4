@@ -1176,15 +1176,15 @@ create_station_prop(void)
 
     XtAddCallback(prop_dlg,XmNokCallback, station_apply_cb, NULL);
 
-    if (0 != cfg_sections_count("dvb")) {
+    if (0 != cfg_sections_count("vdr-channels")) {
 	/* fill vdr list */
 	XmStringTable tab;
 	char *vdr;
 	int i;
 
 	i = 0;
-	tab = malloc(cfg_sections_count("dvb")*sizeof(*tab));
-	cfg_sections_for_each("dvb",vdr)
+	tab = malloc(cfg_sections_count("vdr-channels")*sizeof(*tab));
+	cfg_sections_for_each("vdr-channels",vdr)
 	    tab[i++] = XmStringGenerate(vdr, NULL, XmMULTIBYTE_TEXT, NULL);
 
 	XtVaSetValues(prop_vdr,
@@ -2930,7 +2930,7 @@ main(int argc, char *argv[])
 
 #ifdef HAVE_DVB
     if (0 == cfg_sections_count("stations") &&
-	0 != cfg_sections_count("dvb") &&
+	0 != cfg_sections_count("vdr-channels") &&
 	NULL != cfg_get_str("devs",cfg_sections_first("devs"),"dvb")) {
 	/* easy start for dvb users, import vdr's list ... */
 	vdr_import_stations();

@@ -26,7 +26,14 @@ struct psi_stream {
     int                  netid;
     char                 net[64];
 
-    /* TODO: tuning info */
+    int                  frequency;
+    char                 *bandwidth;
+    char                 *constellation;
+    char                 *hierarchy;
+    char                 *code_rate_hp;
+    char                 *code_rate_lp;
+    char                 *guard;
+    char                 *transmission;
     
     /* status info */
     int                  updated;

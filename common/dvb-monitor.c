@@ -1,5 +1,5 @@
 /*
- * maintain dvb transponder informations in glib-based apps,
+ * maintain dvb transponder informations in glib-based apps.
  */
 
 #include <stdio.h>
@@ -14,6 +14,9 @@
 #include "grab-ng.h"
 #include "dvb-tuning.h"
 #include "dvb-monitor.h"
+
+#include "parseconfig.h"
+#include "tv-config.h"
 
 /* ----------------------------------------------------------------------------- */
 /* structs & prototypes                                                          */
@@ -42,7 +45,6 @@ struct callback {
 };
 
 struct dvbmon {
-    char                adapter[32];
     int                 verbose;
     struct dvb_state    *dvb;
     struct psi_info     *info;
@@ -53,7 +55,7 @@ struct dvbmon {
 };
 
 static void table_open(struct dvbmon *dm, char *name, int pid, int sec);
-static void table_close(struct dvbmon *dm, int pid);
+static void table_close(struct dvbmon *dm, int pid, int sec);
 
 /* ----------------------------------------------------------------------------- */
 /* internal functions                                                            */
@@ -126,7 +128,8 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
     current = mpeg_getbits(buf,47,1);
     if (!current)
 	return TRUE;
-    if (table_data_seen(dm, tab->name, id, version))
+    if (table_data_seen(dm, tab->name, id, version) &&
+	0x00 != tab->sec /* pat */)
 	return TRUE;
 
     switch (tab->sec) {
@@ -165,13 +168,13 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
 	list_for_each(item,&dm->info->programs) {
 	    pr = list_entry(item, struct psi_program, next);
 	    if (!pr->seen)
-		table_close(dm, pr->p_pid);
+		table_close(dm, pr->p_pid, 2);
 	}
 	list_for_each(item,&dm->info->programs) {
 	    pr = list_entry(item, struct psi_program, next);
-	    pr->seen = 0;
-	    if (PSI_NEW == pr->version)
+	    if (pr->seen && pr->p_pid)
 		table_open(dm, "pmt", pr->p_pid, 2);
+	    pr->seen = 0;
 	}
     }
 
@@ -194,10 +197,26 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
     return TRUE;
 }
 
+static struct table* table_find(struct dvbmon *dm, int pid, int sec)
+{
+    struct table      *tab;
+    struct list_head  *item;
+
+    list_for_each(item,&dm->tables) {
+	tab = list_entry(item, struct table, next);
+	if (tab->pid == pid && tab->sec == sec)
+	    return tab;
+    }
+    return NULL;
+}
+
 static void table_open(struct dvbmon *dm, char *name, int pid, int sec)
 {
     struct table *tab; 
 
+    tab = table_find(dm, pid, sec);
+    if (tab)
+	return;
     tab = malloc(sizeof(*tab));
     memset(tab,0,sizeof(*tab));
     tab->name = name;
@@ -216,21 +235,13 @@ static void table_open(struct dvbmon *dm, char *name, int pid, int sec)
 		tab->name, tab->fd, tab->sec, tab->pid);
 }
 
-static void table_close(struct dvbmon *dm, int pid)
+static void table_close(struct dvbmon *dm, int pid, int sec)
 {
     struct table      *tab;
-    struct list_head  *item;
 
-    list_for_each(item,&dm->tables) {
-	tab = list_entry(item, struct table, next);
-	if (tab->pid == pid)
-	    break;
-	tab = NULL;
-    }
-    if (NULL == tab) {
-	fprintf(stderr,"dvbmon: oops: closing unknown pid %d\n",pid);
+    tab = table_find(dm, pid, sec);
+    if (NULL == tab)
 	return;
-    }
     if (dm->verbose)
 	fprintf(stderr,"dvbmon: done:  %s  fd=%2d   sec=0x%02x  pid=%d\n",
 		tab->name, tab->fd, tab->sec, tab->pid);
@@ -245,7 +256,7 @@ static void table_close(struct dvbmon *dm, int pid)
 /* external interface                                                            */
 
 struct dvbmon*
-dvbmon_init(char *adapter, int verbose)
+dvbmon_init(struct dvb_state *dvb, int verbose)
 {
     struct dvbmon *dm;
 
@@ -255,9 +266,8 @@ dvbmon_init(char *adapter, int verbose)
     INIT_LIST_HEAD(&dm->versions);
     INIT_LIST_HEAD(&dm->callbacks);
 
-    strncpy(dm->adapter, adapter, sizeof(dm->adapter));
     dm->verbose = verbose;
-    dm->dvb  = dvb_init(dm->adapter);
+    dm->dvb  = dvb;
     dm->info = psi_info_alloc();
     if (dm->dvb) {
 	if (dm->verbose)
@@ -280,9 +290,10 @@ void dvbmon_fini(struct dvbmon* dm)
     struct table      *tab;
     struct callback   *cb;
 
+    call_callbacks(dm, DVBMON_EVENT_DESTROY, 0, 0);
     list_for_each_safe(item,safe,&dm->tables) {
 	tab = list_entry(item, struct table, next);
-	table_close(dm, tab->pid);
+	table_close(dm, tab->pid, tab->sec);
     };
     list_for_each_safe(item,safe,&dm->versions) {
 	ver = list_entry(item, struct version, next);
@@ -295,7 +306,6 @@ void dvbmon_fini(struct dvbmon* dm)
 	free(cb);
     };
     psi_info_free(dm->info);
-    dvb_fini(dm->dvb);
     free(dm);
 }
 
@@ -323,7 +333,7 @@ void dvbmon_add_callback(struct dvbmon* dm, dvbmon_notify func, void *data)
 
 void dvbmon_del_callback(struct dvbmon* dm, dvbmon_notify func, void *data)
 {
-    struct callback   *cb;
+    struct callback   *cb = NULL;
     struct list_head  *item;
 
     list_for_each(item,&dm->callbacks) {
@@ -339,3 +349,103 @@ void dvbmon_del_callback(struct dvbmon* dm, dvbmon_notify func, void *data)
     list_del(&cb->next);
     free(cb);
 }
+
+/* ----------------------------------------------------------------------------- */
+/* callbacks                                                                     */
+
+void dvbwatch_logger(struct psi_info *info, int event,
+		     int tsid, int pnr, void *data)
+{
+    struct psi_stream  *stream;
+    struct psi_program *pr;
+    
+    switch (event) {
+    case DVBMON_EVENT_SWITCH_TS:
+	fprintf(stderr,"%s: switch ts 0x%04x\n",__FUNCTION__,tsid);
+	break;
+    case DVBMON_EVENT_UPDATE_TS:
+	stream = psi_stream_get(info, tsid, 0);
+	if (stream)
+	    fprintf(stderr,"%s: update ts 0x%04x \"%s\" @ freq %d\n",
+		    __FUNCTION__, tsid, stream->net, stream->frequency);
+	break;
+    case DVBMON_EVENT_UPDATE_PR:
+	pr = psi_program_get(info, tsid, pnr, 0);
+	if (pr)
+	    fprintf(stderr,"%s: update pr 0x%04x/0x%04x  "
+		    "v 0x%04x  a 0x%04x  t 0x%04x  \"%s\", \"%s\"\n",
+		    __FUNCTION__, tsid, pnr,
+		    pr->v_pid, pr->a_pid, pr->t_pid, pr->net, pr->name);
+	break;
+    case DVBMON_EVENT_DESTROY:
+	fprintf(stderr,"%s: destroy\n",__FUNCTION__);
+	break;
+    default:
+	fprintf(stderr,"%s: unknown event %d\n",__FUNCTION__,event);
+	break;
+    }
+}
+
+void dvbwatch_scanner(struct psi_info *info, int event,
+		      int tsid, int pnr, void *data)
+{
+    struct psi_stream  *stream;
+    struct psi_program *pr;
+    char section[32];
+    
+    switch (event) {
+    case DVBMON_EVENT_UPDATE_TS:
+	stream = psi_stream_get(info, tsid, 0);
+	if (!stream)
+	    return;
+	snprintf(section, sizeof(section), "%d", tsid);
+	if (stream->net[0] != '\0')
+	    cfg_set_str("dvb-ts", section, "name", stream->net);
+	cfg_set_int("dvb-ts", section, "frequency", stream->frequency);
+	if (stream->bandwidth)
+	    cfg_set_str("dvb-ts", section, "bandwidth",
+			stream->bandwidth);
+	if (stream->constellation)
+	    cfg_set_str("dvb-ts", section, "modulation",
+			stream->constellation);
+	if (stream->hierarchy)
+	    cfg_set_str("dvb-ts", section, "hierarchy",
+			stream->hierarchy);
+	if (stream->code_rate_hp)
+	    cfg_set_str("dvb-ts", section, "code_rate_high",
+			stream->code_rate_hp);
+	if (stream->code_rate_lp)
+	    cfg_set_str("dvb-ts", section, "code_rate_low",
+			stream->code_rate_lp);
+	if (stream->guard)
+	    cfg_set_str("dvb-ts", section, "guard_interval",
+			stream->guard);
+	if (stream->transmission)
+	    cfg_set_str("dvb-ts", section, "transmission",
+			stream->transmission);
+	break;
+    case DVBMON_EVENT_UPDATE_PR:
+	pr = psi_program_get(info, tsid, pnr, 0);
+	if (!pr)
+	    return;
+	snprintf(section, sizeof(section), "%d-%d", tsid, pnr);
+	if (pr->net[0] != '\0')
+	    cfg_set_str("dvb-pr", section, "net", pr->net);
+	if (pr->name[0] != '\0')
+	    cfg_set_str("dvb-pr", section, "name", pr->name);
+	if (pr->v_pid)
+	    cfg_set_int("dvb-pr", section, "video", pr->v_pid);
+	if (pr->a_pid)
+	    cfg_set_int("dvb-pr", section, "audio", pr->a_pid);
+	if (pr->t_pid)
+	    cfg_set_int("dvb-pr", section, "teletext", pr->t_pid);
+	break;
+    case DVBMON_EVENT_DESTROY:
+	write_config_file("dvb-ts");
+	write_config_file("dvb-pr");
+	write_config_file("vdr-channels");  // DEBUG
+	write_config_file("vdr-diseqc");    // DEBUG
+	break;
+    }
+}
+

@@ -554,6 +554,70 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
 /* ----------------------------------------------------------------------- */
 /* transport streams                                                       */
 
+static char parse_nit_desc(unsigned char *desc, int dlen,
+			   struct psi_stream *stream)
+{
+    static char *bw[4] = {
+	[ 0 ] = "8",
+	[ 1 ] = "7",
+	[ 2 ] = "6",
+    };
+    static char *co[4] = {
+	[ 0 ] = "0",
+	[ 1 ] = "16",
+	[ 2 ] = "64",
+    };
+    static char *hi[4] = {
+	[ 0 ] = "0",
+	[ 1 ] = "1",
+	[ 2 ] = "2",
+	[ 3 ] = "4",
+    };
+    static char *ra[8] = {
+	[ 0 ] = "12",
+	[ 1 ] = "23",
+	[ 2 ] = "34",
+	[ 3 ] = "56",
+	[ 4 ] = "78",
+    };
+    static char *gu[4] = {
+	[ 0 ] = "32",
+	[ 1 ] = "16",
+	[ 2 ] = "8",
+	[ 3 ] = "4",
+    };
+    static char *tr[2] = {
+	[ 0 ] = "2",
+	[ 1 ] = "8",
+    };
+    int i,t,l;
+
+    for (i = 0; i < dlen;) {
+	t = desc[i];
+	l = desc[i+1];
+	switch (t) {
+	case 0x43: /* nit */
+	    fprintf(stderr," not implemented yet: parse dvb-s");
+	    break;
+	case 0x44: /* nit */
+	    fprintf(stderr," not implemented yet: parse dvb-c");
+	    break;
+	case 0x5a: /* nit */
+	    stream->frequency     = mpeg_getbits(desc+i+2,  0, 32) * 10;
+	    stream->bandwidth     = bw[ mpeg_getbits(desc+i+2, 33,  2) ];
+	    stream->constellation = co[ mpeg_getbits(desc+i+2, 40,  2) ];
+	    stream->hierarchy     = hi[ mpeg_getbits(desc+i+2, 43,  2) ];
+	    stream->code_rate_hp  = ra[ mpeg_getbits(desc+i+2, 45,  3) ];
+	    stream->code_rate_lp  = ra[ mpeg_getbits(desc+i+2, 48,  3) ];
+	    stream->guard         = gu[ mpeg_getbits(desc+i+2, 51,  2) ];
+	    stream->transmission  = tr[ mpeg_getbits(desc+i+2, 54,  1) ];
+	    break;
+	}
+	i += 2+l;
+    }
+    return 0;
+}
+
 static void dump_desc(unsigned char *desc, int dlen)
 {
     int i,j,t,l;
@@ -585,7 +649,7 @@ static void dump_desc(unsigned char *desc, int dlen)
 	    fprintf(stderr," dvb-c");
 	    break;
 	case 0x5a: /* nit */
-	    fprintf(stderr," dvb-t");
+	    fprintf(stderr," dvb-t freq=%d",mpeg_getbits(desc+i+2,0,32));
 	    break;
 
 	default:
@@ -786,7 +850,7 @@ int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 {
     struct psi_stream *stream;
     char *name = NULL;
-    int nlen;
+    int nlen = 0;
     int id,version,current,len;
     int j,dlen,tsid;
 
@@ -826,8 +890,11 @@ int mpeg_parse_psi_nit(struct psi_info *info, unsigned char *data, int verbose)
 	j += 48;
 	stream = psi_stream_get(info, tsid, 1);
 	stream->updated = 1;
-	if (name)
+	if (name) {
 	    strncpy(stream->net, name, nlen);
+	    stream->net[nlen] = '\0';
+	}
+	parse_nit_desc(data + j/8, dlen, stream);
 	if (verbose > 1) {
 	    fprintf(stderr,"      tsid %3d :", tsid);
 	    dump_desc(data + j/8, dlen);

@@ -181,6 +181,8 @@ read_config(void)
 {
     read_config_file("options");
     read_config_file("stations");
+    read_config_file("dvb-ts");
+    read_config_file("dvb-pr");
 }
 
 /* ----------------------------------------------------------------------- */

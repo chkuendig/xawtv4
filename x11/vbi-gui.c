@@ -182,6 +182,8 @@ vbi_render_head(struct vbi_window *vw, int pgno, int subno)
 static void
 vbi_newdata(struct vbi_event *ev, void *user)
 {
+    char title[128];
+    char *name;
     struct vbi_window *vw = user;
     
     switch (ev->type) {
@@ -201,7 +203,11 @@ vbi_newdata(struct vbi_event *ev, void *user)
 	}
 	break;
     case VBI_EVENT_NETWORK:
-	XtVaSetValues(vw->shell,XtNtitle,ev->ev.network.name,NULL);
+	name = "<no station name>";
+	if (strlen(ev->ev.network.name) > 0)
+	    name = ev->ev.network.name;
+	snprintf(title,sizeof(title),"teletext: %s",name);
+	XtVaSetValues(vw->shell,XtNtitle,title,NULL);
 	break;
     }
 }

@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr,"can't init dvb\n");
 	exit(1);
     }
-    if (-1 == dvb_frontend_tune(h,argv[optind])) {
+    if (-1 == dvb_frontend_tune(h, "vdr-channels", argv[optind])) {
 	fprintf(stderr,"tuning failed\n");
 	exit(1);
     }
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 	for (;count > 0; count--) {
 	    watch_signal(h,5);
 	    fprintf(stderr,"\n");
-	    dvb_frontend_tune(h,argv[optind]);
+	    dvb_frontend_tune(h, "vdr-channels", argv[optind]);
 	}
 	break;
     case JOB_DUMP:

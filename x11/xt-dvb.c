@@ -224,7 +224,7 @@ static int table_open(DvbWidget dw, int pid)
 
 static void table_close(DvbWidget dw, int pid)
 {
-    struct table      *tab;
+    struct table      *tab = NULL;
     struct list_head  *item;
 
     list_for_each(item,&dw->dvb.tables) {

@@ -12,18 +12,19 @@ char* dvb_devname(struct dvb_state *h);
 struct ng_devinfo* dvb_probe(int debug);
 
 /* high level interface */
-int  dvb_tune(struct dvb_state *h, char *name);
+int  dvb_tune(struct dvb_state *h, char *domain, char *section);
 
 /* low level frontend interface */
-int dvb_frontend_tune(struct dvb_state *h, char *name);
+int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section);
 void dvb_frontend_status_title(void);
 void dvb_frontend_status_print(struct dvb_state *h);
 int dvb_frontend_is_locked(struct dvb_state *h);
 int dvb_frontend_wait_lock(struct dvb_state *h, time_t timeout);
+int dvb_frontend_get_biterr(struct dvb_state *h);
 void dvb_frontend_release(struct dvb_state *h, int write);
 
 /* low level demux interface */
-int dvb_demux_station_filter(struct dvb_state *h, char *name);
+int dvb_demux_station_filter(struct dvb_state *h, char *domain, char *section);
 void dvb_demux_station_release(struct dvb_state *h);
 
 int dvb_demux_req_section(struct dvb_state *h, int pid, int sec, int oneshot);

@@ -234,7 +234,7 @@ static void play_file(char *filename)
 	dvb_debug = 1;
 	dvb = dvb_init_nr(0);
 	if (dvb) {
-	    if (-1 == dvb_tune(dvb,filename)) {
+	    if (-1 == dvb_tune(dvb, "vdr-channels", filename)) {
 		fprintf(stderr,"tuning failed\n");
 		exit(1);
 	    }
@@ -358,7 +358,7 @@ static void about_cb(void)
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]"
+	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
 	"\n";
 
     gtk_about_box(GTK_WINDOW(toplevel), "pia", VERSION, text);

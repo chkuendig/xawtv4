@@ -872,10 +872,10 @@ struct ng_reader mp3_reader = {
     .name       = "mp3",
     .desc       = "MPEG audio (layer iii)",
 
-    /*            mpg1-l3     mpg2-l3       with td3 tag */
-    .magic	= { "\xff\xfb", "\xff\xf3", "ID3" },
-    .moff       = {  0,         0         , 0     },
-    .mlen       = {  2,         2         , 3     },
+    /*              mpg1-l3     mpg2-l3     mpg2-l3     with td3 tag */
+    .magic	= { "\xff\xfa", "\xff\xfb", "\xff\xf3", "ID3" },
+    .moff       = { 0,          0,          0,          0     },
+    .mlen       = { 2,          2,          2,          3     },
     
     .rd_open    = mp3_open,
     .rd_vfmt    = mp3_vfmt,

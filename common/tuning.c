@@ -176,11 +176,11 @@ static int tune_dvb_station(char *station)
     vdrname = cfg_get_str("stations", station, "vdr");
     if (NULL == vdrname)
 	vdrname= station;
-    if (-1 == dvb_tune(devs.dvb, vdrname))
+    if (-1 == dvb_tune(devs.dvb, "vdr-channels", vdrname))
 	return -1;
 
     /* update info */
-    freq = cfg_get_int("dvb", vdrname, "frequency", 0);
+    freq = cfg_get_int("vdr-channels", vdrname, "frequency", 0);
     new_station(station);
     new_channel(NULL);
     snprintf(curr_details, sizeof(curr_details),

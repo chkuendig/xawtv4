@@ -382,7 +382,7 @@ static void menu_cb_about(void)
 	"\n"
 	THIS_IS_GPLv2
 	"\n"
-	"(c) 1997-2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]"
+	"(c) 1997-2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]\n"
 	"\n";
 
     gtk_about_box(GTK_WINDOW(control_win), "xawtv", VERSION, text);
