@@ -226,8 +226,8 @@ static int sat_switch(int fd, char *domain, char *section)
     fe_sec_tone_mode_t tone;
     fe_sec_voltage_t volt;
     
-    dvb_lnb = cfg_get_str(domain, section, "lnb");
-    dvb_sat = cfg_get_str(domain, section, "sat");
+    dvb_lnb = strdup(cfg_get_str(domain, section, "lnb"));
+    dvb_sat = strdup(cfg_get_str(domain, section, "sat"));
 
     if (NULL == dvb_lnb) {
 	fprintf(stderr,"dvb-s: lnb config missing\n");
@@ -395,13 +395,19 @@ int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
     if (-1 == dvb_frontend_open(h,1))
 	return -1;
 
+    if (dvb_src)
+	free(dvb_src);
+    if (dvb_lnb)
+	free(dvb_lnb);
+    if (dvb_sat)
+	free(dvb_sat);
     dvb_src = NULL;
     dvb_lnb = NULL;
     dvb_sat = NULL;
     
     switch (h->info.type) {
     case FE_QPSK:
-	dvb_src = cfg_get_str(domain, section, "source");
+	dvb_src = strdup(cfg_get_str(domain, section, "source"));
 	if (NULL != dvb_src) {
 	    /* use vdr's diseqc.conf */
 	    diseqc = find_vdr_diseqc(domain,section);

@@ -299,9 +299,8 @@ static void response(GtkDialog *dialog,
 	    if (strlen(m_sat[n].value) > 0)
 		cfg_set_str(d, s, "sat", m_sat[n].value);
 	}
-#if 0
-	if (debug)
-	    write_config_file("tmp");
+#if 1
+	write_config_file("tmp");
 #endif
 	dvb_frontend_tune(devs.dvb, d, s);
 	cfg_del_section(d, s);

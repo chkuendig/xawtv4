@@ -84,21 +84,32 @@ Hints for using analog TV
  configuration without loosing all the configuration like hotkeys you
  did after the initial scan.
 
+ I'm currently working on GUI-based channel scanning, stay tuned ;)
+
  xawtv + mtt should work as usual.
 
 
 Hints for using digital TV aka DVB
 ----------------------------------
 
- The alexplore utility can be used to browse the available DVB
- Channels and do a DVB channel scan.  It will save all found channels
- to the ~/tv/dvb-ts and ~/tv/dvb-pr config files.  They will be
- available to xawtv then for creating a station list (~/.tv/stations)
- using xawtv's GUI.  It is possible to drag'n'drop stations from
- alexplore into xawtv's list.
+ First you have to scan for DVB channels.  right-click to popup the
+ control window, then pick "Edit / Scan DVB" to get the DVB channel
+ scanner.  The first Channel/Transponder must be tuned manually
+ using "Commands / Tune frontend".  Once you have successfully tuned
+ the frontend the scanner window should start filling with
+ informations from the current transport stream.  Now a Scan should be
+ able to find all the other Channels/Transponders and stations.
 
- TV Stations listed in ~/.tv/stations can have references to both
- analog and digital tuning info btw.
+ Once the scan is done you can put the stations you like into the
+ station list in the control window (by drag'n'drop) and organize them
+ the way you like it (rename them, group them, give them hotkeys,
+ ...).
+
+ The DVB scanner is also available as standalone application named
+ "alexplore".
+
+ The DVB Channels found by the scan are saved to the ~/tv/dvb-ts and
+ ~/tv/dvb-pr config files, the station list is in ~/.tv/stations.
 
 
 Hints for using teletext
