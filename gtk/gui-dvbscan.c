@@ -61,6 +61,7 @@ enum {
     ST_COL_COUNT,
     ST_COL_FREQ,
     ST_COL_PNR,
+    ST_COL_CA,
     ST_COL_VIDEO,
     ST_COL_AUDIO,
     ST_COL_TELETEXT,
@@ -260,6 +261,7 @@ static GtkTargetEntry dnd_targets[] = {
     { "STRING",       0, ST_COL_NAME  },
     { "TSID",         0, ST_COL_TSID  },
     { "PNR",          0, ST_COL_PNR   },
+//    { "CA",           0, ST_COL_CA    },
     { "VPID",         0, ST_COL_VIDEO },
     { "APID",         0, ST_COL_AUDIO },
 };
@@ -497,6 +499,7 @@ void dvbscan_create_window(int s)
 			       G_TYPE_INT,      // count
 			       G_TYPE_INT,      // freq
 			       G_TYPE_INT,      // pnr
+			       G_TYPE_INT,      // ca
 			       G_TYPE_INT,      // video
 			       G_TYPE_INT,      // audio
 			       G_TYPE_INT,      // teletext
@@ -574,6 +577,20 @@ void dvbscan_create_window(int s)
 	(GTK_TREE_VIEW(view), -1, "PNR", renderer,
 	 "text",           ST_COL_PNR,
 	 "visible",        ST_COL_PNR,
+	 "weight-set",     ST_STATE_ACTIVE,
+	 "foreground-set", ST_STATE_STALE,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "xalign",      1.0,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 "foreground",  "gray",
+		 NULL);
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(view), -1, "CA", renderer,
+	 "text",           ST_COL_CA,
+	 "visible",        ST_COL_CA,
 	 "weight-set",     ST_STATE_ACTIVE,
 	 "foreground-set", ST_STATE_STALE,
 	 NULL);
