@@ -1540,6 +1540,7 @@ void vbi_create_window(struct vbi_state *vbi, struct dvbmon *dvbmon)
 #endif
 
     /* finalize */
+    gtk_widget_grab_focus(vw->tt);
     gtk_widget_show_all(toplevel);
     vbi_setpage(vw,0x100,VBI_ANY_SUBNO);
     tt_windows++;
