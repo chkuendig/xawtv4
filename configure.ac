@@ -403,6 +403,7 @@ compile time options summary
     QuickTime    : $FOUND_LQT
     mad          : $FOUND_MAD
     mpeg2        : $FOUND_MPEG2
+    X11R6        : $FOUND_X11
     OpenMotif    : $FOUND_MOTIF
     OpenGL       : $FOUND_GL
     zvbi         : $FOUND_ZVBI

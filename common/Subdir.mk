@@ -5,6 +5,12 @@ OBJS-dvb := \
 	structs/struct-dump.o
 endif
 
+ifeq ($(FOUND_ZVBI),yes)
+OBJS-common-vbi := \
+	common/vbi-dvb.o \
+	common/vbi-data.o
+endif
+
 OBJS-common-capture := \
 	common/sound.o \
 	common/webcam.o \
@@ -22,10 +28,6 @@ OBJS-common-capture := \
 OBJS-common-input := \
 	common/lirc.o \
 	common/joystick.o
-
-OBJS-common-vbi := \
-	common/vbi-dvb.o \
-	common/vbi-data.o
 
 # RegEdit.c is good old K&R ...
 common/RegEdit.o: CFLAGS += -Wno-missing-prototypes -Wno-strict-prototypes

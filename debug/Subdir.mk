@@ -23,6 +23,7 @@ debug/dvb-signal: \
 	libng/libng.a
 
 debug/xvideo: debug/xvideo.o
+debug/sysfs:  debug/sysfs.o
 
 debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
 debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)
