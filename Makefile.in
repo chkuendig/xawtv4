@@ -1,0 +1,210 @@
+srcdir		:= @srcdir@
+VPATH		:= $(srcdir)
+
+# for package builds (buildroot install + no root privs needed)
+DESTDIR=
+SUID_ROOT=-m4755 -o root
+
+# install paths
+prefix		:= @prefix@
+exec_prefix	:= @exec_prefix@
+bindir		:= $(DESTDIR)@bindir@
+mandir		:= $(DESTDIR)@mandir@
+libdir		:= $(DESTDIR)@libdir@/xawtv
+datadir		:= $(DESTDIR)@datadir@/xawtv
+resdir		:= $(DESTDIR)@resdir@
+config		:= @x11conf@/xawtvrc
+
+# programs
+CC		:= @CC@
+CXX		:= @CXX@
+INSTALL		:= @INSTALL@
+INSTALL_PROGRAM := @INSTALL_PROGRAM@ -s
+INSTALL_DATA	:= @INSTALL_DATA@
+INSTALL_DIR	:= @INSTALL@ -d -m 755
+
+# misc
+VERSION		:= @VERSION@
+
+# for CFLAGS
+WARN_FLAGS	:= -Wall -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith
+LFS_FLAGS	:= -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+X11_FLAGS	:= @X_CFLAGS@ @XFT_FLAGS@ -I/usr/X11R6/include/X11/fonts
+LIB_FLAGS	:= -I. -I./vbistuff -I./x11 \
+		   -I$(srcdir)/jwz -I$(srcdir)/common -I$(srcdir)/console \
+		   -I$(srcdir)/x11 -I$(srcdir)/structs \
+		   -I$(srcdir)/libng -Llibng
+
+# various libraries
+ATHENA_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@ @ATHENA@
+MOTIF_LIBS	:= @X_LIBS@ @XFT_LIBS@ @LIBS@ -lXm -lXmu -lXt @X_PRE_LIBS@ \
+		   -lXp -lXpm -lXext -lX11 @X_EXTRA_LIBS@
+THREAD_LIBS	:= @LIBPTHREAD@
+CURSES_LIBS	:= @LIBCURSES@
+LIRC_LIBS	:= @LIRC@
+OSS_LIBS	:= @LIBOSS@
+ALSA_LIBS	:= @LIBALSA@
+MAD_LIBS	:= @LIBMAD@
+MPEG2_LIBS	:= @LIBMPEG2@
+AA_LIBS		:= @AALIBS@
+QT_LIBS		:= @QTLIBS@
+VBI_LIBS	:= @LIBZVBI@
+GL_LIBS		:= @LIBGL@
+DV_LIBS		:= @LIBDV@
+FS_LIBS		:= -L@x_libraries@ @FSLIB@
+DLFLAGS		:= @DLFLAGS@
+
+ARTS_FLAGS      := @ARTS_FLAGS@
+ARTS_LIBS	:= @ARTS_LIBS@
+
+# stuff configure has found
+FOUND_AALIB	:= @FOUND_AALIB@
+FOUND_ALSA	:= @FOUND_ALSA@
+FOUND_ARTS	:= @FOUND_ARTS@
+FOUND_DV	:= @FOUND_DV@
+FOUND_DVB	:= @FOUND_DVB@
+FOUND_GL	:= @FOUND_GL@
+FOUND_LQT	:= @FOUND_LQT@
+FOUND_MAD	:= @FOUND_MAD@
+FOUND_MPEG2	:= @FOUND_MPEG2@
+FOUND_MOTIF	:= @FOUND_MOTIF@
+FOUND_OS	:= @FOUND_OS@
+FOUND_X11	:= @FOUND_X11@
+FOUND_ZVBI	:= @FOUND_ZVBI@
+USE_MMX		:= @USE_MMX@
+
+# build final cflags
+CFLAGS   := @CFLAGS@
+CFLAGS   += $(WARN_FLAGS)
+CFLAGS   += $(LFS_FLAGS)
+CFLAGS   += $(X11_FLAGS)
+CFLAGS   += $(LIB_FLAGS)
+CFLAGS   += -DCONFIGFILE='"$(config)"'
+CFLAGS   += -DDATADIR='"$(datadir)"'
+CFLAGS   += -DLIBDIR='"$(libdir)"'
+ifeq ($(wildcard .snapshot),)
+  CFLAGS += -DVERSION='"$(VERSION)"'
+else
+  CFLAGS += -DVERSION='"$(VERSION) [SNAPSHOT $(shell cat .snapshot)]"'
+endif
+CXXFLAGS := $(CFLAGS)
+
+# for gcc3
+#CFLAGS   += -std-gnu99
+
+# shared objects need -fPIC
+%.so : CFLAGS   += -fPIC
+%.so : CXXFLAGS += -fPIC
+
+# libraries
+LDLIBS  := @LDLIBS@
+LDFLAGS := @LDFLAGS@
+
+
+#########################################################
+# targets
+
+build: all
+
+Makefile: $(srcdir)/Makefile.in $(srcdir)/configure
+	$(srcdir)/configure
+
+$(srcdir)/configure: $(srcdir)/configure.ac
+	(cd $(srcdir); ./autogen.sh)
+
+install:: all
+	$(INSTALL_DIR) $(bindir)
+
+clean::
+	find . -name \*~ -print | xargs rm -f
+	find . -name \*.o -print | xargs rm -f
+	find . -name \*.a -print | xargs rm -f
+	find . -name \*.dep -print | xargs rm -f
+	rm -f $(depfiles)
+
+distclean:: clean
+	-rm -f Makefile Make.config
+	-rm -f config.cache config.h config.log config.status
+	cp Makefile.clean Makefile
+
+realclean:: distclean
+	find . -name snap0*.ppm  -print | xargs -i rm -f
+	find . -name snap0*.jpeg -print | xargs -i rm -f
+	find . -name .nfs* -print | xargs -i rm -f
+	find . -name core.* -print | xargs -i rm -f
+
+
+#########################################################
+# some rules ...
+
+include $(srcdir)/mk/Compile.mk
+
+%.h: %.in
+	perl $(srcdir)/scripts/html.pl < $< > $@
+
+%.h: %.ad
+	perl $(srcdir)/scripts/fallback.pl < $< > $@
+
+
+#########################################################
+# include stuff
+
+# must come first
+include $(srcdir)/common/Subdir.mk
+
+# subdirs
+include $(srcdir)/console/Subdir.mk
+include $(srcdir)/debug/Subdir.mk
+include $(srcdir)/frequencies/Subdir.mk
+include $(srcdir)/libng/Subdir.mk
+include $(srcdir)/libng/plugins/Subdir.mk
+include $(srcdir)/libng/contrib-plugins/Subdir.mk
+include $(srcdir)/man/Subdir.mk
+include $(srcdir)/scripts/Subdir.mk
+include $(srcdir)/vbistuff/Subdir.mk
+include $(srcdir)/x11/Subdir.mk
+
+# dependencies
+-include $(depfiles)
+
+
+#########################################################
+# just for me, some maintaining jobs.  Don't use them
+
+PRESULT := /work/pbuilder/result
+
+PACKAGE := xawtv
+DEBARCH := $(shell uname -m | sed	\
+		-e 's/i.86/i386/'	\
+		-e 's/ppc/powerpc/')
+DEBVER   = $(shell dpkg-parsechangelog | sed -n 's/^Version: \(.*:\|\)//p')
+DSC     := $(PACKAGE)_$(VERSION).dsc
+CHANGES := $(PACKAGE)_$(VERSION)_$(DEBARCH).changes
+
+
+dsc source ../$(DSC): clean
+	test "$(VERSION)" = "$(DEBVER)"
+	rm -f .snapshot
+	dpkg-buildpackage -S -us -uc -rfakeroot
+
+debs pbuild $(PRESULT)/$(CHANGES): ../$(DSC)
+	sudo /usr/sbin/pbuilder build ../$(DSC)
+	-lintian -i $(PRESULT)/$(CHANGES)
+
+release: $(PRESULT)/$(CHANGES)
+	debsign $(PRESULT)/$(CHANGES)
+
+
+tarball: distclean
+	rm -f .snapshot
+	(cd ..; tar cvzf xawtv_$(VERSION).tar.gz \
+		xawtv-$(VERSION))
+
+rpm: tarball
+	rpm -ta ../xawtv_$(VERSION).tar.gz
+
+snapshot snap: distclean
+	date +%Y%m%d > .snapshot
+	(cd ..; tar cvzf $(HOME)/snapshot/xawtv-`date +%Y%m%d`.tar.gz \
+		xawtv-$(VERSION))
+	$(MAKE) -C $(HOME)/snapshot
