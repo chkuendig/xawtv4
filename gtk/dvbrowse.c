@@ -1,5 +1,5 @@
 /*
- * dvb channel browser
+ * dvb epg browser
  */
 
 #define _GNU_SOURCE
@@ -29,6 +29,7 @@
 #include "grab-ng.h"
 #include "devs.h"
 #include "parseconfig.h"
+#include "commands.h"
 #include "tv-config.h"
 #include "dvb-tuning.h"
 #include "dvb.h"
@@ -39,6 +40,7 @@
 /* misc globals */
 int debug = 0;
 Display *dpy;
+static struct eit_state *eit;
 
 /* ------------------------------------------------------------------------ */
 
@@ -75,7 +77,7 @@ usage(void)
 {
     fprintf(stderr,
 	    "\n"
-	    "usage: alexplore [ options ]\n"
+	    "usage: dvbrowse [ options ]\n"
 	    "options:\n");
 
     cfg_help_cmdline(cmd_opts_only,2,16,0);
@@ -87,48 +89,41 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-    gboolean have_x11;
-
     /* options */
     cfg_parse_cmdline(&argc,argv,cmd_opts_only);
     if (GET_CMD_HELP())
 	usage();
     debug = GET_CMD_DEBUG();
 
-    have_x11 = gtk_init_check(&argc, &argv);
-    
+    gtk_init(&argc, &argv);
     ng_init();
     devlist_init(1, 0, 0);
     device_init(NULL);
     if (NULL == devs.dvb)
-	gtk_panic_box(have_x11, "No DVB device found.\n");
+	gtk_panic_box(1, "No DVB device found.\n");
     devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
     dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
+//  eit = eit_add_watch(devs.dvb, 0x4e,0xff, 0, 0);
+    eit = eit_add_watch(devs.dvb, 0x50,0xf0, debug, 0);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
     dvb_lang_init();
 
-    if (have_x11) {
-	/* setup gtk gui */
-	dvbscan_create_window(1);
-	gtk_widget_show_all(dvbscan_win);
-	if (!debug)
-	    gtk_redirect_stderr_to_gui(GTK_WINDOW(dvbscan_win));
-    } else {
-	/* enter tty mode */
-	fprintf(stderr,"can't open display\n");
-	fprintf(stderr,"non-x11 support not there yet, sorry\n");
-	exit(1);
-    }
+    // quick+dirty
+    read_config_file("stations");
+    do_va_cmd(2,"setstation","0");
+    queue_run();
+
+    /* setup gtk gui */
+    create_epgwin(NULL);
+    gtk_widget_show_all(epg_win);
+    if (!debug)
+	gtk_redirect_stderr_to_gui(GTK_WINDOW(epg_win));
 
     gtk_main();
     fprintf(stderr,"bye...\n");
 
-    write_config_file("dvb-ts");
-    write_config_file("dvb-pr");
-    write_config_file("vdr-channels");  // DEBUG
-    write_config_file("vdr-diseqc");    // DEBUG
-    
+    eit_del_watch(eit);
     dvbmon_fini(devs.dvbmon);
     device_fini();
     exit(0);

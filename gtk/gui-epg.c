@@ -1,8 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <time.h>
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
-#include <time.h>
-#include <stdio.h>
 
+#include "grab-ng.h"
 #include "dvb.h"
 #include "parseconfig.h"
 #include "commands.h"
@@ -10,54 +14,100 @@
 
 GtkWidget* epg_win;
 
+static int standalone;
+
+static GtkWidget* epg_textview;
+static GtkWidget* epg_treeview;
+static GtkWidget* epg_status;
+
+static GtkListStore *epg_store;
+static GtkTreeModel *epg_store_filter;
+
 /* ------------------------------------------------------------------------ */
 
 enum {
-    EPG_COL_EPGITEM,
-    EPG_COL_TIME,
-    EPG_COL_NAME,
-    EPG_CUR_NUM_COLS,
+    /* identify entry */
+    EPG_COL_TSID,
+    EPG_COL_PNR,
+    EPG_COL_ID,
 
-    EPG_COL_STATION = EPG_CUR_NUM_COLS,
-    EPG_NOW_NUM_COLS
+    /* time */
+    EPG_COL_START,
+    EPG_COL_STOP,
+
+    /* properties & descriptions */
+    EPG_COL_LANG,
+    EPG_COL_NAME,
+    EPG_COL_STEXT,
+    EPG_COL_ETEXT,
+
+    /* attributes */
+    EPG_COL_MATCHES,
+
+    /* thats it ;) */
+    EPG_NUM_COLS,
 };
 
-static void epgwin_textview_show_entry(GtkTextView* textview, struct epgitem* epg);
-static void epgwin_add_now_items(GtkTreeView* treeview);
-static void epgwin_add_cur_items(GtkTreeView* treeview, int tsid, int pnr);
+enum epg_filter {
+    EPG_FILTER_NOFILTER,
+    EPG_FILTER_NOW,
+    EPG_FILTER_NEXT,
+    EPG_FILTER_STATION,
+    EPG_FILTER_TEXT,
+};
+
+static enum epg_filter cur_filter = EPG_FILTER_NOFILTER;
+
+/* EPG_FILTER_STATION */
+static int epg_filter_tsid = -1;
+static int epg_filter_pnr = -1;
+
+/* callbacks */
+static void do_refresh(void);
+static void do_filter_nofilter(void);
+static void do_filter_now(void);
+// static void do_filter_next(void);
+static void do_filter_station(void);
+
+static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter, time_t now);
+static void do_filter_all(void);
+
+static void epgwin_textview_show_entry(GtkTextView* textview,
+				       GtkTreeModel *model,
+				       GtkTreeIter *tree);
+static int  epgwin_reload_items();
 static void selection_changed(GtkTreeSelection *sel, GtkTextView* textview);
 
-static void epg_row_activated(
-	GtkTreeView* treeview,
-	GtkTreePath *path,
-	GtkTreeViewColumn* col,
-	GtkWidget* epg_win)
+static void epg_row_activated(GtkTreeView* treeview,
+			      GtkTreePath *path,
+			      GtkTreeViewColumn* col,
+			      GtkWidget* epg_win)
 {
     GtkTreeModel* model;
     GtkTreeIter iter;
-    struct epgitem* epg;
+    gint tsid,pnr;
     char buf[64];
-
+    
     model = gtk_tree_view_get_model(treeview);
     if (gtk_tree_model_get_iter(model, &iter, path)) {
-	gtk_tree_model_get(model, &iter, EPG_COL_EPGITEM, &epg, -1);
-	snprintf(buf, sizeof(buf), "%d-%d", epg->tsid, epg->pnr);
+	gtk_tree_model_get(model, &iter,
+			   EPG_COL_TSID, &tsid,
+			   EPG_COL_PNR,  &pnr,
+			   -1);
+	snprintf(buf, sizeof(buf), "%d-%d", tsid, pnr);
 	do_va_cmd(2,"setdvb",buf);
     }
 }
 
 static void selection_changed(GtkTreeSelection *sel, GtkTextView* textview)
 {
-//    GtkTreeView* treeview;
     GtkTreeModel* model;
     GtkTreeIter iter;
-    struct epgitem* epg;
 
     if(!gtk_tree_selection_get_selected (sel, &model, &iter))
 	return;
 
-    gtk_tree_model_get(model, &iter, EPG_COL_EPGITEM, &epg, -1);
-    epgwin_textview_show_entry(textview, epg);
+    epgwin_textview_show_entry(textview, model, &iter);
 }
 
 static void create_tags(GtkWidget* textview)
@@ -65,236 +115,359 @@ static void create_tags(GtkWidget* textview)
     GtkTextBuffer* buffer;
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
 
-    gtk_text_buffer_create_tag (buffer, "bold", "weight", PANGO_WEIGHT_BOLD, NULL);
-    gtk_text_buffer_create_tag (buffer, "word_wrap", "wrap_mode", GTK_WRAP_WORD, NULL);
+    gtk_text_buffer_create_tag(buffer, "bold", "weight", PANGO_WEIGHT_BOLD, NULL);
+    gtk_text_buffer_create_tag(buffer, "word_wrap", "wrap_mode", GTK_WRAP_WORD, NULL);
 }
 
-static GtkTreeViewColumn* append_text_col(GtkTreeView* tree, const char* title, unsigned id)
+static void data_func_start(GtkTreeViewColumn *col,
+			    GtkCellRenderer   *renderer,
+			    GtkTreeModel      *model,
+			    GtkTreeIter       *iter,
+			    gpointer           user_data)
 {
-    GtkTreeViewColumn* col;
-    GtkCellRenderer* renderer;
-
-    renderer = gtk_cell_renderer_text_new ();
-    col = gtk_tree_view_column_new_with_attributes(title, renderer,
-	    "text", id,
-	    NULL);
-    gtk_tree_view_column_set_resizable(col, TRUE);
-    gtk_tree_view_insert_column(tree, col, -1);
-
-    return col;
+    gint val;
+    time_t start;
+    struct tm *tm;
+    char buf[20];
+    char *fmt = user_data;
+    
+    gtk_tree_model_get(model, iter, EPG_COL_START, &val, -1);
+    start = val;
+    tm = localtime(&start);
+    strftime(buf, sizeof(buf), fmt, tm);
+    g_object_set(renderer, "text", buf, NULL);
 }
+
+static void data_func_station(GtkTreeViewColumn *col,
+			      GtkCellRenderer   *renderer,
+			      GtkTreeModel      *model,
+			      GtkTreeIter       *iter,
+			      gpointer           user_data)
+{
+    gint tsid,pnr;
+    char buf[20], *name;
+    
+    gtk_tree_model_get(model, iter,
+		       EPG_COL_TSID, &tsid,
+		       EPG_COL_PNR,  &pnr,
+		       -1);
+    snprintf(buf,sizeof(buf),"%d-%d",tsid,pnr);
+    name = cfg_get_str("dvb-pr",buf,"name");
+    g_object_set(renderer, "text", name ? name : buf, NULL);
+}
+
+static void menu_cb_close(void)
+{
+    if (standalone) {
+	gtk_main_quit();
+    } else {
+	gtk_widget_hide(epg_win);
+    }
+}
+
+static GtkItemFactoryEntry menu_items[] = {
+    {
+	/* --- File menu ----------------------------- */
+	.path        = "/_File",
+	.item_type   = "<Branch>",
+    },{
+	.path        = "/File/_Close",
+	.accelerator = "<control>Q",
+	.callback    = menu_cb_close,
+	.item_type   = "<StockItem>",
+	.extra_data  = GTK_STOCK_QUIT,
+
+#if 0
+    },{
+	/* --- Help menu ----------------------------- */
+	.path        = "/_Help",
+	.item_type   = "<LastBranch>",
+    },{
+	.path        = "/Help/_About ...",
+	.callback    = menu_cb_about,
+	.item_type   = "<Item>",
+#endif
+    }
+};
+static gint nmenu_items = sizeof(menu_items)/sizeof (menu_items[0]);
+static GtkItemFactory *item_factory;
+
+static struct toolbarbutton toolbaritems[] = {
+    {
+	.text     = "station",
+	.tooltip  = "current station",
+	.stock    = GTK_STOCK_INDEX,
+	.callback = do_filter_station,
+    },{
+	.text     = "now",
+	.tooltip  = "sending now",
+	.stock    = GTK_STOCK_GO_DOWN,
+	.callback = do_filter_now,
+#if 0
+    },{
+	.text     = "next",
+	.tooltip  = "sending soon",
+	.stock    = GTK_STOCK_GO_FORWARD,
+	.callback = do_filter_next,
+#endif
+    },{
+	.text     = "no filter",
+	.tooltip  = "show all entries",
+	.stock    = GTK_STOCK_JUSTIFY_FILL,
+	.callback = do_filter_nofilter,
+    },{
+	/* nothing */
+    },{
+	.text     = "refresh",
+	.tooltip  = "reload epg list",
+	.stock    = GTK_STOCK_REFRESH,
+	.callback = do_refresh,
+    },{
+	/* nothing */
+    }
+};
 
 void create_epgwin(GtkWindow* parent)
 {
-    GtkWidget *vbox,*scroll;
-    GtkWidget* paned;
-    GtkListStore *cur_model;
-    GtkWidget* cur_view;
-    GtkListStore *now_model;
-    GtkWidget* now_view;
-    GtkWidget* textview;
-    GtkWidget* notebook;
-    GtkWidget* frame;
-    GtkTreeSelection* sel;
+    GtkTreeSelection *sel;
+    GtkTreeViewColumn *col;
+    GtkCellRenderer *renderer;
+    GtkWidget *paned,*vbox,*scroll,*frame,*toolbar,*menubar,*handlebox;
+    GtkAccelGroup *accel_group;
 
     epg_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    if(parent)
-	gtk_window_set_transient_for(GTK_WINDOW(epg_win), parent);
     gtk_window_set_title(GTK_WINDOW(epg_win),_("EPG"));
-    gtk_widget_set_size_request(GTK_WIDGET(epg_win), -1, 400);
-    g_signal_connect(epg_win, "delete-event",
-		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+    if (parent) {
+	g_signal_connect(epg_win, "delete-event",
+			 G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+#if 0
+	gtk_window_set_transient_for(GTK_WINDOW(epg_win), parent);
+#endif
+    } else {
+	/* standalone */
+	g_signal_connect(G_OBJECT(epg_win), "destroy",
+			 G_CALLBACK(gtk_main_quit), NULL);
+	standalone = 1;
+    }
 
+    /* build menus */
+    accel_group = gtk_accel_group_new ();
+    item_factory = gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<epg>",
+					accel_group);
+    gtk_item_factory_create_items(item_factory, nmenu_items,
+				  menu_items, NULL);
+    gtk_window_add_accel_group(GTK_WINDOW(epg_win), accel_group);
+    menubar = gtk_item_factory_get_widget(item_factory, "<epg>");
+
+    /* toolbar */
+    toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
+#if 0
+    label = gtk_label_new(" Search: ");
+    gtk_toolbar_add_widget(toolbar,label,-1);
+    search = gtk_entry_new_with_max_length(32);
+    gtk_toolbar_add_widget(toolbar,search,-1);
+    g_signal_connect(search, "activate",
+		     G_CALLBACK(search_text_changed), NULL);
+#endif
+    handlebox = gtk_handle_box_new();
+    gtk_container_add(GTK_CONTAINER(handlebox), toolbar);
+
+    /* status line */
+    epg_status = gtk_widget_new(GTK_TYPE_LABEL,
+				"label",  "not used (yet) status line",
+				"xalign", 0.0,
+				NULL);
+
+    /* window layout */
+    vbox = gtk_vbox_new(FALSE, 1);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
+    gtk_container_add(GTK_CONTAINER(epg_win), vbox);
+    gtk_widget_set_size_request (epg_win, 400, 400);
+
+    gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), handlebox, FALSE, TRUE, 0);
     paned = gtk_vpaned_new();
+    gtk_box_pack_start(GTK_BOX(vbox), paned, TRUE, TRUE, 0);
+    gtk_box_pack_end(GTK_BOX(vbox), epg_status, FALSE, TRUE, 0);
 
-    notebook = gtk_notebook_new();
-
-    /* current station */
-    {
-	cur_view  = gtk_tree_view_new();
-	cur_model = gtk_list_store_new(EPG_CUR_NUM_COLS,
-				      G_TYPE_POINTER,  // epgitem
-				      G_TYPE_STRING,   // time
-				      G_TYPE_STRING,   // name
-				      NULL);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(cur_view),
-				GTK_TREE_MODEL(cur_model));
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-				       GTK_POLICY_NEVER,
-				       GTK_POLICY_AUTOMATIC);
-	g_signal_connect(cur_view, "row-activated",
-			 G_CALLBACK(epg_row_activated), epg_win);
-
-	append_text_col(GTK_TREE_VIEW(cur_view), _("Time"), EPG_COL_TIME);
-	append_text_col(GTK_TREE_VIEW(cur_view), _("Name"), EPG_COL_NAME);
-
-	gtk_container_add(GTK_CONTAINER(scroll), cur_view);
-
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scroll, gtk_label_new_with_mnemonic(_("Current")));
-    }
-
-    /* what's running now */
-    {
-	now_view  = gtk_tree_view_new();
-	now_model = gtk_list_store_new(EPG_NOW_NUM_COLS,
-				      G_TYPE_POINTER,  // epgitem
-				      G_TYPE_STRING,   // station
-				      G_TYPE_STRING,   // time
-				      G_TYPE_STRING,   // name
-				      NULL);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(now_view),
-				GTK_TREE_MODEL(now_model));
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-				       GTK_POLICY_NEVER,
-				       GTK_POLICY_AUTOMATIC);
-	g_signal_connect(now_view, "row-activated",
-			 G_CALLBACK(epg_row_activated), epg_win);
-
-	append_text_col(GTK_TREE_VIEW(now_view), _("Station"), EPG_COL_STATION);
-	append_text_col(GTK_TREE_VIEW(now_view), _("Time"), EPG_COL_TIME);
-	append_text_col(GTK_TREE_VIEW(now_view), _("Name"), EPG_COL_NAME);
-	
-	gtk_container_add(GTK_CONTAINER(scroll), now_view);
-
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scroll, gtk_label_new_with_mnemonic(_("Now")));
-    }
-
+    /* setup tree view */
+    epg_treeview = gtk_tree_view_new();
+    scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+				   GTK_POLICY_NEVER,
+				   GTK_POLICY_AUTOMATIC);
+    gtk_container_add(GTK_CONTAINER(scroll), epg_treeview);
 
     frame = gtk_frame_new(NULL);
     gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
-    gtk_container_add(GTK_CONTAINER(frame), notebook);
+    gtk_container_add(GTK_CONTAINER(frame), scroll);
     gtk_widget_set_size_request (frame, -1, 40);
     gtk_paned_pack1(GTK_PANED(paned), frame, TRUE, FALSE);
+    
+    /* setup textview */
+    epg_textview = gtk_text_view_new();
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(epg_textview), FALSE);
+    scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+				   GTK_POLICY_NEVER,
+				   GTK_POLICY_AUTOMATIC);
+    gtk_container_add(GTK_CONTAINER(scroll), epg_textview);
+
+    frame = gtk_frame_new(NULL);
+    gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
+    gtk_container_add(GTK_CONTAINER(frame), scroll);
+    gtk_widget_set_size_request (frame, -1, 60);
+    gtk_paned_pack2(GTK_PANED(paned), frame, TRUE, FALSE);
+    
+    /* setup store */
+    epg_store = gtk_list_store_new(EPG_NUM_COLS,
+				   G_TYPE_INT,     // EPG_COL_TSID,
+				   G_TYPE_INT,     // EPG_COL_PNR,
+				   G_TYPE_INT,     // EPG_COL_ID,
+
+				   G_TYPE_INT,     // EPG_COL_START,
+				   G_TYPE_INT,     // EPG_COL_END,
+
+				   G_TYPE_STRING,  // EPG_COL_NAME,
+				   G_TYPE_STRING,  // EPG_COL_STEXT,
+				   G_TYPE_STRING,  // EPG_COL_ETEXT,
+				   G_TYPE_STRING,  // EPG_COL_LANG,
+
+				   G_TYPE_BOOLEAN, // EPG_COL_MATCHES,
+				   NULL);
+
+#if 1
+    epg_store_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(epg_store), NULL);
+    gtk_tree_model_filter_set_visible_column(GTK_TREE_MODEL_FILTER(epg_store_filter),
+					     EPG_COL_MATCHES);
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), epg_store_filter);
+#else
+    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), epg_store);
+#endif
+
+    g_signal_connect(epg_treeview, "row-activated",
+		     G_CALLBACK(epg_row_activated), epg_win);
+
+    /* date */
+    renderer = gtk_cell_renderer_text_new ();
+    col = gtk_tree_view_column_new_with_attributes(_("Date"), renderer, NULL);
+    gtk_tree_view_column_set_cell_data_func
+	(col, renderer, data_func_start, "%a, %d.%m.", NULL);
+    gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
+
+    /* time */
+    renderer = gtk_cell_renderer_text_new ();
+    col = gtk_tree_view_column_new_with_attributes(_("Time"), renderer, NULL);
+    gtk_tree_view_column_set_cell_data_func
+	(col, renderer, data_func_start, "%H:%M", NULL);
+    gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
+
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(epg_store), EPG_COL_START,
+				    gtk_sort_iter_compare_int,
+                                    GINT_TO_POINTER(EPG_COL_START), NULL);
+    gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(epg_store),
+					 EPG_COL_START, GTK_SORT_ASCENDING);
+
+#if 0
+    /* FIXME: doesn't work -- will try to sort the epg_store_filter */
+    gtk_tree_view_column_set_sort_column_id(col, EPG_COL_START);
+#endif
+
+    /* station */
+    renderer = gtk_cell_renderer_text_new ();
+    col = gtk_tree_view_column_new_with_attributes(_("Station"), renderer, NULL);
+    gtk_tree_view_column_set_cell_data_func
+	(col, renderer, data_func_station, NULL, NULL);
+    gtk_tree_view_column_set_resizable(col, True);
+    gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
+
+    /* name */
+    renderer = gtk_cell_renderer_text_new ();
+    col = gtk_tree_view_column_new_with_attributes
+	(_("Name"), renderer,
+	 "text", EPG_COL_NAME,
+	 NULL);
+    gtk_tree_view_column_set_resizable(col, True);
+    gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
 
     /* epg description */
-    {
-	textview = gtk_text_view_new();
-	gtk_text_view_set_editable(GTK_TEXT_VIEW(textview), FALSE);
+    create_tags(epg_textview);
 
-	create_tags(textview);
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-				       GTK_POLICY_NEVER,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(scroll), textview);
-
-	frame = gtk_frame_new(NULL);
-	gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
-	gtk_container_add(GTK_CONTAINER(frame), scroll);
-	gtk_widget_set_size_request (frame, -1, 60);
-	gtk_paned_pack2(GTK_PANED(paned), frame, TRUE, FALSE);
-    }
-
-    /* Make a vbox and put stuff in */
-    vbox = gtk_vbox_new(FALSE, 1);
-    gtk_container_set_border_width(GTK_CONTAINER(vbox), 2);
-    gtk_container_add(GTK_CONTAINER(epg_win), vbox);
-
-    gtk_box_pack_start(GTK_BOX(vbox), paned, TRUE, TRUE, 0);
-
-    {
-	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(cur_view));
-	g_signal_connect(sel, "changed",
-			 G_CALLBACK(selection_changed), textview);
-
-	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(now_view));
-	g_signal_connect(sel, "changed",
-			 G_CALLBACK(selection_changed), textview);
-    }
-    
-    gtk_object_set_data_full (GTK_OBJECT (epg_win), "cur_treeview", cur_view,
-                            (GtkDestroyNotify) gtk_widget_unref);
-    gtk_object_set_data_full (GTK_OBJECT (epg_win), "now_treeview", now_view,
-                            (GtkDestroyNotify) gtk_widget_unref);
-    gtk_object_set_data_full (GTK_OBJECT (epg_win), "textview", textview,
-                            (GtkDestroyNotify) gtk_widget_unref);
-
-    gtk_widget_set_size_request (epg_win, 500, 400);
+    sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(epg_treeview));
+    g_signal_connect(sel, "changed",
+		     G_CALLBACK(selection_changed), epg_textview);
 }
 
-static void epgwin_cur_add_listitem(GtkListStore* store, struct epgitem* epg)
+static int epgwin_find_item(GtkTreeIter *iter,
+			    int tsid, int pnr, int id)
+{
+    gint this_tsid, this_pnr, this_id;
+    GtkTreeModel* model = GTK_TREE_MODEL(epg_store);
+    gboolean ok;
+
+    for (ok = gtk_tree_model_get_iter_first(model,iter);
+	 ok;
+	 ok = gtk_tree_model_iter_next(model,iter)) {
+	gtk_tree_model_get(model, iter,
+			   EPG_COL_TSID, &this_tsid,
+			   EPG_COL_PNR,  &this_pnr,
+			   EPG_COL_ID,   &this_id,
+			   -1);
+	if (this_id != id)
+	    continue;
+	if (this_pnr != pnr)
+	    continue;
+	if (this_tsid != tsid)
+	    continue;
+	return 0;
+    }
+    return -1;
+}
+
+static void epgwin_add_item(GtkTreeIter *iter, struct epgitem* epg)
+{
+    gtk_list_store_append(epg_store, iter);
+    gtk_list_store_set(epg_store, iter,
+		       EPG_COL_TSID,     epg->tsid,
+		       EPG_COL_PNR,      epg->pnr,
+		       EPG_COL_ID,       epg->id,
+		       
+		       EPG_COL_MATCHES,  False,
+		       -1);
+    do_filter_one(GTK_TREE_MODEL(epg_store), iter, time(NULL));
+}
+
+static void epgwin_update_item(GtkTreeIter *iter, struct epgitem* epg)
+{
+    gtk_list_store_set(epg_store, iter,
+		       EPG_COL_START,    epg->start,
+		       EPG_COL_STOP,     epg->stop,
+		       EPG_COL_NAME,     epg->name,
+		       EPG_COL_STEXT,    epg->stext,
+		       EPG_COL_ETEXT,    epg->etext,
+		       -1);
+    do_filter_one(GTK_TREE_MODEL(epg_store), iter, time(NULL));
+}
+
+static int epgwin_reload_items()
 {
     GtkTreeIter iter;
-    char buf[64];
-    struct tm tm;
-    
-    if(!epg->name[0])
-	return;
-
-    localtime_r(&epg->start,&tm);
-    strftime(buf, sizeof(buf), "%a %02d.%02m. %R", &tm);
-
-    gtk_list_store_append (store, &iter);
-    gtk_list_store_set (store, &iter,
-	    EPG_COL_EPGITEM, epg,
-	    EPG_COL_TIME, buf,
-	    EPG_COL_NAME, epg->name,
-	    -1);
-}
-
-static void epgwin_add_cur_items(GtkTreeView* treeview, int tsid, int pnr)
-{
     struct list_head *item;
-    struct epgitem* e;
-    GtkListStore* store = GTK_LIST_STORE(gtk_tree_view_get_model(treeview));
+    struct epgitem* epg;
+    int count = 0;
 
-    gtk_list_store_clear(store);
+    gtk_list_store_clear(epg_store);
 
-    if(tsid == -1 || pnr == -1)
-	return;
-
-    list_for_each(item, &epg_list)
-    {
-	e = list_entry(item, struct epgitem, next);
-	if(e->tsid == tsid && e->pnr == pnr)
-	    epgwin_cur_add_listitem(store, e);
+    list_for_each(item, &epg_list) {
+	epg = list_entry(item, struct epgitem, next);
+	if (strlen(epg->name) < 3)
+	    continue;
+	// FIXME: show only stations in control window
+	epgwin_add_item(&iter,epg);
+	epgwin_update_item(&iter,epg);
+	count++;
     }
-}
-
-static void epgwin_now_add_listitem(GtkListStore* store, struct epgitem* epg)
-{
-    GtkTreeIter iter;
-    char buf[64], buf2[64], *name;
-    struct tm tm;
-    
-    if(!epg->name[0])
-	return;
-
-    localtime_r(&epg->start,&tm);
-    strftime(buf, sizeof(buf), "%a %02d.%02m. %R", &tm);
-
-    snprintf(buf2, sizeof(buf2), "%d-%d", epg->tsid, epg->pnr);
-    name = cfg_get_str("dvb-pr",buf2,"name");
-    if (NULL == name)
-	name = buf2;
-
-    gtk_list_store_append (store, &iter);
-    gtk_list_store_set (store, &iter,
-	    EPG_COL_EPGITEM, epg,
-	    EPG_COL_STATION, name,
-	    EPG_COL_TIME, buf,
-	    EPG_COL_NAME, epg->name,
-	    -1);
-}
-
-static void epgwin_add_now_items(GtkTreeView* treeview)
-{
-    struct list_head *item;
-    struct epgitem* e;
-    time_t now = time(NULL);
-    GtkListStore* store = GTK_LIST_STORE(gtk_tree_view_get_model(treeview));
-
-    gtk_list_store_clear(store);
-
-    //FIXME: only stations in control window
-    list_for_each(item, &epg_list)
-    {
-	e = list_entry(item, struct epgitem, next);
-	if (e->start <= now && e->stop > now)
-	    epgwin_now_add_listitem(store, e);
-    }
+    return count;
 }
 
 #define TBBOLD(x) \
@@ -303,25 +476,35 @@ static void epgwin_add_now_items(GtkTreeView* treeview)
 #define TBNORM(x) \
     gtk_text_buffer_insert (buffer, &iter, x, -1);
 
-static void epgwin_textview_show_entry(GtkTextView* textview, struct epgitem* epg)
+static void epgwin_textview_show_entry(GtkTextView* textview,
+				       GtkTreeModel *model,
+				       GtkTreeIter *tree)
 {
     GtkTextIter iter, start, end;
     GtkTextBuffer* buffer;
     char buf[64];
     struct tm tm1, tm2;
+    gint t_start, t_stop;
+    char *name, *stext, *etext, *lang;
+    time_t t;
 
     buffer = gtk_text_view_get_buffer(textview);
 
     gtk_text_buffer_get_bounds (buffer, &start, &end);
     gtk_text_buffer_delete(buffer, &start, &end);
-    
-    if(!epg)
-	return;
-
     gtk_text_buffer_get_iter_at_offset (buffer, &iter, 0);
 
-    localtime_r(&epg->start,&tm1);
-    localtime_r(&epg->stop, &tm2);
+    gtk_tree_model_get(model, tree,
+		       EPG_COL_START,  &t_start,
+		       EPG_COL_STOP,   &t_stop,
+		       EPG_COL_LANG,   &lang,
+		       EPG_COL_NAME,   &name,
+		       EPG_COL_STEXT,  &stext,
+		       EPG_COL_ETEXT,  &etext,
+		       -1);
+
+    t = t_start; localtime_r(&t,&tm1);
+    t = t_stop;  localtime_r(&t,&tm2);
 
     TBBOLD(_("Time: "));
     if (tm1.tm_year == tm2.tm_year &&
@@ -338,24 +521,25 @@ static void epgwin_textview_show_entry(GtkTextView* textview, struct epgitem* ep
 	TBNORM(buf);
     }
 
-    if (epg->name[0]) {
+    if (name && strlen(name)) {
 	TBBOLD(_("Name: "));
-	TBNORM(epg->name);
+	TBNORM(name);
 	TBNORM("\n");
     }
 
-    if (epg->stext[0]) {
+    if (stext && strlen(stext)) {
 	TBBOLD(_("Summary: "));
-	TBNORM(epg->stext);
+	TBNORM(stext);
 	TBNORM("\n");
     }
 
-    if (epg->lang[0]) {
+    if (lang) {
 	TBBOLD(_("Language: "));
-	TBNORM(epg->lang);
+	TBNORM(lang);
 	TBNORM("\n");
     }
 
+#if 0
     if (epg->flags&EPG_FLAGS_AUDIO) {
 	TBBOLD(_("Audio: "));
 	if (epg->flags&EPG_FLAG_AUDIO_MONO)
@@ -381,10 +565,11 @@ static void epgwin_textview_show_entry(GtkTextView* textview, struct epgitem* ep
 	    TBNORM(_("HDTV"));
 	TBNORM("\n");
     }
+#endif
 
-    if (epg->etext) {
+    if (etext && strlen(etext)) {
 	TBBOLD(_("Description:\n"));
-	TBNORM(epg->etext);
+	TBNORM(etext);
 	TBNORM("\n");
     }
 
@@ -394,20 +579,106 @@ static void epgwin_textview_show_entry(GtkTextView* textview, struct epgitem* ep
 
 void epgwin_show(struct epgitem* epg)
 {
-    GtkWidget* textview;
-    GtkWidget* treeview;
+    GtkTreeIter iter;
 
-    textview = gtk_object_get_data (GTK_OBJECT(epg_win), "textview");
-    epgwin_textview_show_entry(GTK_TEXT_VIEW(textview), epg);
-
-    treeview = gtk_object_get_data (GTK_OBJECT(epg_win), "cur_treeview");
-    epgwin_add_cur_items(GTK_TREE_VIEW(treeview), epg?epg->tsid:-1, epg?epg->pnr:-1);
-
-    treeview = gtk_object_get_data (GTK_OBJECT(epg_win), "now_treeview");
-    epgwin_add_now_items(GTK_TREE_VIEW(treeview));
+    if (epg) {
+	if (0 == epgwin_find_item(&iter, epg->tsid, epg->pnr, epg->id))
+	    epgwin_textview_show_entry(GTK_TEXT_VIEW(epg_textview),
+				       GTK_TREE_MODEL(epg_store),
+				       &iter);
+	
+	epg_filter_tsid = epg->tsid;
+	epg_filter_pnr  = epg->pnr;
+	do_filter_all();
+    }
 
     if (!GTK_WIDGET_VISIBLE(epg_win))
 	gtk_widget_show_all(epg_win);
+}
+
+/* callbacks */
+
+static void do_refresh(void)
+{
+    char buf[32];
+    int n;
+
+    n = epgwin_reload_items();
+    snprintf(buf,sizeof(buf),"%d entries",n);
+    gtk_label_set_label(GTK_LABEL(epg_status),buf);
+}
+
+static void do_filter_nofilter(void)
+{
+    cur_filter = EPG_FILTER_NOFILTER;
+    do_filter_all();
+}
+
+static void do_filter_station(void)
+{
+    cur_filter = EPG_FILTER_STATION;
+    do_filter_all();
+}
+
+static void do_filter_now(void)
+{
+    cur_filter = EPG_FILTER_NOW;
+    do_filter_all();
+}
+
+#if 0
+static void do_filter_next(void)
+{
+    cur_filter = EPG_FILTER_NEXT;
+    do_filter_all();
+}
+#endif
+
+static void do_filter_one(GtkTreeModel* model, GtkTreeIter *iter, time_t now)
+{
+    gboolean matches = FALSE;
+    gint start, stop, tsid, pnr;
+
+    switch (cur_filter) {
+    case EPG_FILTER_NOFILTER:
+	matches = TRUE;
+	break;
+    case EPG_FILTER_NOW:
+	gtk_tree_model_get(model, iter,
+			   EPG_COL_START, &start,
+			   EPG_COL_STOP,  &stop,
+			   -1);
+	if (start <= now && stop > now)
+	    matches = TRUE;
+	break;
+    case EPG_FILTER_STATION:
+	gtk_tree_model_get(model, iter,
+			   EPG_COL_TSID, &tsid,
+			   EPG_COL_PNR,  &pnr,
+			   -1);
+	if (tsid == epg_filter_tsid && pnr == epg_filter_pnr)
+	    matches = TRUE;
+	break;
+    case EPG_FILTER_NEXT:
+    case EPG_FILTER_TEXT:
+	g_warning("filter not implemented yet");
+	break;
+    }
+    gtk_list_store_set(epg_store, iter, EPG_COL_MATCHES, matches, -1);
+}
+
+static void do_filter_all(void)
+{
+    GtkTreeIter it;
+    gboolean ok;
+    GtkTreeModel* model = GTK_TREE_MODEL(epg_store);
+    time_t now = time(NULL);
+
+    for (ok = gtk_tree_model_get_iter_first(model,&it);
+	 ok;
+	 ok = gtk_tree_model_iter_next(model,&it)) {
+	do_filter_one(model,&it,now);
+    }
 }
 
 // vim: sw=4

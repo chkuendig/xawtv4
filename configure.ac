@@ -348,17 +348,18 @@ else
     echo "*** OpenGL disabled"
 fi
 
-AC_MSG_CHECKING(for gtk+ 2.0)
-pkg-config gtk+-x11-2.0 >/dev/null 2>&1
+pkgs="gtk+-x11-2.0 >= 2.4"
+AC_MSG_CHECKING(for gtk+ 2.4)
+pkg-config "$pkgs" >/dev/null 2>&1
 if test "$?" = "0"; then
     AC_MSG_RESULT(yes)
     FOUND_GTK="yes"
-    GTK_CFLAGS=$(pkg-config --cflags gtk+-x11-2.0)
-    GTK_LIBS=$(pkg-config --libs gtk+-x11-2.0)
+    GTK_CFLAGS=$(pkg-config --cflags "$pkgs")
+    GTK_LIBS=$(pkg-config --libs "$pkgs")
     AC_SUBST(GTK_CFLAGS)
     AC_SUBST(GTK_LIBS)
 else
-    AC_MSG_RESULT(no)
+    AC_MSG_RESULT([$pkgs not found])
 fi
 
 dnl ---------------------------------------------------------------------

@@ -7,8 +7,10 @@ TARGETS-gtk := \
 ifeq ($(FOUND_DVB),yes)
 TARGETS-gtk += \
 	gtk/alexplore \
+	gtk/dvbrowse \
 	gtk/dvbradio
 OBJS-gtk-dvb := \
+	gtk/gui-epg.o \
 	gtk/gui-dvbscan.o \
 	gtk/gui-dvbtune.o
 endif
@@ -32,7 +34,6 @@ gtk/xawtv: \
 	gtk/av-sync.o \
 	gtk/blit.o \
 	gtk/gui-control.o \
-	gtk/gui-epg.o \
 	gtk/gui-analog.o \
 	$(OBJS-gtk-dvb) \
 	gtk/gui-misc.o \
@@ -68,7 +69,17 @@ gtk/mtt: \
 
 gtk/alexplore: \
 	gtk/alexplore.o \
-	$(OBJS-gtk-dvb) \
+	gtk/gui-dvbscan.o \
+	gtk/gui-dvbtune.o \
+	gtk/gui-misc.o \
+	gtk/xscreensaver.o \
+	common/parseconfig.o \
+	$(OBJS-common-capture) \
+	$(OBJS-glib-dvb)
+
+gtk/dvbrowse: \
+	gtk/dvbrowse.o \
+	gtk/gui-epg.o \
 	gtk/gui-misc.o \
 	gtk/xscreensaver.o \
 	common/parseconfig.o \
@@ -88,6 +99,7 @@ all:: $(TARGETS-gtk)
 
 install::
 	$(INSTALL_PROGRAM) -s $(TARGETS-gtk) $(bindir)
+	$(INSTALL_PROGRAM) gtk/xawtv-epg.glade $(datadir)
 
 distclean::
 	rm -f $(TARGETS-gtk)
