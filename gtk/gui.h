@@ -66,12 +66,11 @@ extern int           fs;
 extern char          *curr_station;
 extern char          *pick_device_new;
 
-extern GtkWidget     *control_win;
 extern GtkWidget     *main_win;
-
-extern GtkAccelGroup *control_accel_group;
+extern GtkWidget     *control_win;
 extern GtkWidget     *control_st_menu;
 extern GtkWidget     *control_status;
+extern GtkAccelGroup *control_accel_group;
 
 extern void create_control(void);
 extern void create_onscreen(void);

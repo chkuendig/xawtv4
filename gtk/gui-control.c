@@ -32,9 +32,9 @@ char          *pick_device_new;
 
 GtkWidget     *main_win;
 GtkWidget     *control_win;
-GtkAccelGroup *control_accel_group;
 GtkWidget     *control_st_menu;
 GtkWidget     *control_status;
+GtkAccelGroup *control_accel_group;
 
 static GtkWidget     *station_dialog;
 static GtkWidget     *station_name;
@@ -89,6 +89,12 @@ static void command_cb_add(GtkMenuItem *menuitem, int argc, ...)
 		     G_CALLBACK(command_cb_activate), cmd);
     g_signal_connect(G_OBJECT(menuitem), "destroy",
 		     G_CALLBACK(command_cb_destroy), cmd);
+}
+
+static gboolean accel_yes(GtkWidget *widget, guint signal_id,
+			  gpointer user_data)
+{
+    return TRUE;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -654,11 +660,13 @@ static void x11_station_apply(GtkTreeIter *iter, char *name)
 			  menu);
     gtk_widget_show(menu);
     command_cb_add(GTK_MENU_ITEM(menu), 2, "setstation", name);
-    if (gkey)
+    if (gkey) {
 	gtk_widget_add_accelerator(menu, "activate",
 				   control_accel_group,
 				   gkey, gmods,
 				   GTK_ACCEL_VISIBLE);
+	g_signal_connect(menu, "can_activate_accel", G_CALLBACK(accel_yes), NULL);
+    }
 
     /* update storage */
     gtk_list_store_set(st_model, iter,
@@ -1424,6 +1432,13 @@ void control_switchdevice(void)
 #endif
 }
 
+static void enable_accels(GtkWidget *widget, gpointer dummy)
+{
+    if (GTK_IS_CONTAINER(widget))
+	gtk_container_foreach(GTK_CONTAINER(widget),enable_accels,NULL);
+    g_signal_connect(widget, "can-activate-accel", G_CALLBACK(accel_yes), NULL);
+}
+
 void create_control(void)
 {
     GtkWidget *vbox,*menubar,*scroll;
@@ -1605,6 +1620,7 @@ void create_control(void)
     init_devices_list();
     init_freqtab_list();
     control_switchdevice();
+    enable_accels(menubar,NULL);
 
     return;
 }
