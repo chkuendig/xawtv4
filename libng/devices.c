@@ -21,6 +21,8 @@ struct ng_device_config ng_dev = {
     video_scan: {
 	"/dev/bktr0",
 	"/dev/bktr1",
+	"/dev/cxm0",
+	"/dev/cxm1",
 	NULL
     },
     vbi_scan: {

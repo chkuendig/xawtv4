@@ -848,7 +848,7 @@ blit_create_buf(struct blit_handle *h, struct ng_video_fmt *fmt)
     if (have_gl) {
 	if (gl_formats[fmt->fmtid].fmt   != VIDEO_NONE &&
 	    gl_formats[fmt->fmtid].works == 0) {
-	    if (NULL == gl_formats[fmt->fmtid].ext)
+	    if (NULL != gl_formats[fmt->fmtid].ext)
 		gl_formats[fmt->fmtid].works = 
 		    gl_ext(gl_formats[fmt->fmtid].ext) ? 1 : -1;
 	    else
