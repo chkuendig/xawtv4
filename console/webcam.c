@@ -354,7 +354,7 @@ static struct xfer_ops local_ops = {
 /* ---------------------------------------------------------------------- */
 /* capture stuff                                                          */
 
-char                        *devname;
+char                        *device;
 struct ng_devstate          dev;
 struct ng_video_fmt         fmt,gfmt;
 struct ng_video_conv        *conv;
@@ -369,7 +369,7 @@ grab_init(void)
     int i;
 
     /* open device */
-    if (0 != ng_vid_init(devname,&dev)) {
+    if (0 != ng_vid_init(device,&dev)) {
 	fprintf(stderr,"no grabber device available\n");
 	exit(1);
     }
@@ -503,7 +503,7 @@ add_text(char *image, int width, int height)
 {
     time_t      t;
     struct tm  *tm;
-    char        line[MSG_MAXLEN+1],*ptr;
+    unsigned char line[MSG_MAXLEN+1],*ptr;
     int         i,x,y,f,len;
 
     time(&t);
@@ -733,7 +733,6 @@ main(int argc, char *argv[])
     char *section;
     struct list_head *item;
     struct xfer_state *s;
-    char *devname = "default";
 
     /* read config */
     if (argc > 1) {
@@ -746,7 +745,7 @@ main(int argc, char *argv[])
     ng_init();
 
     if (NULL != (val = cfg_get_str("webcam","grab","device")))
-	devname = val;
+	device = val;
     if (NULL != (val = cfg_get_str("webcam","grab","text")))
 	grab_text = val;
     if (NULL != (val = cfg_get_str("webcam","grab","infofile")))
