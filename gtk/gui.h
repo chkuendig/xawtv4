@@ -56,6 +56,10 @@ gint gtk_sort_iter_compare_str(GtkTreeModel *model,
 			       GtkTreeIter  *a,
 			       GtkTreeIter  *b,
 			       gpointer      userdata);
+gint gtk_sort_iter_compare_eq(GtkTreeModel *model,
+			       GtkTreeIter  *a,
+			       GtkTreeIter  *b,
+			       gpointer      userdata);
 
 /* ------------------------------------------------------------------- */
 /* gui-control.c                                                       */

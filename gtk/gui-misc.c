@@ -464,3 +464,12 @@ gint gtk_sort_iter_compare_str(GtkTreeModel *model,
 	return -1;
     return strcmp(aa,bb);
 }
+
+gint gtk_sort_iter_compare_eq(GtkTreeModel *model,
+			      GtkTreeIter  *a,
+			      GtkTreeIter  *b,
+			      gpointer      userdata)
+{
+    /* dummy function to _not_ sort */
+    return 0;
+}

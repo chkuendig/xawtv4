@@ -394,8 +394,17 @@ void create_epgwin(GtkWindow* parent)
     gtk_tree_view_column_set_resizable(col, True);
     gtk_tree_view_insert_column(GTK_TREE_VIEW(epg_treeview), col, -1);
 
+    /* default sort order is unsorted, needed for mass-insertions of
+     * rows without mass-resorting ;) */
+#if 0
+    /* doesn't work as documented :-/ */
     gtk_tree_sortable_set_default_sort_func(GTK_TREE_SORTABLE(epg_store),
 					    NULL, NULL, NULL);
+#else
+    /* dirty workaround */
+    gtk_tree_sortable_set_default_sort_func(GTK_TREE_SORTABLE(epg_store),
+					    gtk_sort_iter_compare_eq, NULL, NULL);
+#endif
 
     /* epg description */
     create_tags(epg_textview);
@@ -464,25 +473,39 @@ static void epgwin_update_item(GtkTreeIter *iter, struct epgitem* epg)
 }
 #endif
 
+static void mass_row_update(int begin)
+{
+    static GtkSortType order;
+    static gboolean sorted;
+    static gint id;
+
+    if (begin) {
+	g_object_ref(epg_store_filter);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), NULL);
+	sorted = gtk_tree_sortable_get_sort_column_id(GTK_TREE_SORTABLE(epg_store),
+						      &id, &order);
+	if (sorted)
+	    gtk_tree_sortable_set_sort_column_id
+		(GTK_TREE_SORTABLE(epg_store),
+		 GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID, 0);
+    } else {
+	if (sorted)
+	    gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(epg_store),
+						 id, order);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview),
+				GTK_TREE_MODEL(epg_store_filter));
+	g_object_unref(epg_store_filter);
+    }
+}
+
 static int epgwin_reload_items()
 {
     GtkTreeIter iter;
     struct list_head *item;
     struct epgitem* epg;
     int count = 0;
-    gint id;
-    GtkSortType order;
-    gboolean sorted;
 
-    g_object_ref(epg_store_filter);
-    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview), NULL);
-    
-    /* sorting disable temporarely (hmm, seems not to work ???) */
-    sorted = gtk_tree_sortable_get_sort_column_id(GTK_TREE_SORTABLE(epg_store),
-						  &id, &order);
-    if (sorted)
-	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(epg_store),
-					     GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID, 0);
+    mass_row_update(1);
 
     gtk_list_store_clear(epg_store);
     list_for_each(item, &epg_list) {
@@ -495,12 +518,7 @@ static int epgwin_reload_items()
 	count++;
     }
 
-    if (sorted)
-	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(epg_store),
-					     id, order);
-    gtk_tree_view_set_model(GTK_TREE_VIEW(epg_treeview),
-			    GTK_TREE_MODEL(epg_store_filter));
-    g_object_unref(epg_store_filter);
+    mass_row_update(0);
     return count;
 }
 
