@@ -43,9 +43,6 @@ extern void (*volume_notify)(void);
 extern void (*freqtab_notify)(void);
 extern void (*setstation_notify)(void);
 
-/* capture overlay/grab/off */
-extern void (*set_capture_hook)(int old, int new, int tmp_switch);
-
 /* toggle fullscreen */
 extern void (*fullscreen_hook)(void);
 extern void (*exit_hook)(void);

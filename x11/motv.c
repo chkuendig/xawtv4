@@ -60,6 +60,7 @@
 #include "atoms.h"
 #include "x11.h"
 #include "xt.h"
+#include "motif-gettext.h"
 #include "xv.h"
 #include "man.h"
 #include "RegEdit.h"
@@ -124,7 +125,7 @@ XtIntervalId audio_timer;
 
 static Widget st_menu1,st_menu2;
 static Widget control_shell,str_shell,levels_shell,levels_toggle;
-static Widget launch_menu,opt_menu,cap_menu,freq_menu;
+static Widget launch_menu,freq_menu;
 static Widget chan_viewport,chan_cont;
 static Widget st_freq,st_chan,st_name,st_key;
 static Widget w_full;
@@ -414,8 +415,10 @@ about_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     Widget msgbox;
     
     msgbox = XmCreateInformationDialog(app_shell,"about_box",NULL,0);
-    XtUnmanageChild(XmMessageBoxGetChild(msgbox,XmDIALOG_HELP_BUTTON));
-    XtUnmanageChild(XmMessageBoxGetChild(msgbox,XmDIALOG_CANCEL_BUTTON));
+    xm_init_msgbox(msgbox,"About MoTV",
+		   "motv - Motif TV application\n"
+		   "\n"
+		   "(c) 2002-04 Gerd Knorr <kraxel@bytesex.org>\n");
     XtAddCallback(msgbox,XmNokCallback,destroy_cb,msgbox);
     XtManageChild(msgbox);
 }
@@ -684,17 +687,10 @@ create_attrs(void)
     XmAddWMProtocolCallback(attr_shell,WM_DELETE_WINDOW,
 			    popupdown_cb,attr_shell);
 
-#if 0
-    attr_tabs = XtVaCreateManagedWidget("tab", xmTabStackWidgetClass, attr_shell,
-					NULL);
-    attr_rc1 = XtVaCreateManagedWidget("rc", xmRowColumnWidgetClass, attr_tabs,
-				       NULL);
-#else
     attr_scroll = XtVaCreateManagedWidget("scroll", xmScrolledWindowWidgetClass,
 					  attr_shell, NULL);
     attr_rc1 = XtVaCreateManagedWidget("rc", xmRowColumnWidgetClass,
 				       attr_scroll, NULL);
-#endif
 
 #if 0
     list_for_each(item,&ng_filters) {
@@ -993,6 +989,7 @@ station_add_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 	XmStringFree(str);
     }
 
+    XtVaSetValues(XtParent(prop_dlg),XtNtitle,_("Add station"),NULL);
     XtManageChild(prop_dlg);
 }
 
@@ -1032,6 +1029,7 @@ station_edit_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 	XmStringFree(str);
     }
 
+    XtVaSetValues(XtParent(prop_dlg),XtNtitle,_("Edit station"),NULL);
     XtManageChild(prop_dlg);
 }
 
@@ -1097,8 +1095,8 @@ station_apply_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 
     if (0 == strlen(station)) {
 	msgbox = XmCreateErrorDialog(prop_dlg,"no_name",NULL,0);
-	XtUnmanageChild(XmMessageBoxGetChild(msgbox,XmDIALOG_HELP_BUTTON));
-	XtUnmanageChild(XmMessageBoxGetChild(msgbox,XmDIALOG_CANCEL_BUTTON));
+	xm_init_msgbox(msgbox,_("Error"),
+		       _("You have to specify a name for the TV Station"));
 	XtAddCallback(msgbox,XmNokCallback,destroy_cb,msgbox);
 	XtManageChild(msgbox);
 	return;
@@ -1141,36 +1139,30 @@ station_tune_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 static void
 create_station_prop(void)
 {
-    Widget label,rowcol;
+    Widget rowcol;
 
     prop_dlg = XmCreatePromptDialog(control_shell,"prop",NULL,0);
-    XmdRegisterEditres(XtParent(prop_dlg));
+    xm_init_dialog(prop_dlg, _("OK"), NULL, _("Cancel"), NULL);
     XtUnmanageChild(XmSelectionBoxGetChild(prop_dlg,XmDIALOG_SELECTION_LABEL));
-    XtUnmanageChild(XmSelectionBoxGetChild(prop_dlg,XmDIALOG_HELP_BUTTON));
     XtUnmanageChild(XmSelectionBoxGetChild(prop_dlg,XmDIALOG_TEXT));
 
     rowcol = XtVaCreateManagedWidget("rc", xmRowColumnWidgetClass, prop_dlg,
 				     NULL);
-    label = XtVaCreateManagedWidget("nameL", xmLabelWidgetClass, rowcol,
-				    NULL);
+    xm_label(rowcol,"nameL",_("Station name"));
     prop_name = XtVaCreateManagedWidget("name", xmTextWidgetClass, rowcol,
 					NULL);
 
-    label = XtVaCreateManagedWidget("keyL", xmLabelWidgetClass, rowcol,
-				    NULL);
+    xm_label(rowcol,"keyL",_("Hotkey"));
     prop_key = XtVaCreateManagedWidget("key", xmTextWidgetClass, rowcol,
 				       NULL);
     XtAddEventHandler(prop_key, KeyPressMask, False, station_key_eh, NULL);
 
-    label = XtVaCreateManagedWidget("groupL", xmLabelWidgetClass, rowcol,
-				    NULL);
+    xm_label(rowcol,"groupL",_("Group"));
     prop_group = XtVaCreateManagedWidget("group", xmTextWidgetClass, rowcol,
 					 NULL);
 
-    prop_channelL = XtVaCreateManagedWidget("channelL", xmLabelWidgetClass,
-					    rowcol,
-					    XmNsensitive, False,
-					    NULL);
+    prop_channelL = xm_label(rowcol,"channelL",_("Channel"));
+    XtVaSetValues(prop_channelL, XmNsensitive, False, NULL);
     prop_channel = XtVaCreateManagedWidget("channel",xmComboBoxWidgetClass,
 					   rowcol,
 #if 0 /* FIXME, set to "True" later seems not to work ... */
@@ -1179,11 +1171,8 @@ create_station_prop(void)
 					   NULL);
     XtAddCallback(prop_channel,XmNselectionCallback, station_tune_cb, NULL);
 
-    prop_vdrL = XtVaCreateManagedWidget("vdrL", xmLabelWidgetClass,
-					rowcol,
-					NULL);
-    prop_vdr = XtVaCreateManagedWidget("vdr",xmComboBoxWidgetClass,
-				       rowcol,
+    prop_vdrL = xm_label(rowcol,"vdrL",_("DVB name"));
+    prop_vdr = XtVaCreateManagedWidget("vdr",xmComboBoxWidgetClass, rowcol,
 				       NULL);
     XtAddCallback(prop_channel,XmNselectionCallback, station_tune_cb, NULL);
 
@@ -1305,6 +1294,7 @@ create_control(void)
 				       XtNvisual,vinfo.visual,
 				       XtNcolormap,colormap,
 				       XtNdepth,vinfo.depth,
+				       XtNtitle,"MoTV",
 				       XmNdeleteResponse,XmDO_NOTHING,
 				       NULL);
     XmdRegisterEditres(control_shell);
@@ -1313,7 +1303,7 @@ create_control(void)
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, control_shell,
 				   NULL);
 
-    /* menbar */
+    /* menubar */
     menubar = XmCreateMenuBar(form,"menubar",NULL,0);
     XtManageChild(menubar);
 
@@ -1346,174 +1336,45 @@ create_control(void)
     XtAddEventHandler(clip,StructureNotifyMask,True,container_resize_eh,NULL);
     
     /* menu - file */
-    menu = XmCreatePulldownMenu(menubar,"fileM",NULL,0);
-    XtVaCreateManagedWidget("file",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-    push = XtVaCreateManagedWidget("rec",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "file", _("&File"));
+    push = xm_pushbutton(menu,"rec",_("&Record movie ..."));
     XtAddCallback(push,XmNactivateCallback,popupdown_cb,str_shell);
     XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-    push = XtVaCreateManagedWidget("quit",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"quit",_("&Quit"));
     XtAddCallback(push,XmNactivateCallback,ExitCB,NULL);
 
     /* menu - edit */
-    menu = XmCreatePulldownMenu(menubar,"editM",NULL,0);
-    XtVaCreateManagedWidget("edit",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-    push = XtVaCreateManagedWidget("st_add",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "edit", _("&Edit"));
+    push = xm_pushbutton(menu,"st_add",_("&Add station ..."));
     XtAddCallback(push,XmNactivateCallback,station_add_cb,NULL);
-    push = XtVaCreateManagedWidget("st_edit",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"st_edit",_("&Edit station ..."));
     XtAddCallback(push,XmNactivateCallback,station_edit_cb,NULL);
-    push = XtVaCreateManagedWidget("st_del",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"st_del",_("&Delete station"));
     XtAddCallback(push,XmNactivateCallback,station_delete_cb,NULL);
-    push = XtVaCreateManagedWidget("st_save",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"st_save",_("Save stations"));
     XtAddCallback(push,XmNactivateCallback,config_save_cb,"stations");
     XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-    push = XtVaCreateManagedWidget("copy",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"copy",_("&Copy"));
     XtAddCallback(push,XmNactivateCallback,action_cb,"Ipc(clipboard)");
 
     /* menu - view */
-    menu = XmCreatePulldownMenu(menubar,"viewM",NULL,0);
-    XtVaCreateManagedWidget("view",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-
-    push = XtVaCreateManagedWidget("spatial",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "view", _("&View"));
+    push = xm_pushbutton(menu,"spatial",_("&Large icons"));
     XtAddCallback(push,XmNactivateCallback,
 		  container_spatial_cb,chan_cont);
-    push = XtVaCreateManagedWidget("details",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"details",_("&Details"));
     XtAddCallback(push,XmNactivateCallback,
 		  container_detail_cb,chan_cont);
 
-    /* menu - tv stations */
-    st_menu1 = XmCreatePulldownMenu(menubar,"stationsM",NULL,0);
-    XtVaCreateManagedWidget("stations",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,st_menu1,NULL);
-    XtAddCallback(st_menu1,XmNmapCallback,menu_cols_cb,NULL);
-    
-    /* menu - tools (name?) */
-    menu = XmCreatePulldownMenu(menubar,"toolsM",NULL,0);
-    XtVaCreateManagedWidget("tools",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-    w_full = XtVaCreateManagedWidget("full",xmToggleButtonWidgetClass,menu,
-				     NULL);
-    XtAddCallback(w_full,XmNvalueChangedCallback,action_cb,
-		  "Command(fullscreen)");
-    push = XtVaCreateManagedWidget("ontop",xmToggleButtonWidgetClass,menu,
-				   NULL);
-    b_ontop = push;
-    XtAddCallback(push,XmNvalueChangedCallback,ontop_cb,NULL);
-    push = XtVaCreateManagedWidget("levels",xmPushButtonWidgetClass,menu,
-				   NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Popup(levels)");
-    XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-    push = XtVaCreateManagedWidget("st_up",xmPushButtonWidgetClass,menu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(setstation,next)");
-    push = XtVaCreateManagedWidget("st_dn",xmPushButtonWidgetClass,menu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(setstation,prev)");
-
-    /* menu - tools / tuner */
-    smenu = XmCreatePulldownMenu(menu,"tuneM",NULL,0);
-    XtVaCreateManagedWidget("tune",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,smenu,NULL);
-    push = XtVaCreateManagedWidget("ch_up",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(setchannel,next)");
-    push = XtVaCreateManagedWidget("ch_dn",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(setchannel,prev)");
-    push = XtVaCreateManagedWidget("fi_up",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(setchannel,fine_up)");
-    push = XtVaCreateManagedWidget("fi_dn",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(setchannel,fine_down)");
-
-    /* menu - tools / capture */
-    smenu = XmCreatePulldownMenu(menu,"grabM",NULL,0);
-    XtVaCreateManagedWidget("grab",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,smenu,NULL);
-    push = XtVaCreateManagedWidget("ppm_f",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(snap,ppm,full)");
-    push = XtVaCreateManagedWidget("ppm_w",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(snap,ppm,win)");
-    push = XtVaCreateManagedWidget("jpg_f",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(snap,jpeg,full)");
-    push = XtVaCreateManagedWidget("jpg_w",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,
-		  "Command(snap,jpeg,win)");
-    
-    /* menu - tools / aspect ratio */
-    smenu = XmCreatePulldownMenu(menu,"ratioM",NULL,0);
-    XtVaCreateManagedWidget("ratio",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,smenu,NULL);
-    push = XtVaCreateManagedWidget("r_no",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Ratio(0,0)");
-    push = XtVaCreateManagedWidget("r_43",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Ratio(4,3)");
-
-    /* menu - tools / launch */
-    launch_menu = XmCreatePulldownMenu(menu,"launchM",NULL,0);
-    XtVaCreateManagedWidget("launch",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,launch_menu,NULL);
-
-#ifdef HAVE_ZVBI
-    /* menu - tools / subtitles */
-    smenu = XmCreatePulldownMenu(menu,"subM",NULL,0);
-    XtVaCreateManagedWidget("sub",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,smenu,NULL);
-    push = XtVaCreateManagedWidget("s_off",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(stop)");
-    push = XtVaCreateManagedWidget("s_150",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,150)");
-    push = XtVaCreateManagedWidget("s_333",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,333)");
-    push = XtVaCreateManagedWidget("s_777",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,777)");
-    push = XtVaCreateManagedWidget("s_801",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,801)");
-    push = XtVaCreateManagedWidget("s_888",xmPushButtonWidgetClass,smenu,NULL);
-    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,888)");
-#endif
-
-    /* menu - internal options */
-    opt_menu = menu = XmCreatePulldownMenu(menubar,"optionsM",NULL,0);
-    XtVaCreateManagedWidget("options",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
+    /* menu - tools */
+    menu = xm_submenu(menubar, NULL, "tools", _("&Tools"));
 #ifdef HAVE_ZVBI
     if (0 /* FIXME */) {
 	push = XtVaCreateManagedWidget("scan",xmPushButtonWidgetClass,menu,NULL);
 	XtAddCallback(push,XmNactivateCallback,chscan_cb,NULL);
     }
 #endif
-    push = XtVaCreateManagedWidget("pref",xmPushButtonWidgetClass,menu,NULL);
-    XtAddCallback(push,XmNactivateCallback,pref_manage_cb,NULL);
-    push = XtVaCreateManagedWidget("opt_save",xmPushButtonWidgetClass,menu,NULL);
-    XtAddCallback(push,XmNactivateCallback,config_save_cb,"options");
-    XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-
-    cap_menu = XmCreatePulldownMenu(menu,"captureM",NULL,0);
-    XtVaCreateManagedWidget("capture",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,cap_menu,NULL);
-    push = XtVaCreateManagedWidget("overlay",xmToggleButtonWidgetClass,
-				   cap_menu,XmNindicatorType,XmONE_OF_MANY,
-				   NULL);
-    add_cmd_callback(push,XmNvalueChangedCallback,"capture","overlay",NULL);
-    push = XtVaCreateManagedWidget("grabdisplay",xmToggleButtonWidgetClass,
-				   cap_menu,XmNindicatorType,XmONE_OF_MANY,
-				   NULL);
-    add_cmd_callback(push,XmNvalueChangedCallback,"capture","grab",NULL);
-    push = XtVaCreateManagedWidget("none",xmToggleButtonWidgetClass,
-				   cap_menu,XmNindicatorType,XmONE_OF_MANY,
-				   NULL);
-    add_cmd_callback(push,XmNvalueChangedCallback,"capture","off",NULL);
-    
-    freq_menu = XmCreatePulldownMenu(menu,"freqM",NULL,0);
-    XtVaCreateManagedWidget("freq",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,freq_menu,NULL);
+    freq_menu = xm_submenu(menu, NULL, "freq", _("Frequency table"));
     for (list = cfg_sections_first("freqtabs");
 	 NULL != list;
 	 list = cfg_sections_next("freqtabs",list)) {
@@ -1524,22 +1385,83 @@ create_control(void)
 	add_cmd_callback(push,XmNvalueChangedCallback,
 			 "setfreqtab", list, NULL);
     }
-
+    push = xm_pushbutton(menu,"pref",_("&Preferences ..."));
+    XtAddCallback(push,XmNactivateCallback,pref_manage_cb,NULL);
+    push = xm_pushbutton(menu,"opt_save",_("&Save options"));
+    XtAddCallback(push,XmNactivateCallback,config_save_cb,"options");
     XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-    smenu = XmCreatePulldownMenu(menu,"devicesM",NULL,0);
-    XtVaCreateManagedWidget("devices",xmCascadeButtonWidgetClass,menu,
-			    XmNsubMenuId,smenu,NULL);
-    for (list = cfg_sections_first("devs");
-	 NULL != list;
-	 list = cfg_sections_next("devs",list)) {
-	push = XtVaCreateManagedWidget(list,
-				       xmToggleButtonWidgetClass,smenu,
-				       XmNindicatorType,XmONE_OF_MANY,
-				       NULL);
-	XtAddCallback(push,XmNvalueChangedCallback,pick_device_cb,NULL);
-    }
-    push = XtVaCreateManagedWidget("attrs",xmPushButtonWidgetClass,menu,NULL);
-    XtAddCallback(push,XmNactivateCallback,popupdown_cb,attr_shell);
+
+    w_full = xm_togglebutton(menu,"full",_("&Fullscreen"));
+    XtAddCallback(w_full,XmNvalueChangedCallback,action_cb,
+		  "Command(fullscreen)");
+    b_ontop = xm_togglebutton(menu,"ontop",_("Stay on &Top"));
+    XtAddCallback(b_ontop,XmNvalueChangedCallback,ontop_cb,NULL);
+    push = xm_pushbutton(menu,"levels",_("Record &level monitor ..."));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Popup(levels)");
+    XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"st_up",_("&Next station"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(setstation,next)");
+    push = xm_pushbutton(menu,"st_dn",_("&Previous station"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(setstation,prev)");
+
+    /* menu - tools / tuner */
+    smenu = xm_submenu(menu, NULL, "tune", _("Tuner"));
+    push = xm_pushbutton(smenu,"ch_up",_("Channel &up"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(setchannel,next)");
+    push = xm_pushbutton(smenu,"ch_dn",_("Channel &down"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(setchannel,prev)");
+    push = xm_pushbutton(smenu,"fi_up",_("Finetune up"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(setchannel,fine_up)");
+    push = xm_pushbutton(smenu,"fi_dn",_("Finetune down"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(setchannel,fine_down)");
+
+    /* menu - tools / capture */
+    smenu = xm_submenu(menu, NULL, "grab", _("Grab image"));
+    push = xm_pushbutton(smenu,"ppm_f",_("PPM, max size"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(snap,ppm,full)");
+    push = xm_pushbutton(smenu,"ppm_w",_("PPM, window size"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(snap,ppm,win)");
+    push = xm_pushbutton(smenu,"jpg_f",_("&JPEG, max size"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(snap,jpeg,full)");
+    push = xm_pushbutton(smenu,"jpg_w",_("JPEG, window size"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,
+		  "Command(snap,jpeg,win)");
+    
+    /* menu - tools / aspect ratio */
+    smenu = xm_submenu(menu, NULL, "ratio", _("Aspect ratio"));
+    push = xm_pushbutton(smenu,"r_no",_("&no ratio"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Ratio(0,0)");
+    push = xm_pushbutton(smenu,"r_43",_("&4:3"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Ratio(4,3)");
+
+    /* menu - tools / launch */
+    launch_menu = xm_submenu(menu, NULL, "launch", _("Launch"));
+
+#ifdef HAVE_ZVBI
+    /* menu - tools / subtitles */
+    smenu = xm_submenu(menu, NULL, "sub", _("Subtitles"));
+    push = xm_pushbutton(smenu,"s_off",_("&disable"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(stop)");
+    push = xm_pushbutton(smenu,"s_150",_("page &150"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,150)");
+    push = xm_pushbutton(smenu,"s_333",_("page &333"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,333)");
+    push = xm_pushbutton(smenu,"s_777",_("page &777"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,777)");
+    push = xm_pushbutton(smenu,"s_801",_("page 8&01"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,801)");
+    push = xm_pushbutton(smenu,"s_888",_("page &888"));
+    XtAddCallback(push,XmNactivateCallback,action_cb,"Vtx(start,888)");
+#endif
 
     /* menu - filter */
 #if 0
@@ -1547,12 +1469,8 @@ create_control(void)
 	struct list_head *item;
 	struct ng_filter *filter;
 	
-	menu = XmCreatePulldownMenu(menubar,"filterM",NULL,0);
-	XtVaCreateManagedWidget("filter",xmCascadeButtonWidgetClass,menubar,
-				XmNsubMenuId,menu,NULL);
-	push = XtVaCreateManagedWidget("fnone",
-				       xmPushButtonWidgetClass,menu,
-				       NULL);
+	menu = xm_submenu(menubar,"filter",_("Filter"));
+	push = xm_pushbutton(menu,"fnone","&No filter");
 	XtAddCallback(push,XmNactivateCallback,action_cb,"Filter()");
 	list_for_each(item,&ng_filters) {
 	    filter = list_entry(item, struct ng_filter, list);
@@ -1563,21 +1481,34 @@ create_control(void)
 	    XtAddCallback(push,XmNactivateCallback,action_cb,strdup(action));
 	}
 	XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-	push = XtVaCreateManagedWidget("fopts",xmPushButtonWidgetClass,menu,
-				       NULL);
+	push = xm_pushbutton(menu,"fops","Filter &options");
 	XtAddCallback(push,XmNactivateCallback,action_cb,"Popup(filter)");
     }
 #endif
 
+    /* menu - devices */
+    menu = xm_submenu(menubar, NULL, "devices", _("&Devices"));
+    cfg_sections_for_each("devs",list) {
+	push = XtVaCreateManagedWidget(list,
+				       xmToggleButtonWidgetClass,menu,
+				       XmNindicatorType,XmONE_OF_MANY,
+				       NULL);
+	XtAddCallback(push,XmNvalueChangedCallback,pick_device_cb,NULL);
+    }
+    XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"attrs",_("Device &Settings ..."));
+    XtAddCallback(push,XmNactivateCallback,popupdown_cb,attr_shell);
+
+    /* menu - tv stations */
+    st_menu1 = xm_submenu(menubar, NULL, "stations", _("&Stations"));
+    XtAddCallback(st_menu1,XmNmapCallback,menu_cols_cb,NULL);
+    
     /* menu - help */
-    menu = XmCreatePulldownMenu(menubar,"helpM",NULL,0);
-    push = XtVaCreateManagedWidget("help",xmCascadeButtonWidgetClass,menubar,
-				   XmNsubMenuId,menu,NULL);
-    XtVaSetValues(menubar,XmNmenuHelpWidget,push,NULL);
-    push = XtVaCreateManagedWidget("man",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "help", _("&Help"));
+    push = xm_pushbutton(menu,"man","Show &manpage");
     XtAddCallback(push,XmNactivateCallback,man_cb,"motv");
     XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-    push = XtVaCreateManagedWidget("about",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"about",_("&About ..."));
     XtAddCallback(push,XmNactivateCallback,about_cb,NULL);
 
     /* toolbar */
@@ -1609,54 +1540,6 @@ create_control(void)
 }
 
 /*----------------------------------------------------------------------*/
-
-#if 0
-void create_chanwin(void)
-{
-    Widget form,clip,menu,push;
-    
-}
-#endif
-
-/*----------------------------------------------------------------------*/
-
-#if 0
-static void
-do_capture(int from, int to, int tmp_switch)
-{
-    static int niced = 0;
-    WidgetList children;
-
-    /* off */
-    switch (from) {
-    case CAPTURE_GRABDISPLAY:
-//	video_gd_stop();
-	XClearArea(XtDisplay(tv), XtWindow(tv), 0,0,0,0, True);
-	break;
-    case CAPTURE_OVERLAY:
-	video_overlay(0);
-	break;
-    }
-
-    /* on */
-    switch (to) {
-    case CAPTURE_GRABDISPLAY:
-	if (!niced)
-	    nice(niced = 10);
-//	video_gd_start();
-	break;
-    case CAPTURE_OVERLAY:
-	video_overlay(1);
-	break;
-    }
-
-    /* update menu */
-    XtVaGetValues(cap_menu,XtNchildren,&children,NULL);
-    XmToggleButtonSetState(children[0],to == CAPTURE_OVERLAY,    False);
-    XmToggleButtonSetState(children[1],to == CAPTURE_GRABDISPLAY,False);
-    XmToggleButtonSetState(children[2],to == CAPTURE_OFF,        False);
-}
-#endif
 
 static void
 do_motif_fullscreen(void)
@@ -1693,13 +1576,11 @@ static void
 file_browse_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 {
     struct FILE_DATA *h = clientdata;
-    Widget help;
     /* XmString str; */
 
     if (NULL == h->filebox) {
 	h->filebox = XmCreateFileSelectionDialog(h->push,"filebox",NULL,0);
-	help = XmFileSelectionBoxGetChild(h->filebox,XmDIALOG_HELP_BUTTON);
-	XtUnmanageChild(help);
+	xm_init_dialog(h->filebox,_("OK"),NULL,_("Cancel"),NULL);
 	XtAddCallback(h->filebox,XmNokCallback,file_done_cb,h);
 	XtAddCallback(h->filebox,XmNcancelCallback,file_done_cb,h);
     }
@@ -1726,7 +1607,6 @@ create_strwin(void)
 {
     Widget form,push,rowcol,frame,fbox;
     struct FILE_DATA *h;
-    Arg args[2];
     
     str_shell = XtVaAppCreateShell("streamer", "MoTV4",
 				   topLevelShellWidgetClass,
@@ -1735,6 +1615,7 @@ create_strwin(void)
 				   XtNvisual,vinfo.visual,
 				   XtNcolormap,colormap,
 				   XtNdepth,vinfo.depth,
+				   XtNtitle,_("Record a movie"),
 				   XmNdeleteResponse,XmDO_NOTHING,
 				   NULL);
     XmdRegisterEditres(str_shell);
@@ -1745,83 +1626,70 @@ create_strwin(void)
 
     /* driver */
     frame = XtVaCreateManagedWidget("driverF", xmFrameWidgetClass, form, NULL);
-    XtVaCreateManagedWidget("driverL",xmLabelWidgetClass,frame,NULL);
+    xm_label(frame,"driverL","Output format");
     driver_menu = XmCreatePulldownMenu(form,"driverM",NULL,0);
-    XtSetArg(args[0],XmNsubMenuId,driver_menu);
-    driver_option = XmCreateOptionMenu(frame,"driver",args,1);
-    XtManageChild(driver_option);
+    driver_option = xm_optionmenu(frame,driver_menu,"driver",_("Driver:"));
 
     /* video format + frame rate */
     frame = XtVaCreateManagedWidget("videoF", xmFrameWidgetClass, form, NULL);
-    XtVaCreateManagedWidget("videoL",xmLabelWidgetClass,frame,NULL);
+    xm_label(frame,"videoL",_("Video options"));
     rowcol = XtVaCreateManagedWidget("videoB",xmRowColumnWidgetClass,
 				     frame,NULL);
     video_menu = XmCreatePulldownMenu(rowcol,"videoM",NULL,0);
-    XtSetArg(args[0],XmNsubMenuId,video_menu);
-    video_option = XmCreateOptionMenu(rowcol,"video",args,1);
-    XtManageChild(video_option);
-    XtVaCreateManagedWidget("fpsL",xmLabelWidgetClass,rowcol,NULL);
+    xm_optionmenu(rowcol,video_menu,"video", "Format:");
+    xm_label(rowcol,"fpsL",_("fps:"));
     m_fps = XtVaCreateManagedWidget("fps",xmComboBoxWidgetClass,rowcol,NULL);
     
     /* audio format + sample rate */
     frame = XtVaCreateManagedWidget("audioF", xmFrameWidgetClass, form, NULL);
-    XtVaCreateManagedWidget("audioL",xmLabelWidgetClass,frame,NULL);
+    xm_label(frame,"audioL",_("Audio options"));
     rowcol = XtVaCreateManagedWidget("audioB",xmRowColumnWidgetClass,
 				     frame,NULL);
     audio_menu = XmCreatePulldownMenu(rowcol,"audioM",NULL,0);
-    XtSetArg(args[0],XmNsubMenuId,audio_menu);
-    audio_option = XmCreateOptionMenu(rowcol,"audio",args,1);
-    XtManageChild(audio_option);
-    XtVaCreateManagedWidget("rateL",xmLabelWidgetClass,rowcol,NULL);
+    xm_optionmenu(rowcol,audio_menu,"audio",_("Format:"));
+    xm_label(rowcol,"rateL",_("Rate:"));
     m_rate = XtVaCreateManagedWidget("rate",xmComboBoxWidgetClass,rowcol,NULL);
 
     /* filenames */
     frame = XtVaCreateManagedWidget("fileF", xmFrameWidgetClass, form, NULL);
-    XtVaCreateManagedWidget("fileL",xmLabelWidgetClass,frame,NULL);
+    xm_label(frame,"fileL",_("Filenames"));
     fbox = XtVaCreateManagedWidget("fbox",xmRowColumnWidgetClass,
 				   frame,NULL);
 
     rowcol = XtVaCreateManagedWidget("fvideoB",xmRowColumnWidgetClass,
 				     fbox,NULL);
-    XtVaCreateManagedWidget("fvideoL",xmLabelWidgetClass,rowcol,NULL);
+    xm_label(rowcol,"fvideoL",_("Video:"));
     h = malloc(sizeof(*h));
     memset(h,0,sizeof(*h));
     h->text = XtVaCreateManagedWidget("fvideo",xmTextWidgetClass,
 				      rowcol,NULL);
     m_fvideo = h->text;
-    h->push = XtVaCreateManagedWidget("files",xmPushButtonWidgetClass,rowcol,
-				      NULL);
+    h->push = xm_pushbutton(rowcol,"files",_("Browse..."));
     XtAddCallback(h->push,XmNactivateCallback,file_browse_cb,h);
 
     rowcol = XtVaCreateManagedWidget("faudioB",xmRowColumnWidgetClass,
 				     fbox,NULL);
-    m_faudioL = XtVaCreateManagedWidget("faudioL",xmLabelWidgetClass,rowcol,
-					NULL);
+    m_faudioL = xm_label(rowcol,"faudioL",_("Audio:"));
     h = malloc(sizeof(*h));
     memset(h,0,sizeof(*h));
     h->text = XtVaCreateManagedWidget("faudio",xmTextWidgetClass,rowcol,
 				      NULL);
     m_faudio = h->text;
-    h->push = XtVaCreateManagedWidget("files",xmPushButtonWidgetClass,rowcol,
-				      NULL);
+    h->push = xm_pushbutton(rowcol,"files",_("Browse..."));
     m_faudioB = h->push;
     XtAddCallback(h->push,XmNactivateCallback,file_browse_cb,h);
 
     /* seperator, buttons */
-    m_status = XtVaCreateManagedWidget("status",xmLabelWidgetClass,form,NULL);
+    xm_label(form,"status","status");
     rowcol = XtVaCreateManagedWidget("buttons",xmRowColumnWidgetClass,form,
-				   NULL);
-    push = XtVaCreateManagedWidget("rec", xmPushButtonWidgetClass, rowcol,
-				   NULL);
+				     NULL);
+    push = xm_pushbutton(rowcol,"rec",_("Record"));
     add_cmd_callback(push,XmNactivateCallback, "movie","start",NULL);
-    push = XtVaCreateManagedWidget("stop", xmPushButtonWidgetClass, rowcol,
-				   NULL);
+    push = xm_pushbutton(rowcol,"stop",_("Stop"));
     add_cmd_callback(push,XmNactivateCallback, "movie","stop",NULL);
-    push = XtVaCreateManagedWidget("play", xmPushButtonWidgetClass, rowcol,
-				   NULL);
+    push = xm_pushbutton(rowcol,"play",_("Playback"));
     XtAddCallback(push,XmNactivateCallback,exec_player_cb,NULL);
-    push = XtVaCreateManagedWidget("cancel", xmPushButtonWidgetClass, rowcol,
-				   NULL);
+    push = xm_pushbutton(rowcol,"cancel",_("Close"));
     XtAddCallback(push,XmNactivateCallback, popupdown_cb, str_shell);
 }
 
@@ -2279,10 +2147,9 @@ create_pref(void)
     Widget rc1,frame,rc2,rc3;
 
     pref_dlg = XmCreatePromptDialog(control_shell,"pref",NULL,0);
-    XmdRegisterEditres(XtParent(pref_dlg));
+    XtVaSetValues(XtParent(pref_dlg),XtNtitle,_("Preferences"),NULL);
+    xm_init_dialog(pref_dlg,_("OK"),_("Apply"),_("Cancel"),NULL);
     XtUnmanageChild(XmSelectionBoxGetChild(pref_dlg,XmDIALOG_SELECTION_LABEL));
-    XtUnmanageChild(XmSelectionBoxGetChild(pref_dlg,XmDIALOG_HELP_BUTTON));
-    XtManageChild(XmSelectionBoxGetChild(pref_dlg,XmDIALOG_APPLY_BUTTON));
     XtUnmanageChild(XmSelectionBoxGetChild(pref_dlg,XmDIALOG_TEXT));
 
     rc1 = XtVaCreateManagedWidget("rc", xmRowColumnWidgetClass, pref_dlg,
@@ -2290,21 +2157,20 @@ create_pref(void)
 
     /* third frame */
     frame = XtVaCreateManagedWidget("optF",xmFrameWidgetClass,rc1,NULL);
-    XtVaCreateManagedWidget("optL",xmLabelWidgetClass,frame,NULL);
+    xm_label(frame,"optL",_("Options"));
     rc2 = XtVaCreateManagedWidget("rc",xmRowColumnWidgetClass,frame,NULL);
     
     /* options */
-    pref_osd = XtVaCreateManagedWidget("osd",xmToggleButtonWidgetClass,
-				       rc2,NULL);
-    pref_ntsc = XtVaCreateManagedWidget("keypad-ntsc",
-					xmToggleButtonWidgetClass,
-					rc2,NULL);
-    pref_partial = XtVaCreateManagedWidget("keypad-partial",
-					   xmToggleButtonWidgetClass,
-					   rc2,NULL);
+    pref_osd = xm_togglebutton(rc2, "osd",
+			       _("Use onscreen display in Fullscreen mode"));
+    pref_ntsc = xm_togglebutton(rc2, "keypad-ntsc",
+				_("keypad: ntsc mode"));
+    pref_partial = xm_togglebutton(rc2, "keypad-partial",
+				   _("keypad: enable partial (switch on first key)"));
+
     rc3 = XtVaCreateManagedWidget("jpeg", xmRowColumnWidgetClass,
 				  rc2,NULL);
-    XtVaCreateManagedWidget("label",xmLabelWidgetClass,rc3,NULL);
+    xm_label(rc3,"label",_("JPEG Quality"));
     pref_quality = XtVaCreateManagedWidget("quality",
 					   xmTextWidgetClass,
 					   rc3,NULL);
@@ -2850,6 +2716,7 @@ create_levels(void)
 				      XtNvisual,vinfo.visual,
 				      XtNcolormap,colormap,
 				      XtNdepth,vinfo.depth,
+				      XtNtitle,_("Monitor"),
 				      XmNdeleteResponse,XmDO_NOTHING,
 				      NULL);
     XmdRegisterEditres(levels_shell);
@@ -2858,9 +2725,7 @@ create_levels(void)
     rc = XtVaCreateManagedWidget("rc", xmRowColumnWidgetClass, levels_shell,
 				 NULL);
 
-    levels_toggle = XtVaCreateManagedWidget("enable",
-					    xmToggleButtonWidgetClass,rc,
-					    NULL);
+    levels_toggle = xm_togglebutton(rc,"enable",_("enable"));
     XtAddCallback(levels_toggle,XmNvalueChangedCallback,
 		  levels_toggle_cb,NULL);
 
@@ -2952,10 +2817,7 @@ stderr_init(void)
 int
 main(int argc, char *argv[])
 {
-#if 0
-    int            i;
-    unsigned long  freq;
-#endif
+    Pixel background;
     
     XtSetLanguageProc(NULL,NULL,NULL);
     app_shell = XtVaAppInitialize(&app_context, "MoTV4",
@@ -2965,7 +2827,8 @@ main(int argc, char *argv[])
 				  NULL);
     XmdRegisterEditres(app_shell);
     dpy = XtDisplay(app_shell);
-    x11_icons_init(dpy,0);
+    XtVaGetValues(app_shell, XtNbackground,&background, NULL);
+    x11_icons_init(dpy, background);
     init_atoms(dpy);
     ng_init();
     hello_world("motv");

@@ -29,6 +29,7 @@ MoTV4.vtx.label.renderTable.fontType: FONT_IS_FONTSET
 MoTV4.vtx.label.renderTable.fontName: \
 	-*-fixed-medium-r-normal--20-*-*-*-*-*-*, *
 
+*background:		gray77
 
 ! ----------------------------------------------------------------------------
 ! main window
@@ -126,7 +127,7 @@ control*menubar*stationsM.packing:	PACK_COLUMN
 control.title:				MoTV
 control.iconName:			MoTV
 control.iconPixmap:			TVimg
-control.iconMask:			TVmask
+control.iconMask:			TVimg_shape
 control*traversalOn:			true
 control*highlightThickness:		0
 control*XmPushButton.highlightThickness: 1

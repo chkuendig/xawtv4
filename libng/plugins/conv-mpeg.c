@@ -30,6 +30,9 @@ struct mpeg_handle {
     struct list_head       wip;
     struct list_head       done;
     struct list_head       free;
+
+    int                    wip_cnt;
+    int                    wip_max;
 };
 
 /* ---------------------------------------------------------------------- */
@@ -129,6 +132,12 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 	    fr->released = 0;
 	    list_add_tail(&fr->list,&h->wip);
 	    mpeg2_set_buf(h->dec,planes,fr);
+	    h->wip_cnt++;
+	    if (h->wip_max < h->wip_cnt) {
+		h->wip_max = h->wip_cnt;
+		if (ng_debug)
+		    fprintf(stderr,"mpeg: wip max=%d\n",h->wip_max);
+	    }
 	    break;
 	case STATE_SLICE:
         case STATE_END:
@@ -165,6 +174,8 @@ static struct ng_video_buf* mpeg_get_frame(void *handle)
 
     if (list_empty(&h->done))
 	return NULL;
+    if (h->wip_cnt < h->wip_max)
+	return NULL;
     fr = list_entry(h->done.next, struct mpeg_frame, list);
     if (!fr->released)
 	return NULL;
@@ -175,6 +186,7 @@ static struct ng_video_buf* mpeg_get_frame(void *handle)
     list_add_tail(&fr->list,&h->free);
     if (ng_debug > 1)
 	mpeg_pr_buf(buf, "output");
+    h->wip_cnt--;
     return buf;
 }
 

@@ -48,6 +48,7 @@
 #include "vbi-x11.h"
 #include "vbi-gui.h"
 #include "vbi-dvb.h"
+#include "motif-gettext.h"
 
 static int tt_debug = 1;
 static int tt_windows = 0;
@@ -230,8 +231,7 @@ vbi_subpage_menu(struct vbi_window *vw)
     }
 
     /* rebuild menu */
-    push = XtVaCreateManagedWidget("s00",xmPushButtonWidgetClass,
-				   vw->sub_menu,NULL);
+    push = xm_pushbutton(vw->sub_menu,"s00",_("cycle subpages"));
     XtAddCallback(push,XmNactivateCallback,vbi_goto_cb,vw);
     XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,
 			    vw->sub_menu,NULL);
@@ -314,7 +314,8 @@ vbi_font_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
     char *name = XtName(widget);
     vbi_render_set_font(widget, vw, name);
     XtVaSetValues(vw->tt, XmNwidth,vw->w*41, XmNheight,vw->h*25, NULL);
-    XClearWindow(XtDisplay(vw->tt),XtWindow(vw->tt));
+    XClearArea(XtDisplay(vw->tt),XtWindow(vw->tt),
+	       0,0,0,0, True);
 }
 
 static void
@@ -587,13 +588,14 @@ export_save_cb(Widget widget, XtPointer clientdata, XtPointer call_data)
 
     if (NULL == vw->savebox) {
         vw->savebox = XmCreateFileSelectionDialog(vw->shell,"save",NULL,0);
+        XtVaSetValues(XtParent(vw->savebox),XtNtitle,_("Save File"),NULL);
         help = XmFileSelectionBoxGetChild(vw->savebox,XmDIALOG_HELP_BUTTON);
         text = XmFileSelectionBoxGetChild(vw->savebox,XmDIALOG_TEXT);
         XtUnmanageChild(help);
 
         menu = XmCreatePulldownMenu(vw->savebox,"formatM",NULL,0);
         XtSetArg(args[0],XmNsubMenuId,menu);
-        option = XmCreateOptionMenu(vw->savebox,"format",args,1);
+	option = xm_optionmenu(vw->savebox,menu,"format",_("Character set:"));
         XtManageChild(option);
 
 	vw->charset = nl_langinfo(CODESET);
@@ -990,6 +992,10 @@ static void vbi_analog_station_menu(Widget menu, struct vbi_state *vbi)
 	free(sub);
 }
 
+/* --------------------------------------------------------------------- */
+
+#ifdef HAVE_DVB
+
 static void vbi_dvb_pid_cb(Widget widget, XtPointer client, XtPointer call)
 {
     struct vbi_state *vbi = client;
@@ -1061,35 +1067,6 @@ static void vbi_dvb_delete_cb(Widget widget, XtPointer client, XtPointer call)
 	XtVaSetValues(vw->st_btn, XtNsensitive, False, NULL);
 }
 
-#if 0
-static void vbi_dvb_station_menu(Widget menubar, struct vbi_state *vbi)
-{
-    struct psi_info *info = vbi->info;
-    Widget menu,push;
-    XmString label;
-    char pid[16];
-    int i;
-
-    menu = XmCreatePulldownMenu(menubar,"stationM",NULL,0);
-    XtVaCreateManagedWidget("station",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-
-    for (i = 0; i < PSI_PROGS; i++) {
-	if (0 == info->progs[i].p_pid)
-	    break;
-	if (0 == info->progs[i].t_pid)
-	    continue;
-	sprintf(pid,"%d",info->progs[i].t_pid);
-	label = XmStringGenerate(info->progs[i].name,
-				 NULL, XmMULTIBYTE_TEXT, NULL);
-	push = XtVaCreateManagedWidget(pid,
-				       xmPushButtonWidgetClass,menu,
-				       XmNlabelString,label,
-				       NULL);
-	XtAddCallback(push,XmNactivateCallback,vbi_dvb_pid_cb,vbi);
-	XmStringFree(label);
-    }
-}
 #endif
 
 /* --------------------------------------------------------------------- */
@@ -1102,7 +1079,8 @@ static int fntcmp(const void *a, const void *b)
     return strcmp(*aa,*bb);
 }
 
-static void vbi_xft_font_menu(Widget menu, struct vbi_window *vw)
+static void vbi_xft_font_menu(Widget menu, struct vbi_window *vw,
+			      char *sel)
 {
 #ifdef HAVE_XFT
     FcPattern   *pattern;
@@ -1113,13 +1091,12 @@ static void vbi_xft_font_menu(Widget menu, struct vbi_window *vw)
     char        **fonts, *h;
     int         i;
     
-    pattern = FcNameParse(":spacing=100:slant=0:weight=100");
+    pattern = FcNameParse(sel);
     oset = FcObjectSetBuild(FC_FAMILY, FC_STYLE, FC_SPACING, FC_SLANT,
 			    FC_WEIGHT, NULL);
     fset = FcFontList(NULL, pattern, oset);
     FcPatternDestroy(pattern);
     if (fset) {
-	XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
 	fonts = malloc(sizeof(char*) * fset->nfont);
 	for (i = 0; i < fset->nfont; i++)
 	    fonts[i] = FcNameUnparse (fset->fonts[i]);
@@ -1153,7 +1130,7 @@ Widget vbi_create_widgets(Display *dpy, struct vbi_state *vbi)
     int i;
 
     /* shell + form container */
-    shell = XtVaAppCreateShell("mtt","mtt",applicationShellWidgetClass,
+    shell = XtVaAppCreateShell("mtt4","mtt4",applicationShellWidgetClass,
 			       dpy,NULL);
     XtVaSetValues(shell, XmNallowShellResize, True, NULL);
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, shell,
@@ -1178,52 +1155,42 @@ Widget vbi_create_widgets(Display *dpy, struct vbi_state *vbi)
     vbi_event_handler_register(vw->vbi->dec,~0,vbi_newdata,vw);
 
     /* menu -- file */
-    menu = XmCreatePulldownMenu(menubar,"fileM",NULL,0);
-    XtVaCreateManagedWidget("file",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-    push = XtVaCreateManagedWidget("new",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "file", _("&File"));
+    push = xm_pushbutton(menu,"new",_("&New window"));
     XtAddCallback(push,XmNactivateCallback,vbi_new_cb,vw);
-    push = XtVaCreateManagedWidget("save",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"save",_("&Save as ..."));
     XtAddCallback(push,XmNactivateCallback,export_save_cb,vw);
     XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
-    push = XtVaCreateManagedWidget("quit",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"quit",_("&Close"));
     XtAddCallback(push,XmNactivateCallback,vbi_close_cb,vw);
 
     /* menu -- edit */
-    menu = XmCreatePulldownMenu(menubar,"editM",NULL,0);
-    XtVaCreateManagedWidget("edit",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-    push = XtVaCreateManagedWidget("copy",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "edit", _("&Edit"));
+    push = xm_pushbutton(menu,"copy",_("&Copy"));
     XtAddCallback(push,XmNactivateCallback,selection_clip_cb,vw);
-    
+
     /* menu -- go (navigation) */
-    menu = XmCreatePulldownMenu(menubar,"goM",NULL,0);
-    XtVaCreateManagedWidget("go",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
-    push = XtVaCreateManagedWidget("100",xmPushButtonWidgetClass,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "go", _("&Go to"));
+    push = xm_pushbutton(menu,"100",_("&Index"));
     XtAddCallback(push,XmNactivateCallback,vbi_goto_cb,vw);
-    push = XtVaCreateManagedWidget("prev",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"prev",_("&Previous page"));
     XtAddCallback(push,XmNactivateCallback,vbi_goto_cb,vw);
-    push = XtVaCreateManagedWidget("next",xmPushButtonWidgetClass,menu,NULL);
+    push = xm_pushbutton(menu,"next",_("&Next page"));
     XtAddCallback(push,XmNactivateCallback,vbi_goto_cb,vw);
 
     /* menu -- subpage */
-    vw->sub_menu = XmCreatePulldownMenu(menubar,"subpageM",NULL,0);
-    vw->sub_btn  = XtVaCreateManagedWidget("subpage",xmCascadeButtonWidgetClass,
-					   menubar,
-					   XmNsubMenuId,vw->sub_menu,NULL);
+    vw->sub_menu = xm_submenu(menubar, &vw->sub_btn,
+			      "subpage",_("&Subpage"));
 
     /* menu -- stations */
-    vw->st_menu = XmCreatePulldownMenu(menubar,"stationM",NULL,0);
-    vw->st_btn  = XtVaCreateManagedWidget("station",xmCascadeButtonWidgetClass,
-					  menubar,
-					  XmNsubMenuId, vw->st_menu,
-					  XtNsensitive, False,
-					  NULL);
+    vw->st_menu = xm_submenu(menubar, &vw->st_btn,
+			     "station",_("S&tations"));
     if (dvbmon) {
+#ifdef HAVE_DVB
 	XtAddCallback(dvbmon,"update_channel",vbi_dvb_update_cb,vw);
 	XtAddCallback(dvbmon,"delete_channel",vbi_dvb_delete_cb,vw);
 	dvb_refresh(dvbmon);
+#endif
     } else {
 	if (0 != cfg_sections_count("stations")) {
 	    vbi_analog_station_menu(vw->st_menu,vbi);
@@ -1232,15 +1199,15 @@ Widget vbi_create_widgets(Display *dpy, struct vbi_state *vbi)
     }
 
     /* menu -- fonts */
-    menu = XmCreatePulldownMenu(menubar,"fontM",NULL,0);
-    XtVaCreateManagedWidget("font",xmCascadeButtonWidgetClass,menubar,
-			    XmNsubMenuId,menu,NULL);
+    menu = xm_submenu(menubar, NULL, "font", _("F&onts"));
     for (i = 0; vbi_fonts[i].label != NULL; i++) {
 	push = XtVaCreateManagedWidget(vbi_fonts[i].label,
 				       xmPushButtonWidgetClass,menu,NULL);
 	XtAddCallback(push,XmNactivateCallback,vbi_font_cb,vw);
     }
-    vbi_xft_font_menu(menu,vw);
+    XtVaCreateManagedWidget("sep",xmSeparatorWidgetClass,menu,NULL);
+    vbi_xft_font_menu(menu,vw,":spacing=100:slant=0:weight=80");
+    vbi_xft_font_menu(menu,vw,":spacing=100:slant=0:weight=100");
 
     /* toolbar */
     push = XtVaCreateManagedWidget("100",xmPushButtonWidgetClass,tool,NULL);

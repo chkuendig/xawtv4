@@ -41,6 +41,7 @@ x11/xawtv: \
 
 x11/motv: \
 	x11/motv.o \
+	x11/motif-gettext.o \
 	x11/man.o \
 	x11/icons.o \
 	x11/wmhooks.o \
@@ -60,6 +61,7 @@ x11/motv: \
 
 x11/mtt: \
 	x11/mtt.o \
+	x11/motif-gettext.o \
 	x11/icons.o \
 	x11/atoms.o \
 	x11/vbi-x11.o \

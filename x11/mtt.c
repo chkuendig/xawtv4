@@ -288,6 +288,7 @@ int
 main(int argc, char **argv)
 {
     struct vbi_state *vbi;
+    Pixel background;
     Widget shell;
     char **av;
     int ac;
@@ -301,16 +302,17 @@ main(int argc, char **argv)
     app_context = XtCreateApplicationContext();
     XtAppSetFallbackResources(app_context,fallback_ressources);
     dpy = XtOpenDisplay(app_context, NULL,
-			NULL,"mtt",
+			NULL,"mtt4",
 			opt_desc, opt_count,
 			&argc, argv);
     if (NULL == dpy)
 	main_tty(ac,av);
-    app_shell = XtVaAppCreateShell(NULL,"mtt",
+    app_shell = XtVaAppCreateShell(NULL,"mtt4",
 				   applicationShellWidgetClass,dpy,NULL);
     XtAppAddActions(app_context,actionTable,
 		    sizeof(actionTable)/sizeof(XtActionsRec));
-    x11_icons_init(dpy,0);
+    XtVaGetValues(app_shell, XtNbackground,&background, NULL);
+    x11_icons_init(dpy, background);
     init_atoms(dpy);
     XtGetApplicationResources(app_shell,&args,
 			      args_desc,args_count,

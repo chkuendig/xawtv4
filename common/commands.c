@@ -45,9 +45,6 @@ void (*vtx_subtitle)(struct vbi_page *pg, struct vbi_rect *rect);
 void (*freqtab_notify)(void);
 void (*setstation_notify)(void);
 
-/* capture overlay/grab/off */
-void (*set_capture_hook)(int old, int new, int tmp_switch);
-
 /* toggle fullscreen */
 void (*fullscreen_hook)(void);
 void (*exit_hook)(void);
@@ -65,7 +62,6 @@ int cur_movie;
 static int setfreqtab_handler(char *name, int argc, char **argv);
 static int tuning_handler(char *name, int argc, char **argv);
 
-static int capture_handler(char *name, int argc, char **argv);
 static int volume_handler(char *name, int argc, char **argv);
 static int attr_handler(char *name, int argc, char **argv);
 static int show_handler(char *name, int argc, char **argv);
@@ -93,8 +89,6 @@ static struct COMMANDS {
     { "setchannel", 0, tuning_handler,     1 },
     { "setfreq",    1, tuning_handler,     1 },
     { "setfreqtab", 1, setfreqtab_handler, 0 },
-
-    { "capture",    1, capture_handler,    0 },
 
     { "setnorm",    1, attr_handler,       1 },
     { "setinput",   1, attr_handler,       1 },
@@ -276,15 +270,6 @@ split_cmdline(char *line, int *count)
 }
 
 /* ----------------------------------------------------------------------- */
-
-#if 0
-/* sharing code does'nt work well for this one ... */
-static void
-set_capture(int capture, int tmp_switch)
-{
-    /* FIXME */
-}
-#endif
 
 static void
 set_freqtab(char *name)
@@ -532,22 +517,6 @@ print_choices(char *name, char *value, struct STRTAB *tab)
 static int setfreqtab_handler(char *name, int argc, char **argv)
 {
     set_freqtab(argv[0]);
-    return 0;
-}
-
-static int capture_handler(char *name, int argc, char **argv)
-{
-#if 0 /* FIXME */
-    int i;
-
-    if (0 == strcasecmp(argv[0],"toggle")) {
-	i = (cur_capture == CAPTURE_OFF) ? CAPTURE_ON : CAPTURE_OFF;
-    } else {
-	i = str_to_int(argv[0],captab);
-    }
-    if (i != -1)
-	set_capture(i,0);
-#endif
     return 0;
 }
 
