@@ -48,6 +48,7 @@ struct callback {
 
 struct dvbmon {
     int                 verbose;
+    int                 timeout;
     struct dvb_state    *dvb;
     struct psi_info     *info;
 
@@ -58,6 +59,7 @@ struct dvbmon {
 
 static void table_open(struct dvbmon *dm, char *name, int pid, int sec);
 static void table_close(struct dvbmon *dm, int pid, int sec);
+static void table_refresh(struct dvbmon *dm, struct table *tab);
 
 /* ----------------------------------------------------------------------------- */
 /* internal functions                                                            */
@@ -121,8 +123,9 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
     
     /* get data */
     if (dvb_demux_get_section(&tab->fd, buf, sizeof(buf), 0) < 0) {
-	fprintf(stderr,"dvbmon: read %s oops (fd %d)\n",
-		tab->name, tab->fd);
+	fprintf(stderr,"dvbmon: reading %s failed (frontend not locked?), "
+		"fd %d, trying to re-init.\n", tab->name, tab->fd);
+	table_refresh(dm,tab);
 	return TRUE;
     }
     id      = mpeg_getbits(buf,24,16);
@@ -224,7 +227,7 @@ static void table_open(struct dvbmon *dm, char *name, int pid, int sec)
     tab->name = name;
     tab->pid  = pid;
     tab->sec  = sec;
-    tab->fd   = dvb_demux_req_section(dm->dvb, -1, pid, sec, 0, 600);
+    tab->fd   = dvb_demux_req_section(dm->dvb, -1, pid, sec, 0, dm->timeout);
     if (-1 == tab->fd) {
 	free(tab);
 	return;
@@ -254,6 +257,20 @@ static void table_close(struct dvbmon *dm, int pid, int sec)
     free(tab);
 }
 
+static void table_refresh(struct dvbmon *dm, struct table *tab)
+{
+    tab->fd = dvb_demux_req_section(dm->dvb, tab->fd, tab->pid, tab->sec,
+				    0, dm->timeout);
+    if (-1 == tab->fd) {
+	fprintf(stderr,"%s: failed\n",__FUNCTION__);
+	g_source_remove(tab->id);
+	g_io_channel_unref(tab->ch);
+	list_del(&tab->next);
+	free(tab);
+	return;
+    }
+}
+
 /* ----------------------------------------------------------------------------- */
 /* external interface                                                            */
 
@@ -269,6 +286,7 @@ dvbmon_init(struct dvb_state *dvb, int verbose)
     INIT_LIST_HEAD(&dm->callbacks);
 
     dm->verbose = verbose;
+    dm->timeout = 60;
     dm->dvb  = dvb;
     dm->info = psi_info_alloc();
     if (dm->dvb) {
