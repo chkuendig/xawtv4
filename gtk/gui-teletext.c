@@ -27,7 +27,7 @@
 #include "vbi-data.h"
 #include "vbi-dvb.h"
 #include "dvb-tuning.h"
-#include "dvb-monitor.h"
+#include "dvb.h"
 #include "gui.h"
 
 #if 1

@@ -43,7 +43,7 @@
 #include "av-sync.h"
 #include "atoms.h"
 #include "dvb-tuning.h"
-#include "dvb-monitor.h"
+#include "dvb.h"
 #include "gui.h"
 
 #define APPNAME "dvbradio"

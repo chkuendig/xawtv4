@@ -13,13 +13,14 @@
 
 #include "list.h"
 #include "grab-ng.h"
+#include "parse-mpeg.h"
 
 #include "parseconfig.h"
 #include "tv-config.h"
 #include "commands.h"
 #include "tuning.h"
 #include "devs.h"
-#include "dvb-epg.h"
+#include "dvb.h"
 
 #include "gui.h"
 

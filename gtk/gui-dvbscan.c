@@ -17,7 +17,7 @@
 #include "devs.h"
 #include "commands.h"
 #include "dvb-tuning.h"
-#include "dvb-monitor.h"
+#include "dvb.h"
 #include "gui.h"
 
 extern int debug;
@@ -534,7 +534,6 @@ void dvbscan_create_window(int s)
     GtkWidget *handlebox,*toolbar,*label,*search;
     GtkCellRenderer *renderer;
     GtkAccelGroup *accel_group;
-    GtkTreeViewColumn *col;
 
     standalone = s;
     dvbscan_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -587,15 +586,11 @@ void dvbscan_create_window(int s)
 			       G_TYPE_BOOLEAN,  // stale
 			       G_TYPE_BOOLEAN,  // scanned
 			       G_TYPE_BOOLEAN); // matches
-#if 1
+
     filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(store),NULL);
     gtk_tree_model_filter_set_visible_column(GTK_TREE_MODEL_FILTER(filter),
 					     ST_STATE_MATCHES);
     gtk_tree_view_set_model(GTK_TREE_VIEW(view), filter);
-#else
-    gtk_tree_view_set_model(GTK_TREE_VIEW(view),
-			    GTK_TREE_MODEL(store));
-#endif
     scroll = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 				   GTK_POLICY_NEVER,
@@ -758,30 +753,6 @@ void dvbscan_create_window(int s)
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "", renderer,
 	 NULL);
-
-    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NAME);
-    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_NAME,
-				    gtk_sort_iter_compare_str,
-                                    GINT_TO_POINTER(ST_COL_NAME), NULL);
-    gtk_tree_view_column_set_sort_column_id(col, ST_COL_NAME);
-
-    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_NET);
-    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_NET,
-				    gtk_sort_iter_compare_str,
-                                    GINT_TO_POINTER(ST_COL_NET), NULL);
-    gtk_tree_view_column_set_sort_column_id(col, ST_COL_NET);
-
-    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_TSID);
-    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_TSID,
-				    gtk_sort_iter_compare_int,
-                                    GINT_TO_POINTER(ST_COL_TSID), NULL);
-    gtk_tree_view_column_set_sort_column_id(col, ST_COL_TSID);
-
-    col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), ST_COL_FREQ);
-    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(store), ST_COL_FREQ,
-				    gtk_sort_iter_compare_int,
-                                    GINT_TO_POINTER(ST_COL_FREQ), NULL);
-    gtk_tree_view_column_set_sort_column_id(col, ST_COL_FREQ);
 
     /* dnd */
     gtk_drag_source_set(view,

@@ -31,7 +31,7 @@
 #include "parseconfig.h"
 #include "tv-config.h"
 #include "dvb-tuning.h"
-#include "dvb-monitor.h"
+#include "dvb.h"
 #include "gui.h"
 
 /* ------------------------------------------------------------------------ */

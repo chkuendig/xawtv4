@@ -35,7 +35,7 @@
 #include "vbi-data.h"
 #include "vbi-tty.h"
 #include "dvb-tuning.h"
-#include "dvb-monitor.h"
+#include "dvb.h"
 #include "gui.h"
 
 int  debug;

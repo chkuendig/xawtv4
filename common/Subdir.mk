@@ -11,6 +11,7 @@ OBJS-common-dvb := \
 	structs/struct-dump.o
 OBJS-glib-dvb := \
 	common/dvb-monitor.o \
+	common/dvb-lang.o \
 	common/dvb-epg.o
 endif
 

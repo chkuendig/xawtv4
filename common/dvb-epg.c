@@ -12,7 +12,7 @@
 
 #include "grab-ng.h"
 #include "dvb-tuning.h"
-#include "dvb-epg.h"
+#include "dvb.h"
 
 /* ----------------------------------------------------------------------- */
 
