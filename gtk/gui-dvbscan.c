@@ -506,7 +506,7 @@ void dvbscan_create_window(int s)
 			       G_TYPE_BOOLEAN); // scanned
     gtk_tree_view_set_model(GTK_TREE_VIEW(view),
 			    GTK_TREE_MODEL(store));
-    scroll = gtk_vscrollbar_new(gtk_tree_view_get_hadjustment(GTK_TREE_VIEW(view)));
+    scroll = gtk_vscrollbar_new(gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(view)));
     g_signal_connect(view, "row-activated", G_CALLBACK(activate), NULL);
     gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(view)),
 				GTK_SELECTION_MULTIPLE);

@@ -1385,7 +1385,7 @@ void create_control(void)
 				  G_TYPE_BOOLEAN); // active
     gtk_tree_view_set_model(GTK_TREE_VIEW(st_view),
 			    GTK_TREE_MODEL(st_model));
-    scroll = gtk_vscrollbar_new(gtk_tree_view_get_hadjustment(GTK_TREE_VIEW(st_view)));
+    scroll = gtk_vscrollbar_new(gtk_tree_view_get_vadjustment(GTK_TREE_VIEW(st_view)));
     g_signal_connect(st_view, "row-activated",
 		     G_CALLBACK(station_activate), NULL);
 
