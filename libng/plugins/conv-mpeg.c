@@ -80,9 +80,9 @@ static void mpeg_pr_buf(struct ng_video_buf *buf, char *tag)
 
 static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 {
-#if 0
     static char *states[] = {
-	[ STATE_SEQUENCE          ] = "sequence",
+	[ STATE_BUFFER ]            = "buffer",
+	[ STATE_SEQUENCE ]          = "sequence",
 	[ STATE_SEQUENCE_REPEATED ] = "sequence repeated",
 	[ STATE_GOP ]               = "gop",
 	[ STATE_PICTURE ]           = "picture",
@@ -92,7 +92,7 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 	[ STATE_END ]               = "end",
 	[ STATE_INVALID ]           = "invalid",
     };
-#endif
+
     struct mpeg_handle  *h = handle;
     struct mpeg_frame   *fr;
     struct ng_video_buf *buf;
@@ -110,7 +110,7 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
     do {
 	state = mpeg2_parse(h->dec);
 	switch (state) {
-	case -1:
+	case STATE_BUFFER:
 	    break;
 	case STATE_PICTURE:
 	    BUG_ON(NULL == h->get, "no setup");
@@ -147,8 +147,13 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 		fr->released = 1;
 	    }
 	    break;
+	    break;
+	default:
+	    if (ng_debug > 2)
+		fprintf(stderr,"mpeg: state=%d [%s]\n",state,states[state]);
+	    break;
 	}
-    } while (state != -1);
+    } while (state != STATE_BUFFER);
     ng_release_video_buf(in);
 }
 

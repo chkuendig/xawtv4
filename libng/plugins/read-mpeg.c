@@ -27,7 +27,7 @@
 #define TS_AUDIO_BUF        (32*1026)
 
 #define DROP_FRAMES                 1
-#define READ_TIMEOUT                5
+#define ERROR_LIMIT               256
 
 /* ----------------------------------------------------------------------- */
 /* common MPEG demux code                                                  */
@@ -450,6 +450,19 @@ static void* mpeg_ts_open(char *moviename)
 		continue;
 	    if (0 == h->ts.size)
 		continue;
+
+	    if (h->errors > ERROR_LIMIT) {
+		fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+		goto fail;
+	    }
+	    if (h->ts.tei) {
+		if (ng_log_bad_stream)
+		    fprintf(stderr,"mpeg ts: warning %d: video: tei "
+			    "(error flag) set\n",h->errors);
+		h->errors++;
+		continue;
+	    }
+	    
 	    h->audio_offset = pos;
 	    if (h->init_offset < pos)
 		h->init_offset = pos;
@@ -484,6 +497,19 @@ static void* mpeg_ts_open(char *moviename)
 		continue;
 	    if (0 == h->ts.size)
 		continue;
+
+	    if (h->errors > ERROR_LIMIT) {
+		fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+		goto fail;
+	    }
+	    if (h->ts.tei) {
+		if (ng_log_bad_stream)
+		    fprintf(stderr,"mpeg ts: warning %d: video: tei "
+			    "(error flag) set\n",h->errors);
+		h->errors++;
+		continue;
+	    }
+
 	    h->video_offset = pos;
 	    if (h->init_offset < pos)
 		h->init_offset = pos;
@@ -513,10 +539,11 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
     struct ng_video_fifo *fifo;
     struct ng_video_buf  *buf;
     int aligned;
-    int cont;
+    int cont,errors;
     off_t off;
     enum ng_video_frame seek = dropper(*drop);
 
+    errors = h->errors;
     for (;;) {
 	if (!list_empty(&h->vfifo)) {
 	    fifo = list_entry(h->vfifo.next, struct ng_video_fifo, next);
@@ -559,6 +586,11 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
 		break;
 	    if (0 == h->ts.size)
 		continue;
+
+	    if (h->errors - errors > ERROR_LIMIT) {
+		fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+		return NULL;
+	    }
 	    if (h->ts.tei) {
 		if (ng_log_bad_stream)
 		    fprintf(stderr,"mpeg ts: warning %d: video: tei "
@@ -567,6 +599,7 @@ static struct ng_video_buf* mpeg_ts_vdata(void *handle, unsigned int *drop)
 		if (h->vbuf)
 		    h->vbuf->info.broken++;
 	    }
+
 	    if ((cont+1)%16 != h->ts.cont) {
 		if (ng_log_bad_stream)
 		    fprintf(stderr,"mpeg ts: warning %d: video: cont mismatch, "
@@ -591,8 +624,9 @@ static struct ng_audio_buf* mpeg_ts_adata(void *handle)
     int aligned;
     size_t size;
     off_t off;
-    int cont;
+    int cont,errors;
 
+    errors = h->errors;
     buf = ng_malloc_audio_buf(&h->afmt, TS_AUDIO_BUF);
     buf->size = 0;
 
@@ -651,6 +685,11 @@ static struct ng_audio_buf* mpeg_ts_adata(void *handle)
 	    }
 	    break;
 	}
+
+	if (h->errors - errors > ERROR_LIMIT) {
+	    fprintf(stderr,"mpeg: insane amount of stream errors, drop out\n");
+	    return NULL;
+	}
 	if (h->ts.tei) {
 	    if (ng_log_bad_stream)
 		fprintf(stderr,"mpeg ts: warning %d: audio: tei (error flag) set\n",
@@ -658,6 +697,7 @@ static struct ng_audio_buf* mpeg_ts_adata(void *handle)
 	    h->errors++;
 	    buf->info.broken++;
 	}
+
 	if ((cont+1)%16 != h->ts.cont) {
 	    if (ng_log_bad_stream)
 		fprintf(stderr,"mpeg ts: warning %d: audio: cont mismatch, "

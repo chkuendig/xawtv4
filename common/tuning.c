@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,6 +11,7 @@
 
 #include "parseconfig.h"
 #include "tuning.h"
+#include "dvb.h"
 
 extern int debug;
 
@@ -154,6 +157,41 @@ int tune_analog_station(char *station)
 }
 		       
 /* ---------------------------------------------------------------------------- */
+/* dvb tuning                                                                   */
+
+static int tune_dvb_station(char *station)
+{
+#ifndef HAVE_DVB
+    return -1;
+#else
+    char pids[32];
+    char *vdrname;
+    int32_t freq;
+
+    if (!devs.dvb)
+	return -1;
+
+    /* DVB tuning */
+    vdrname = cfg_get_str("stations", station, "vdr");
+    if (NULL == vdrname)
+	vdrname= station;
+    if (-1 == dvb_tune(devs.dvb, vdrname)) {
+	fprintf(stderr,"tuning failed\n");
+	return -1;
+    }
+
+    /* update info */
+    freq = cfg_get_int("dvb", vdrname, "frequency", 0);
+    snprintf(pids,sizeof(pids),"%d / %d",ng_mpeg_vpid,ng_mpeg_apid);
+    new_station(station);
+    new_channel(pids);
+    snprintf(curr_details, sizeof(curr_details),
+	     "%.2f MHz", (float)freq/1000);
+    return 0;
+#endif
+}
+
+/* ---------------------------------------------------------------------------- */
 
 int tune_station(char *station)
 {
@@ -162,12 +200,15 @@ int tune_station(char *station)
     /* reset state */
     curr_details[0] = 0;
 
+    /* try dvb ... */
+    rc = tune_dvb_station(station);
+    if (0 == rc)
+	return 0;
+
     /* analog */
     rc = tune_analog_station(station);
     if (0 == rc)
 	return 0;
-
-    /* TODO: try dvb ... tuning */
 
     /* all failed */
     return -1;
