@@ -56,6 +56,7 @@ static int export_tvbrowser_channels(char *filename)
     xmlDocPtr doc;
     xmlNodePtr tv, chan;
     char *list,*name,*enc;
+    int type;
     char tz[8];
 
     LIBXML_TEST_VERSION;
@@ -67,8 +68,12 @@ static int export_tvbrowser_channels(char *filename)
 
     cfg_sections_for_each("dvb-pr",list) {
 	name = cfg_get_str("dvb-pr",list,"name");
+	type = cfg_get_int("dvb-pr",list,"type",0);
 	if (NULL == name)
 	    continue;
+	if (1 != type)
+	    continue;
+
 	chan = xmlNewChild(tv, NULL, BAD_CAST "channel", NULL);
 	xmlNewProp(chan, BAD_CAST "id", list);
 
@@ -79,12 +84,12 @@ static int export_tvbrowser_channels(char *filename)
 	xmlNewChild(chan, NULL, BAD_CAST "group",     "dvbepg");
 	xmlNewChild(chan, NULL, BAD_CAST "time-zone", tz);
 	xmlNewChild(chan, NULL, BAD_CAST "country",   "xx");
-	xmlNewChild(chan, NULL, BAD_CAST "copyright", "none");
+	xmlNewChild(chan, NULL, BAD_CAST "copyright", "(no copyright info)");
 	xmlNewChild(chan, NULL, BAD_CAST "url",       "about:blank");
     }
     
     xmlSaveFormatFileEnc(filename, doc, "UTF-8", 1);
-    fprintf(stderr,"wrote tvbrowser file \"%s\"\n",filename);
+    fprintf(stderr,"Wrote tvbrowser channel file \"%s\".\n",filename);
     xmlFreeDoc(doc);
     xmlCleanupParser();
     return 0;
@@ -99,7 +104,7 @@ static int export_xmltv(int tsid, char *filename)
     time_t stop;
     struct tm *tm;
     char buf[64],*list,*name,*enc;
-    int ts,pr,c;
+    int ts,pr,c,type;
 
     LIBXML_TEST_VERSION;
 
@@ -115,7 +120,10 @@ static int export_xmltv(int tsid, char *filename)
 
     cfg_sections_for_each("dvb-pr",list) {
 	name = cfg_get_str("dvb-pr",list,"name");
+	type = cfg_get_int("dvb-pr",list,"type",0);
 	if (NULL == name)
+	    continue;
+	if (1 != type)
 	    continue;
 	if (2 == sscanf(list,"%d-%d",&ts,&pr)) {
 	    if (0 != tsid && ts != tsid)
@@ -200,7 +208,7 @@ static int export_xmltv(int tsid, char *filename)
     }
 
     xmlSaveFormatFileEnc(filename, doc, "UTF-8", 1);
-    fprintf(stderr,"wrote xmltv file \"%s\"\n",filename);
+    fprintf(stderr,"Wrote xmltv file \"%s\".\n",filename);
     xmlFreeDoc(doc);
     xmlCleanupParser();
     return 0;
@@ -212,15 +220,32 @@ int debug   = 0;
 int verbose = 0;
 int current = 0;
 int notune  = 0;
+int timeout = 10;
 
 static void dvbwatch_tsid(struct psi_info *info, int event,
 			  int tsid, int pnr, void *data)
 {
+    // struct psi_program *pr;
+
     switch (event) {
     case DVBMON_EVENT_SWITCH_TS:
-	fprintf(stderr,"read: tsid %d\n",tsid);
+	fprintf(stderr,"Current stream: tsid %d.\n",tsid);
 	current = tsid;
 	break;
+#if 0
+    case DVBMON_EVENT_UPDATE_PR:
+	pr = psi_program_get(info, tsid, pnr, 0);
+	if (!pr)
+	    return;
+	if (tsid != current)
+	    return;
+	if (pr->type != 1)
+	    return;
+	if (pr->name[0] == '\0')
+	    return;
+	/* Hmm, get duplicates :-/ */
+	fprintf(stderr,"  %s\n", pr->name);
+#endif
     }
 }
 
@@ -241,7 +266,7 @@ usage(FILE *out, char *argv0)
 	    "options:\n"
 	    "  -h          print this help text.\n"
 	    "  -v          be verbose.\n"
-	    "  -c          currently tuned transponder only.\n"
+	    "  -c          scan currently tuned transponder only.\n"
 	    "  -t          dump tvbrowser files.\n",
 	    name);
 };
@@ -249,7 +274,8 @@ usage(FILE *out, char *argv0)
 int main(int argc, char *argv[])
 {
     GMainContext *context;
-    char filename[32],ts[8],*sec = NULL,*name;
+    char filename[1024];
+    char ts[8],*sec = NULL,*name;
     int tuned = 0;
     int tvb = 0;
     int c;
@@ -289,11 +315,38 @@ int main(int argc, char *argv[])
     eit_add_watch(devs.dvb, 0x50,0xf0, verbose, 1);
     context = g_main_context_default();
 
+    if (!dvb_frontend_is_locked(devs.dvb)) {
+	snprintf(filename,sizeof(filename),"%s/.tv/dvb-ts",getenv("HOME"));
+	fprintf(stderr,"Hmm, frontend not locked, must tune first.\n");
+	fprintf(stderr,"Getting tuning config [%s].\n",filename);
+	cfg_parse_file("dvb-ts",filename);
+	sec = cfg_sections_first("dvb-ts");
+	if (NULL == sec)
+	    fprintf(stderr,"Oops, no config available.\n");
+    } else {
+	fprintf(stderr,"Frontend is locked, fine.\n");
+    }
+    
     for (;;) {
-	/* fish data */
+	/* something to tune? */
+	if (sec) {
+	    if (notune) {
+		fprintf(stderr,"Tuning is disabled, stopping here.\n");
+		break;
+	    }
+	    name = cfg_get_str("dvb-ts",sec,"name");
+	    fprintf(stderr,"Tuning now: tsid %s [%s].\n", sec, name ? name : "???");
+	    if (0 != dvb_frontend_tune(devs.dvb, "dvb-ts", sec))
+		break;
+	    tuned   = 1;
+	    current = 0;
+	}
+
+ 	/* fish data */
+	fprintf(stderr,"Going fish data ...\n");
 	eit_last_new_record = time(NULL);
-	while (!exit_application && time(NULL) - eit_last_new_record < 10) {
-	    alarm(3);
+	while (!exit_application && time(NULL) - eit_last_new_record < timeout) {
+	    alarm(timeout/3);
 	    g_main_context_iteration(context,TRUE);
 	}
 	if (current) {
@@ -302,15 +355,13 @@ int main(int argc, char *argv[])
 	    sprintf(ts,"%d",current);
 	    cfg_set_sflags("dvb-ts",ts,1,1);
 	} else {
-	    if (tuned)
-		fprintf(stderr,"Hmm, no data received, tuning failed?\n");
-	    else
-		fprintf(stderr,"Hmm, no data received, dvb card not tuned?\n");
+	    fprintf(stderr,"Hmm, no data received. Frontend is%s locked.\n",
+		    dvb_frontend_is_locked(devs.dvb) ? "" : " not");
 	}
-	if (exit_application)
+	if (exit_application) {
+	    fprintf(stderr,"Ctrl-C seen, stopping here.\n");
 	    break;
-	if (notune)
-	    break;
+	}
 
 	/* more not-yet seen transport streams? */
 	if (sec)
@@ -319,16 +370,10 @@ int main(int argc, char *argv[])
 	    if (!cfg_get_sflags("dvb-ts",sec))
 		break;
 	}
-	if (NULL == sec)
+	if (NULL == sec) {
+	    fprintf(stderr,"No more transport streams, stopping here.\n");
 	    break;
-
-	/* yes! => tune */
-	name = cfg_get_str("dvb-ts",sec,"name");
-	fprintf(stderr,"tune: tsid %s [%s]\n", sec, name ? name : "???");
-	if (0 != dvb_frontend_tune(devs.dvb, "dvb-ts", sec))
-	    break;
-	tuned   = 1;
-	current = 0;
+	}
     }
 
     if (tvb) {
