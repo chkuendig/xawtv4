@@ -466,19 +466,20 @@ size_t mpeg_parse_pes_packet(struct mpeg_handle *h, unsigned char *packet,
 	    pts |= (uint64_t)mpeg_getbits(packet, i + 48, 15);
 	    break;
 	}
-#if 0
-	fprintf(stderr,"--\n");
-	hexdump("mpeg2 pes",packet,32);
-	fprintf(stderr,"mpeg2 pes: pl=%d al=%d copy=%d orig=%d ts=%d hl=%d | "
-		" pts=%" PRIx64 " dts=%" PRIx64 " size=%d\n",
-		mpeg_getbits(packet, i - 16, 16),
-		mpeg_getbits(packet, i +  5,  1),
-		mpeg_getbits(packet, i +  6,  1),
-		mpeg_getbits(packet, i +  7,  1),
-		mpeg_getbits(packet, i +  8,  2),
-		mpeg_getbits(packet, i + 16,  8),
-		pts, dts, (int)size);
-#endif
+	if (ng_debug > 2)
+	    fprintf(stderr,"mpeg2 pes: pl=%d al=%d copy=%d orig=%d ts=%d hl=%d | "
+		    " pts=%" PRIx64 " dts=%" PRIx64 " size=%d\n",
+		    mpeg_getbits(packet, i - 16, 16),
+		    mpeg_getbits(packet, i +  5,  1),
+		    mpeg_getbits(packet, i +  6,  1),
+		    mpeg_getbits(packet, i +  7,  1),
+		    mpeg_getbits(packet, i +  8,  2),
+		    mpeg_getbits(packet, i + 16,  8),
+		    pts, dts, (int)size);
+	if (ng_debug > 3) {
+	    hexdump("mpeg2 pes",packet,32);
+	    fprintf(stderr,"--\n");
+	}
     } else {
 	/* MPEG 1 */
 	if (mpeg_getbits(packet,i,2) == 0x01)
@@ -959,6 +960,8 @@ int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose)
 	    pr->p_pid   = pid;
 	    pr->updated = 1;
 	    pr->seen    = 1;
+	    if (NULL == info->pr)
+		info->pr = pr;
 	}
     }
     if (verbose > 1) {
@@ -1158,7 +1161,7 @@ int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose)
 		fprintf(stderr, "ts: conditional access\n");
 		return 0;
 	    case 2:
-		i += mpeg_parse_psi_pmt(&info->pr, h->ts.data+i, verbose);
+		i += mpeg_parse_psi_pmt(info->pr, h->ts.data+i, verbose);
 		break;
 	    case 3:
 		fprintf(stderr, "ts: description\n");

@@ -561,7 +561,7 @@ static void xv_blit(struct ng_video_buf *buf)
 	ng_ratio_fixup(&ww, &wh, &wx, &wy);
 	break;
     case NG_RATIO_SQUARE:
-	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 1, 1, 0);
+	ng_ratio_fixup2(&ww, &wh, &wx, &wy, buf->fmt.width, buf->fmt.height, 0);
 	break;
     case NG_RATIO_3_4:
 	ng_ratio_fixup2(&ww, &wh, &wx, &wy, 4, 3, 0);

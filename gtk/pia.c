@@ -66,7 +66,7 @@ static XVisualInfo vinfo;
 
 #define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
 #define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
-#define GET_CMD_DEBUG()		cfg_get_bool(O_CMD_DEBUG,   	0)
+#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 #define GET_CMD_DVB()		cfg_get_bool(O_CMD_DVB,   	0)
 
 #define GET_CMD_XVIDEO()	cfg_get_bool(O_CMD_XVIDEO,   	1)
@@ -96,6 +96,11 @@ struct cfg_cmdline cmd_opts[] = {
 	.option   = { O_CMD_DEBUG },
 	.value    = "1",
 	.desc     = "enable debug output",
+    },{
+	.cmdline  = "dd",
+	.option   = { O_CMD_DEBUG },
+	.value    = "2",
+	.desc     = "more debug output",
     },{
 	.cmdline  = "dvb",
 	.option   = { O_CMD_DVB },

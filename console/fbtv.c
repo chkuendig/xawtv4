@@ -98,10 +98,10 @@ struct event_entry kbd_events[] = {
 	action: "setstation back",
     },{
 	event:  "kbd-key-pgup",
-	action: "setstation prev",
+	action: "setstation next",
     },{
 	event:  "kbd-key-pgdown",
-	action: "setstation next",
+	action: "setstation prev",
     },{
 	event:  "kbd-key-right",
 	action: "setchannel fine_up",

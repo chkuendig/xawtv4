@@ -78,7 +78,7 @@ static XVisualInfo vinfo;
 #define GET_CMD_HELP()		cfg_get_bool(O_CMD_HELP,   	0)
 #define GET_CMD_VERSION()       cfg_get_bool(O_CMD_VERSION,   	0)
 #define GET_CMD_VERBOSE()	cfg_get_bool(O_CMD_VERBOSE,   	0)
-#define GET_CMD_DEBUG()		cfg_get_bool(O_CMD_DEBUG,   	0)
+#define GET_CMD_DEBUG()		cfg_get_int(O_CMD_DEBUG,   	0)
 
 #define GET_CMD_READCONF()     	cfg_get_bool(O_CMD_READCONF,   	1)
 #define GET_CMD_WRITECONF()    	cfg_get_bool(O_CMD_WRITECONF,   0)

@@ -78,7 +78,7 @@ struct psi_info {
     int                  pat_updated;
 
     /* hmm ... */
-    struct psi_program   pr;
+    struct psi_program   *pr;
     int                  pat_version;
     int                  sdt_version;
     int                  nit_version;
