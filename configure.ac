@@ -259,7 +259,8 @@ AC_SUBST(LIBZVBI)
 LIBZVBI=""
 if test "$enable_zvbi" != "no"; then
     AC_CHECK_LIB(zvbi, vbi_capture_fd,
-        AC_DEFINE(HAVE_ZVBI,1,"have zvbi") FOUND_ZVBI="yes"; LIBZVBI="-lzvbi -lm -lpng -lz",,)
+        AC_DEFINE(HAVE_ZVBI,1,"have zvbi") FOUND_ZVBI="yes";
+	LIBZVBI="-lzvbi -lm -lpng -lz",,$LIBPTHREAD)
 else
     echo "*** zvbi disabled"
 fi
@@ -282,12 +283,13 @@ AC_SUBST(LIBDV)
 LIBDV=""
 if test "$enable_dv" != "no"; then
     AC_CHECK_LIB(dv, dv_decoder_new,
-        AC_DEFINE(HAVE_DV,1,"have dv") FOUND_DV="yes"; LIBDV="-ldv -lm",,-lm)
+        AC_DEFINE(HAVE_DV,1,"have dv") FOUND_DV="yes";
+	LIBDV="-ldv -lm",,-lm $LIBPTHREAD)
 else
     echo "*** DV disabled"
 fi
 
-quicktime_libs="-ldl $(`pkg-config --libs glib`) $LIBPTHREAD"
+quicktime_libs="$DLFLAGS $(pkg-config --libs glib) $LIBPTHREAD"
 if test "$enable_quicktime" != "no"; then
     AC_CHECK_LIB(quicktime, lqt_query_registry,
 	FOUND_LQT="yes"; AC_DEFINE(HAVE_LIBQUICKTIME,1,"have libquicktime"),,
