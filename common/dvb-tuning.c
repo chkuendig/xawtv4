@@ -611,6 +611,9 @@ void dvb_demux_filter_setup(struct dvb_state *h, int video, int audio)
 
 int dvb_demux_filter_apply(struct dvb_state *h)
 {
+    if (0 == h->video.filter.pid || 0 == h->audio.filter.pid)
+	goto oops;
+
     if (-1 == h->video.fd) {
 	h->video.fd = open(h->demux,O_RDWR);
 	if (-1 == h->video.fd) {
@@ -817,7 +820,7 @@ int dvb_finish_tune(struct dvb_state *h, int timeout)
 	    return -1;
     }
     if (0 != dvb_demux_filter_apply(h)) {
-	return -1;
+	return -2;
     }
     return 0;
 }

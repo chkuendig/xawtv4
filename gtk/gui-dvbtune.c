@@ -299,7 +299,6 @@ static void response(GtkDialog *dialog,
 	    if (strlen(m_sat[n].value) > 0)
 		cfg_set_str(d, s, "sat", m_sat[n].value);
 	}
-
 #if 0
 	if (debug)
 	    write_config_file("tmp");

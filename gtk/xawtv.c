@@ -72,9 +72,8 @@ static XVisualInfo vinfo;
 #define O_CMD_VERSION           O_CMDLINE, "version"
 #define O_CMD_VERBOSE          	O_CMDLINE, "verbose"
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
-
+#define O_CMD_DEVICE	       	O_CMDLINE, "device"
 #define O_CMD_READCONF	       	O_CMDLINE, "readconf"
-#define O_CMD_WRITECONF	       	O_CMDLINE, "writeconf"
 
 #define O_CMD_HW_LS	       	O_CMDLINE, "hw-ls"
 #define O_CMD_HW_CONFIG	       	O_CMDLINE, "hw-config"
@@ -113,18 +112,18 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.cmdline  = "debug",
 	.option   = { O_CMD_DEBUG },
 	.needsarg = 1,
-	.desc     = "enable debug output",
+	.desc     = "set debug level",
+    },{
+	.cmdline  = "device",
+	.option   = { O_CMD_DEVICE },
+	.needsarg = 1,
+	.desc     = "pick device config (use -hwconfig to list them)",
 
     },{
 	.cmdline  = "noconf",
 	.option   = { O_CMD_READCONF },
 	.value    = "0",
 	.desc     = "don't read the config file",
-    },{
-	.cmdline  = "store",
-	.option   = { O_CMD_WRITECONF },
-	.value    = "1",
-	.desc     = "write cmd line args to config file",
 
     },{
 	.cmdline  = "hwls",
@@ -263,15 +262,16 @@ grabber_init(char *dev)
 static void
 grabber_fini(void)
 {
-    if (dvbscan_win)
-	gtk_widget_destroy(dvbscan_win);
-    if (dvbtune_dialog)
-	gtk_widget_destroy(dvbtune_dialog);
-    
 #ifdef HAVE_DVB
     if (NULL != dvbmon) {
+	if (dvbscan_win)
+	    gtk_widget_destroy(dvbscan_win);
+	if (dvbtune_dialog)
+	    gtk_widget_destroy(dvbtune_dialog);
 	dvbmon_fini(dvbmon);
 	dvbmon = NULL;
+	write_config_file("dvb-ts");
+	write_config_file("dvb-pr");
     }
 #endif
     audio_off();
@@ -370,6 +370,11 @@ static void new_station(void)
     gtk_label_set_text(GTK_LABEL(control_status), label);
     set_property();
     x11_station_activate(curr_station);
+}
+
+static void new_freqtab(void)
+{
+    cfg_set_str(O_FREQTAB, freqtab_get());
 }
 
 /* ------------------------------------------------------------------------ */
@@ -582,7 +587,7 @@ static int main_loop(GMainContext *context)
     /* init */
     if (debug)
 	fprintf(stderr,"main: open grabber device...\n");
-    grabber_init(NULL);
+    grabber_init(cfg_get_str(O_CMD_DEVICE));
     blit = blit_init(video, &vinfo, GET_EXT_XVIDEO(), GET_EXT_OPENGL());
 
     /* mainloop */
@@ -625,14 +630,17 @@ static int main_loop(GMainContext *context)
 #ifdef HAVE_DVB
 	case DISPLAY_DVB:
 	    if (devs.dvb) {
-		fprintf(stderr,"#");
-		while ((0 != dvb_finish_tune(devs.dvb,100)) &&
-		       !command_pending) {
-		    fprintf(stderr,"*");
-		    g_main_context_iteration(context,FALSE);
-		}
-		fprintf(stderr,"#\n");
-		if (!command_pending)
+		int rc;
+		/* wait for DVB tuning finish (frontend lock) */
+		// fprintf(stderr,"#");
+		do {
+		    rc = dvb_finish_tune(devs.dvb,100);
+		    // fprintf(stderr,"*");
+		    while (g_main_context_iteration(context,FALSE))
+			/* nothing */;
+		} while (-1 == rc && !command_pending);
+		// fprintf(stderr,"#%d#\n",rc);
+		if (0 == rc && !command_pending)
 		    dvb_loop(context,video,blit);
 	    }
 	    break;
@@ -794,7 +802,7 @@ hello_world(void)
 	    VERSION,uts.sysname,uts.machine,uts.release);
 
     if (0 == geteuid() && 0 != getuid()) {
-	fprintf(stderr,"xawtv *must not* be installed suid root\n");
+	fprintf(stderr,"xawtv /must not/ be installed suid root\n");
 	exit(1);
     }
 }
@@ -847,8 +855,6 @@ parse_args(int *argc, char **argv)
 	usage();
     if (GET_CMD_VERSION())
 	exit(0);
-    if (GET_CMD_WRITECONF())
-	write_config_file("options");
 
     /* set debug variables */
     debug    = GET_CMD_DEBUG();
@@ -948,11 +954,11 @@ main(int argc, char *argv[])
     exit_hook           = do_exit;
     setstation_notify   = new_station;
     fullscreen_hook     = menu_cb_fullscreen;
+    freqtab_notify      = new_freqtab;
 #if 0 /* TODO */
 #ifdef HAVE_ZVBI
     vtx_subtitle        = display_subtitle;
 #endif
-    freqtab_notify      = new_freqtab;
     movie_hook          = do_movie_record;
     rec_status          = do_rec_status;
 #endif
@@ -1005,5 +1011,10 @@ main(int argc, char *argv[])
 	/* first in list (FIXME: don't modify when known station tuned?) */
 	do_va_cmd(2,"setstation","0");
     }
-    return main_loop(g_main_context_default());
+
+    /* enter main loop */
+    main_loop(g_main_context_default());
+    write_config_file("options");
+    fprintf(stderr,"bye...\n");
+    exit(0);
 }

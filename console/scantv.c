@@ -133,11 +133,11 @@ static void do_scan(int fullscan)
 	/* scan channels */
 	fprintf(stderr,"\nscanning channel list %s...\n",
 		cfg_get_str("options", "global", "freqtab"));
-	for (channel = cfg_sections_first(freqtab);
+	for (channel = cfg_sections_first(freqtab_get());
 	     NULL != channel;
-	     channel = cfg_sections_next(freqtab,channel)) {
+	     channel = cfg_sections_next(freqtab_get(),channel)) {
 	    fprintf(stderr,"%-4s (%6.2f MHz): ",
-		    channel,cfg_get_float(freqtab,channel,"freq",0)/1000);
+		    channel,cfg_get_float(freqtab_get(),channel,"freq",0)/1000);
 	    tune_analog_channel(channel);
 	    usleep(200000); /* 0.2 sec */
 	    if (0 == devs.video.v->is_tuned(devs.video.handle)) {
@@ -184,10 +184,10 @@ static void do_scan(int fullscan)
 	f1 = 0;
 	f2 = 0;
 	for (f = 44*16; f <= 958*16; f += 4) {
-	    for (channel = cfg_sections_first(freqtab);
+	    for (channel = cfg_sections_first(freqtab_get());
 		 NULL != channel;
-		 channel = cfg_sections_next(freqtab,channel)) {
-		if (cfg_get_int(freqtab,channel,"freq",0) * 16 == f * 1000)
+		 channel = cfg_sections_next(freqtab_get(),channel)) {
+		if (cfg_get_int(freqtab_get(),channel,"freq",0) * 16 == f * 1000)
 		    break;
 	    }
 	    fprintf(stderr,"?? %6.2f MHz (%-4s): ",f/16.0,

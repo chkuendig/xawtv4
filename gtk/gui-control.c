@@ -738,8 +738,8 @@ static void update_station_prop(GtkTreeIter *iter)
     gtk_menu_append(menu, item);
     gtk_option_menu_set_history(GTK_OPTION_MENU(station_ch_omenu),active);
     active++;
-    if (freqtab) {
-	cfg_sections_for_each(freqtab, list) {
+    if (freqtab_get()) {
+	cfg_sections_for_each(freqtab_get(), list) {
 	    item = gtk_menu_item_new_with_label(list);
 	    g_object_set_data_full(G_OBJECT(item),"channel",strdup(list),free);
 	    gtk_menu_append(menu, item);
@@ -963,7 +963,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = menu_cb_edit_station,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Edit/_Delete Station ...",
+	.path        = "/Edit/_Delete Station",
 	.callback    = menu_cb_del_station,
 	.item_type   = "<Item>",
     },{
@@ -1069,6 +1069,9 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/Tuning",
 	.item_type   = "<Branch>",
     },{
+	.path        = "/Commands/Tuning/tearoff",
+	.item_type   = "<Tearoff>",
+    },{
 	.path        = "/Commands/Tuning/Channel up",
 	// .accelerator = "Up",
 	.callback    = menu_cb_channel_next,
@@ -1127,12 +1130,13 @@ static void drag_data_received(GtkWidget *widget,
     char *atom,*name;
     int pos[5];
     int i,tsid,pnr,audio,video;
-    
-    fprintf(stderr,"%s: %s %s %s fmt=%d ptr=%p len=%d id=%d\n",__FUNCTION__,
-	    gdk_atom_name(sd->selection),
-	    gdk_atom_name(sd->target),
-	    gdk_atom_name(sd->type),
-	    sd->format, sd->data, sd->length, info);
+
+    if (debug)
+	fprintf(stderr,"%s: %s %s %s fmt=%d ptr=%p len=%d id=%d\n",__FUNCTION__,
+		gdk_atom_name(sd->selection),
+		gdk_atom_name(sd->target),
+		gdk_atom_name(sd->type),
+		sd->format, sd->data, sd->length, info);
 
     switch (info) {
     case 42: // TARGETS
@@ -1162,7 +1166,8 @@ static void drag_data_received(GtkWidget *widget,
     if (0 != dnd_pending)
 	return;
 
-    fprintf(stderr,"%s: all done\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s: all done\n",__FUNCTION__);
     gtk_drag_finish(dc, TRUE, FALSE, time);
 
     for (i = 0; i < 5; i++)
@@ -1180,11 +1185,11 @@ static void drag_data_received(GtkWidget *widget,
 	video = atoi(dnd_data[4]+pos[3]);
 	audio = atoi(dnd_data[3]+pos[4]);
 	if (0 == tsid || 0 == pnr || 0 == video || 0 == audio) {
-	    if (1 /* debug */)
+	    if (debug)
 		fprintf(stderr,"ignore: %s tsid=%d pnr=%d video=%d audio=%d\n",
 			name, tsid, pnr, video, audio);
 	} else {
-	    if (1 /* debug */)
+	    if (debug)
 		fprintf(stderr,"received: %s tsid=%d pnr=%d video=%d audio=%d\n",
 			name, tsid, pnr, video, audio);
 	    cfg_set_int("stations",name,"tsid",tsid);
@@ -1207,7 +1212,8 @@ static void drag_drop(GtkWidget *widget,
     GdkAtom targets = gdk_atom_intern("TARGETS", FALSE);
     int i;
 
-    fprintf(stderr,"%s\n",__FUNCTION__);
+    if (debug)
+	fprintf(stderr,"%s\n",__FUNCTION__);
 
     for (i = 0; i < 3; i++) {
     	if (dnd_data[i])
@@ -1234,13 +1240,14 @@ static void init_channel_list(void)
 
 static void init_devices_list(void)
 {
-    GSList *group = NULL;
+    // GSList *group = NULL;
     GtkWidget *item;
     char *list;
 
     cfg_sections_for_each("devs",list) {
-	item = gtk_radio_menu_item_new_with_label(group,list);
-	group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
+	// item = gtk_radio_menu_item_new_with_label(group,list);
+	// group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
+	item = gtk_menu_item_new_with_label(list);
 	gtk_menu_shell_append(GTK_MENU_SHELL(control_dev_menu),item);
 	g_signal_connect(G_OBJECT(item), "activate",
 			 G_CALLBACK(menu_cb_setdevice),

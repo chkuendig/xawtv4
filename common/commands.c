@@ -87,6 +87,7 @@ static struct COMMANDS {
     { "setstation", 0, tuning_handler,     1 },
     { "setchannel", 0, tuning_handler,     1 },
     { "setfreq",    1, tuning_handler,     1 },
+    { "setdvb",     1, tuning_handler,     1 },
     { "setfreqtab", 1, setfreqtab_handler, 0 },
 
     { "setnorm",    1, attr_handler,       1 },
@@ -401,6 +402,7 @@ static int tuning_handler(char *name, int argc, char **argv)
     struct ng_attribute *mute;
     char *newstation = NULL;
     char *newchannel = NULL;
+    char *pr  = NULL;
     int newfreq = 0;
     char *list;
     int i,c,isnum;
@@ -416,16 +418,16 @@ static int tuning_handler(char *name, int argc, char **argv)
 	newfreq = (unsigned long)(atof(argv[0])*16);
 
     if (0 == strcasecmp("setchannel",name)) {
-	if (NULL == freqtab) {
+	if (NULL == freqtab_get()) {
 	    fprintf(stderr,"can't tune channels: freqtab not set (yet)\n");
 	} else if (0 == strcasecmp(argv[0],"next")) {
 	    if (curr_channel)
-		newchannel = cfg_sections_next(freqtab,curr_channel);
+		newchannel = cfg_sections_next(freqtab_get(),curr_channel);
 	    if (NULL == newchannel)
 		/* wrap around and no current channel */
-		newchannel = cfg_sections_first(freqtab);
+		newchannel = cfg_sections_first(freqtab_get());
 	} else if (0 == strcasecmp(argv[0],"prev") && curr_channel) {
-	    newchannel = cfg_sections_prev(freqtab,curr_channel);
+	    newchannel = cfg_sections_prev(freqtab_get(),curr_channel);
 	} else {
 	    newchannel = argv[0];
 	}
@@ -433,6 +435,10 @@ static int tuning_handler(char *name, int argc, char **argv)
 	    newstation = cfg_search("stations",NULL,"channel",newchannel);
     }
 
+    if (0 == strcasecmp("setdvb",name)) {
+	pr = argv[0];
+    }
+    
     if (0 == strcasecmp("setstation",name)) {
 	if (0 == strcasecmp(argv[0],"next")) {
 	    if (curr_station)
@@ -495,6 +501,8 @@ static int tuning_handler(char *name, int argc, char **argv)
 		__FUNCTION__,newstation,newchannel,newfreq);
     if (newstation) {
 	tune_station(newstation);
+    } else if (pr) {
+	tune_dvb_channel(pr);
     } else if (newchannel) {
 	tune_analog_channel(newchannel);
     } else {

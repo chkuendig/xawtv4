@@ -46,11 +46,16 @@ static void new_channel(char *channel)
 /* ---------------------------------------------------------------------------- */
 /* analog tv tuning                                                             */
 
-char *freqtab;
+static char *freqtab;
 
 static void __init freqtab_init(void)
 {
     cfg_parse_file("freqtabs", DATADIR "/Index.map");
+}
+
+char* freqtab_get(void)
+{
+    return freqtab;
 }
 
 void freqtab_set(char *name)
@@ -58,7 +63,9 @@ void freqtab_set(char *name)
     char filename[1024];
     char *file;
 
-    freqtab = name;
+    if (freqtab)
+	free(freqtab);
+    freqtab = strdup(name);
     if (debug)
 	fprintf(stderr,"freqtab: %s\n",name);
     if (0 != cfg_sections_count(freqtab))
@@ -160,6 +167,22 @@ int tune_analog_station(char *station)
 		       
 /* ---------------------------------------------------------------------------- */
 /* dvb tuning                                                                   */
+
+int tune_dvb_channel(char *pr)
+{
+    int tsid, pnr;
+
+    if (2 != sscanf(pr,"%d-%d",&tsid,&pnr))
+	return -1;
+    if (-1 == dvb_start_tune(devs.dvb, tsid, pnr))
+	return -1;
+
+    snprintf(curr_details, sizeof(curr_details),
+	     "TSID %d / PNR %d", tsid, pnr);
+    new_station(NULL);
+    new_channel(NULL);
+    return 0;
+}
 
 static int tune_dvb_station(char *station)
 {

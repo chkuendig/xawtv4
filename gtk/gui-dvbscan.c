@@ -13,6 +13,7 @@
 #include "grab-ng.h"
 #include "parseconfig.h"
 #include "devs.h"
+#include "commands.h"
 #include "dvb-tuning.h"
 #include "dvb-monitor.h"
 #include "gui.h"
@@ -401,20 +402,26 @@ static void activate(GtkTreeView        *treeview,
 		     gpointer            userdata)
 {
     GtkTreeModel *model;
-    GtkTreeIter   iter;
-    int   tsid, audio, video;
-    char  section[16];
+    GtkTreeIter iter;
+    int   tsid, pnr;
+    char  section[32];
 
     model = gtk_tree_view_get_model(treeview);
     if (!gtk_tree_model_get_iter(model, &iter, path))
 	return;
     gtk_tree_model_get(model, &iter,
-		       ST_COL_TSID,  &tsid,
-		       ST_COL_AUDIO, &audio,
-		       ST_COL_VIDEO, &video,
+		       ST_COL_TSID, &tsid,
+		       ST_COL_PNR,  &pnr,
 		       -1);
-    snprintf(section, sizeof(section), "%d", tsid);
-    dvb_frontend_tune(devs.dvb, "dvb-ts", section);
+
+    if (standalone) {
+	snprintf(section, sizeof(section), "%d", tsid);
+	dvb_frontend_tune(devs.dvb, "dvb-ts", section);
+	return;
+    } else {
+	snprintf(section, sizeof(section), "%d-%d", tsid, pnr);
+	do_va_cmd(2, "setdvb", section);
+    }
 }
 
 
