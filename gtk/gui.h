@@ -34,9 +34,11 @@ extern void gtk_about_box(GtkWindow *parent, char *name, char *version,
 			  char *text);
 extern void gtk_error_box(GtkWindow *parent, char *title, char *text);
 
-extern GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text);
-extern GtkWidget *gtk_build_toolbar(struct toolbarbutton *btns, int count,
+extern GtkBox* gtk_add_hbox_with_label(GtkBox *vbox, char *text);
+extern GtkWidget* gtk_toolbar_build(struct toolbarbutton *btns, int count,
 				    void *user_data);
+void gtk_toolbar_add_widget(GtkWidget *toolbar, GtkWidget *widget,
+			    gint pos);
 
 void gtk_screensaver_disable(Display *dpy);
 void gtk_screensaver_enable(Display *dpy);

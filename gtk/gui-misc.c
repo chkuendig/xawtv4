@@ -35,7 +35,7 @@ gboolean gtk_wm_delete_quit(GtkWidget *widget,
     return TRUE;
 }
 
-GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text)
+GtkBox* gtk_add_hbox_with_label(GtkBox *vbox, char *text)
 {
     GtkWidget *label;
     GtkBox *hbox;
@@ -51,31 +51,46 @@ GtkBox *gtk_add_hbox_with_label(GtkBox *vbox, char *text)
     return hbox;
 }
 
-GtkWidget *gtk_build_toolbar(struct toolbarbutton *btns, int count,
+GtkWidget* gtk_toolbar_build(struct toolbarbutton *btns, int count,
 			     void *user_data)
 {
-    GtkWidget *toolbar;
-    GtkWidget *icon;
+    GtkWidget   *toolbar;
+    GtkTooltips *tooltips = NULL;
+    GtkToolItem *item;
     int i;
     
     toolbar = gtk_toolbar_new();
     for (i = 0; i < count; i++) {
-	icon = NULL;
-	if (btns[i].stock)
-	    icon = gtk_image_new_from_stock(btns[i].stock,
-					    GTK_ICON_SIZE_SMALL_TOOLBAR);
-	if (!btns[i].text)
-	    gtk_toolbar_append_space(GTK_TOOLBAR(toolbar));
-	else
-	    gtk_toolbar_append_item(GTK_TOOLBAR(toolbar),
-				    btns[i].text,
-				    btns[i].tooltip,
-				    btns[i].priv,
-				    icon,
-				    btns[i].callback,
-				    user_data);
+	if (!btns[i].text) {
+	    item = gtk_separator_tool_item_new();
+	} else {
+	    item = gtk_tool_button_new(NULL, btns[i].text);
+	    if (btns[i].stock)
+		gtk_tool_button_set_stock_id(GTK_TOOL_BUTTON(item),
+					     btns[i].stock);
+	    if (btns[i].tooltip) {
+		if (NULL == tooltips)
+		    tooltips = gtk_tooltips_new();
+		gtk_tool_item_set_tooltip(GTK_TOOL_ITEM(item),
+					  tooltips,
+					  btns[i].tooltip,
+					  btns[i].priv);
+	    }
+	    if (btns[i].callback)
+		g_signal_connect(item, "clicked", btns[i].callback, user_data);
+	}
+	gtk_toolbar_insert(GTK_TOOLBAR(toolbar),item,-1);
     }
     return toolbar;
+}
+
+void gtk_toolbar_add_widget(GtkWidget *toolbar, GtkWidget *widget, gint pos)
+{
+    GtkToolItem *item;
+
+    item = gtk_tool_item_new();
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar),item,pos);
+    gtk_container_add(GTK_CONTAINER(item),widget);
 }
 
 /* ---------------------------------------------------------------------------- */

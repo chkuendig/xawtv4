@@ -11,6 +11,7 @@
 #include <gtk/gtk.h>
 
 #include "grab-ng.h"
+#include "misc.h"
 #include "parseconfig.h"
 #include "devs.h"
 #include "commands.h"
@@ -28,6 +29,7 @@ static int           standalone;
 
 static GtkWidget     *status;
 static GtkTreeStore  *store;
+static GtkTreeModel  *filter;
 static GtkWidget     *view;
 
 static int   current_tsid;
@@ -48,6 +50,7 @@ static gint  fe_poll_id;
 static void  scan_ts_start(void);
 static char* scan_ts_next(void);
 static void  mark_stale(void);
+static void  do_search(const char *str);
 static void  find_ts(GtkTreeIter *iter, int tsid);
 static void  find_pr(GtkTreeIter *iter, int tsid, int pnr);
 static void  dvbwatch_gui(struct psi_info *info, int event,
@@ -70,6 +73,7 @@ enum {
     ST_STATE_ACTIVE,
     ST_STATE_STALE,
     ST_STATE_SCANNED,
+    ST_STATE_MATCHES,
     
     ST_NUM_COLS
 };
@@ -336,7 +340,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.item_type   = "<Branch>",
     },{
 	.path        = "/File/_Close",
-	.accelerator = "Q",
+	.accelerator = "<control>Q",
 	.callback    = menu_cb_close,
 	.item_type   = "<StockItem>",
 	.extra_data  = GTK_STOCK_QUIT,
@@ -347,7 +351,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	.item_type   = "<Branch>",
     },{
 	.path        = "/Commands/_Tune frontend ...",
-	.accelerator = "T",
+	.accelerator = "<control>T",
 	.callback    = menu_cb_tune,
 	.item_type   = "<Item>",
     },{
@@ -355,12 +359,12 @@ static GtkItemFactoryEntry menu_items[] = {
 	.item_type   = "<Separator>",
     },{
 	.path        = "/Commands/Fast _rescan",
-	.accelerator = "R",
+	.accelerator = "<control>R",
 	.callback    = menu_cb_rescan,
 	.item_type   = "<Item>",
     },{
 	.path        = "/Commands/Full _scan",
-	.accelerator = "S",
+	.accelerator = "<control>S",
 	.callback    = menu_cb_full_scan,
 	.item_type   = "<Item>",
     },{
@@ -424,6 +428,14 @@ static void activate(GtkTreeView        *treeview,
     }
 }
 
+static void search_text_changed(GtkWidget *search)
+{
+    const char *text = gtk_entry_get_text(GTK_ENTRY(search));
+
+    if (debug)
+	fprintf(stderr,"search: \"%s\"\n", text);
+    do_search(text);
+}
 
 static void dvbscan_init_gui(void)
 {
@@ -463,9 +475,21 @@ static void dvbscan_init_gui(void)
     fe_poll_id = g_timeout_add(1000, frontend_poll, NULL);
 }
 
+static struct toolbarbutton toolbaritems[] = {
+    {
+	.text     = "close",
+	.tooltip  = "close window",
+	.stock    = GTK_STOCK_QUIT,
+	.callback = menu_cb_close,
+    },{
+	/* nothing */
+    }
+};
+
 void dvbscan_create_window(int s)
 {
     GtkWidget *vbox,*menubar,*scroll;
+    GtkWidget *handlebox,*toolbar,*label,*search;
     GtkCellRenderer *renderer;
     GtkAccelGroup *accel_group;
     GtkTreeViewColumn *col;
@@ -493,6 +517,15 @@ void dvbscan_create_window(int s)
 	gtk_widget_destroy(noabout);
     }
 
+    /* toolbar */
+    toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
+    label = gtk_label_new(" Search: ");
+    gtk_toolbar_add_widget(toolbar,label,-1);
+    search = gtk_entry_new_with_max_length(32);
+    gtk_toolbar_add_widget(toolbar,search,-1);
+    g_signal_connect(search, "activate",
+		     G_CALLBACK(search_text_changed), NULL);
+
     /* station list */
     view  = gtk_tree_view_new();
     store = gtk_tree_store_new(ST_NUM_COLS,
@@ -509,9 +542,17 @@ void dvbscan_create_window(int s)
 
 			       G_TYPE_BOOLEAN,  // active
 			       G_TYPE_BOOLEAN,  // stale
-			       G_TYPE_BOOLEAN); // scanned
+			       G_TYPE_BOOLEAN,  // scanned
+			       G_TYPE_BOOLEAN); // matches
+#if 1
+    filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(store),NULL);
+    gtk_tree_model_filter_set_visible_column(GTK_TREE_MODEL_FILTER(filter),
+					     ST_STATE_MATCHES);
+    gtk_tree_view_set_model(GTK_TREE_VIEW(view), filter);
+#else
     gtk_tree_view_set_model(GTK_TREE_VIEW(view),
 			    GTK_TREE_MODEL(store));
+#endif
     scroll = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 				   GTK_POLICY_NEVER,
@@ -701,9 +742,12 @@ void dvbscan_create_window(int s)
 
     /* Make a vbox and put stuff in */
     vbox = gtk_vbox_new(FALSE, 1);
+    handlebox = gtk_handle_box_new();
+    gtk_container_add(GTK_CONTAINER(handlebox), toolbar);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
     gtk_container_add(GTK_CONTAINER(dvbscan_win), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), handlebox, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
     gtk_container_add(GTK_CONTAINER(scroll), view);
     gtk_box_pack_end(GTK_BOX(vbox), status, FALSE, TRUE, 0);
@@ -782,8 +826,9 @@ static void find_ts(GtkTreeIter *iter, int tsid)
     gtk_tree_store_append(store, iter, NULL);
     active = (tsid == current_tsid) ? TRUE : FALSE;
     gtk_tree_store_set(store, iter,
-		       ST_COL_TSID,     tsid,
-		       ST_STATE_ACTIVE, active,
+		       ST_COL_TSID,      tsid,
+		       ST_STATE_ACTIVE,  active,
+		       ST_STATE_MATCHES, TRUE,
 		       -1);
 }
 
@@ -804,8 +849,9 @@ static void find_pr(GtkTreeIter *iter, int tsid, int pnr)
 
     gtk_tree_store_append(store, iter, &parent);
     gtk_tree_store_set(store, iter,
-		       ST_COL_TSID,    tsid,
-		       ST_COL_PNR,     pnr,
+		       ST_COL_TSID,      tsid,
+		       ST_COL_PNR,       pnr,
+		       ST_STATE_MATCHES, TRUE,
 		       -1);
 
     gtk_tree_model_get(GTK_TREE_MODEL(store), &parent, ST_COL_COUNT, &count, -1);
@@ -828,6 +874,46 @@ static void mark_stale(void)
 	    gtk_tree_store_set(store, &pr, ST_STATE_STALE, TRUE, -1);
 	}
     }
+}
+
+static void do_search(const char *string)
+{
+    GtkTreeIter ts,pr;
+    gboolean vts,vpr,matches,submatch;
+    char *name, *net;
+
+    for (vts = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store),&ts);
+	 vts;
+	 vts = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&ts)) {
+	submatch = FALSE;
+	gtk_tree_store_set(store, &ts, ST_STATE_MATCHES, TRUE, -1);
+	for (vpr = gtk_tree_model_iter_children(GTK_TREE_MODEL(store),&pr,&ts);
+	     vpr;
+	     vpr = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&pr)) {
+	    matches = FALSE;
+	    if (NULL == string) {
+		matches = TRUE;
+	    } else {
+		gtk_tree_model_get(GTK_TREE_MODEL(store), &pr,
+				   ST_COL_NAME,    &name,
+				   ST_COL_NET,     &net,
+				   -1);
+		if (name && NULL != NULL != strcasestr(name,string))
+		    matches = TRUE;
+		if (net  && NULL != NULL != strcasestr(net,string))
+		    matches = TRUE;
+		if (matches)
+		    submatch = TRUE;
+	    }
+	    gtk_tree_store_set(store, &pr, ST_STATE_MATCHES, matches, -1);
+	}
+	gtk_tree_store_set(store, &ts, ST_STATE_MATCHES, submatch, -1);
+	if (submatch)
+	    gtk_tree_view_expand_row(GTK_TREE_VIEW(view),
+				     gtk_tree_model_get_path(GTK_TREE_MODEL(store),&ts),
+				     TRUE);
+    }
+    gtk_tree_view_expand_all(GTK_TREE_VIEW(view));
 }
 
 static void dvbwatch_gui(struct psi_info *info, int event,

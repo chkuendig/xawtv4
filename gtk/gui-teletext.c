@@ -1471,7 +1471,7 @@ void vbi_create_window(struct vbi_state *vbi, struct dvbmon *dvbmon)
     vw->subpages = gtk_item_factory_get_widget(item_factory,"<tt>/Subpage");
     vw->stations = gtk_item_factory_get_widget(item_factory,"<tt>/Station");
     vw->fonts    = gtk_item_factory_get_widget(item_factory,"<tt>/Font");
-    toolbar = gtk_build_toolbar(toolbaritems, DIMOF(toolbaritems), vw);
+    toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), vw);
 
     /* drawing area */
     vw->tt = gtk_drawing_area_new();

@@ -250,51 +250,55 @@ static void __init attr_x11_hooks_init(void)
 /* ------------------------------------------------------------------------ */
 /* onscreen display                                                         */
 
-static GtkWidget *on_win, *on_label;
-static guint on_timer;
+GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
+GdkColor white = { .red = 0xffff, .green = 0xffff, .blue = 0xffff };
+GdkColor green = { .red = 0x0000, .green = 0xffff, .blue = 0x0000 };
 
-static void onscreen_colors(GtkWidget *widget)
+static void widget_colors(GtkWidget *widget, GdkColor *fg, GdkColor *bg)
 {
     GdkColormap *cmap;
-    GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
-    GdkColor white = { .red = 0xffff, .green = 0xffff, .blue = 0xffff };
-    GdkColor green = { .red = 0x0000, .green = 0xffff, .blue = 0x0000 };
-    PangoFontDescription *font;
     GtkRcStyle *style;
 
     cmap = gtk_widget_get_colormap(widget);
-    gdk_colormap_alloc_color(cmap, &black, FALSE, TRUE);
-    gdk_colormap_alloc_color(cmap, &white, FALSE, TRUE);
-    gdk_colormap_alloc_color(cmap, &green, FALSE, TRUE);
-    font = pango_font_description_from_string("led fixed 36");
-
     style = gtk_widget_get_modifier_style(widget);
-    style->font_desc = font;
-    style->fg[GTK_STATE_INSENSITIVE] = green;
-    style->bg[GTK_STATE_INSENSITIVE] = black;
-    style->fg[GTK_STATE_NORMAL] = green;
-    style->bg[GTK_STATE_NORMAL] = black;
-    style->color_flags[GTK_STATE_INSENSITIVE] |=
-	GTK_RC_FG | GTK_RC_BG;
-    style->color_flags[GTK_STATE_NORMAL] |=
-	GTK_RC_FG | GTK_RC_BG;
+    if (fg) {
+	gdk_colormap_alloc_color(cmap, fg, FALSE, TRUE);
+	style->fg[GTK_STATE_INSENSITIVE] = *fg;
+	style->fg[GTK_STATE_NORMAL]      = *fg;
+	style->color_flags[GTK_STATE_INSENSITIVE] |= GTK_RC_FG;
+	style->color_flags[GTK_STATE_NORMAL]      |= GTK_RC_FG;
+    }
+    if (bg) {
+	gdk_colormap_alloc_color(cmap, bg, FALSE, TRUE);
+	style->bg[GTK_STATE_INSENSITIVE] = *bg;
+	style->bg[GTK_STATE_NORMAL]      = *bg;
+	style->color_flags[GTK_STATE_INSENSITIVE] |= GTK_RC_BG;
+	style->color_flags[GTK_STATE_NORMAL]      |= GTK_RC_BG;
+    }
     gtk_widget_modify_style(widget,style);
 }
 
+static GtkWidget *on_win, *on_label;
+static guint on_timer;
+
 void create_onscreen(void)
 {
+    PangoFontDescription *font;
+
     on_win   = gtk_window_new(GTK_WINDOW_POPUP);
     on_label = gtk_widget_new(GTK_TYPE_LABEL,
 			      "xalign", 0.0,
 			      "xpad",   20,
 			      "ypad",   5,
 			      NULL);
-    onscreen_colors(on_win);
-    onscreen_colors(on_label);
+
+    font = pango_font_description_from_string("led fixed 36");
+    gtk_widget_modify_font(on_label, font);
+    widget_colors(on_win,   &green, &black);
+    widget_colors(on_label, &green, &black);
+
     gtk_container_add(GTK_CONTAINER(on_win), on_label);
     gtk_window_set_resizable(GTK_WINDOW(on_win), TRUE);
-    gtk_widget_set_sensitive(on_win,   FALSE);
-    gtk_widget_set_sensitive(on_label, FALSE);
 }
 
 static gboolean popdown_onscreen(gpointer data)
@@ -335,25 +339,6 @@ void display_onscreen(char *title)
 static GtkWidget *epg_win, *epg_bar, *epg_time, *epg_name;
 static guint epg_timer;
 
-static void epg_colors(GtkWidget *widget)
-{
-    GdkColormap *cmap;
-    GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
-    GtkRcStyle *style;
-
-    cmap = gtk_widget_get_colormap(widget);
-    gdk_colormap_alloc_color(cmap, &black, FALSE, TRUE);
-
-    style = gtk_widget_get_modifier_style(widget);
-    style->fg[GTK_STATE_INSENSITIVE] = black;
-    style->fg[GTK_STATE_NORMAL] = black;
-    style->color_flags[GTK_STATE_INSENSITIVE] |=
-	GTK_RC_FG;
-    style->color_flags[GTK_STATE_NORMAL] |=
-	GTK_RC_FG;
-    gtk_widget_modify_style(widget,style);
-}
-
 void create_epg(void)
 {
     GtkWidget *box;
@@ -369,8 +354,6 @@ void create_epg(void)
 			      "xalign", 0.5,
 			      "xpad", SPACING,
 			      NULL);
-    epg_colors(epg_time);
-    epg_colors(epg_name);
 
     gtk_container_add(GTK_CONTAINER(epg_win), box);
     gtk_box_pack_start(GTK_BOX(box), epg_bar,  FALSE, TRUE, 0);
@@ -378,9 +361,6 @@ void create_epg(void)
     gtk_box_pack_start(GTK_BOX(box), epg_name, FALSE, TRUE, 0);
 
     gtk_window_set_resizable(GTK_WINDOW(epg_win), TRUE);
-    gtk_widget_set_sensitive(epg_win,   FALSE);
-    gtk_widget_set_sensitive(epg_time,  FALSE);
-    gtk_widget_set_sensitive(epg_name,  FALSE);
 }
 
 static gboolean popdown_epg(gpointer data)
@@ -410,10 +390,6 @@ void display_epg(GtkWindow *win, struct epgitem *epg)
     len = strftime(buf,sizeof(buf),"%H:%M - ",&tm);
     localtime_r(&epg->stop,&tm);
     len += strftime(buf+len,sizeof(buf)-len,"%H:%M",&tm);
-#if 0
-    len += snprintf(buf+len,sizeof(buf)-len," (%d%%)",
-		    (int)(passed*100/total));
-#endif
     gtk_label_set_text(GTK_LABEL(epg_time), buf);
 
     len = snprintf(buf,sizeof(buf),"%s",epg->name);
@@ -1480,7 +1456,7 @@ void create_control(void)
 	(item_factory,"<control>/Settings");
 
     /* toolbar */
-    toolbar = gtk_build_toolbar(toolbaritems, DIMOF(toolbaritems), NULL);
+    toolbar = gtk_toolbar_build(toolbaritems, DIMOF(toolbaritems), NULL);
 
     /* station list */
     st_view  = gtk_tree_view_new();

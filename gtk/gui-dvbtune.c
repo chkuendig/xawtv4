@@ -326,6 +326,8 @@ void create_dvbtune(GtkWindow *parent)
 				    NULL);
     gtk_dialog_set_default_response(GTK_DIALOG(dvbtune_dialog),
 				    GTK_RESPONSE_OK);
+    g_signal_connect(dvbtune_dialog, "delete-event",
+		     G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 
     vbox = GTK_BOX(GTK_DIALOG(dvbtune_dialog)->vbox);
     frame = gtk_frame_new(NULL);
