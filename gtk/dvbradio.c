@@ -56,6 +56,7 @@ static gboolean   have_x11;
 
 static GtkWidget  *main_win;
 static GtkWidget  *label;
+static GtkWidget  *status;
 static GtkWidget  *st_menu;
 
 static GtkWidget     *conf_win;
@@ -106,17 +107,17 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.option   = { O_CMD_DEVICE },
 	.needsarg = 1,
 	.desc     = "pick device config",
-    },{
-	.cmdline  = "tv",
-	.option   = { O_CMD_TV },
-	.desc     = "also list tv stations",
-	.value    = "1",
 
     },{
 	.cmdline  = "geometry",
 	.option   = { O_CMD_GEOMETRY },
 	.needsarg = 1,
 	.desc     = "specify window geoemtry",
+    },{
+	.cmdline  = "tv",
+	.option   = { O_CMD_TV },
+	.desc     = "also add tv stations to the list",
+	.value    = "1",
 
     },{
 	/* end of list */
@@ -125,6 +126,14 @@ struct cfg_cmdline cmd_opts_only[] = {
 
 /* ------------------------------------------------------------------------ */
 /* main loop                                                                */
+
+static void set_status(char *msg)
+{
+    if (status)
+	gtk_label_set_text(GTK_LABEL(status),msg);
+    else
+	fprintf(stderr,"%s\n",msg);
+}
 
 static void tune_byname(char *station)
 {
@@ -207,11 +216,13 @@ static int main_loop(GMainContext *context, char *station)
     if (NULL == devs.dvb)
 	gtk_panic_box(have_x11, "No DVB device found.\n");
 
-    if (0 == init_channel_list())
-	fprintf(stderr,
-		"Hmm, no stations found.  You either don't have scanned\n"
-		"for stations yet (use \"alexplore\" for that) or there are\n"
-		"no radio stations available.\n");
+    if (have_x11) {
+	if (0 == init_channel_list())
+	    fprintf(stderr,
+		    "Hmm, no stations found.  You either don't have scanned\n"
+		    "for stations yet (use \"alexplore\" for that) or there are\n"
+		    "no radio stations available.\n");
+    }
 
     if (station)
 	tune_byname(station);
@@ -232,13 +243,17 @@ static int main_loop(GMainContext *context, char *station)
 	if (devs.dvb) {
 	    int rc;
 	    /* wait for DVB tuning finish (frontend lock) */
+	    if (current)
+		set_status("Tuning ...");
 	    do {
 		rc = dvb_finish_tune(devs.dvb,100);
 		while (g_main_context_iteration(context,FALSE))
 		    /* nothing */;
 	    } while (-1 == rc && !command_pending);
-	    if (0 == rc && !command_pending)
+	    if (0 == rc && !command_pending) {
+		set_status("Frontend locked.");
 		dvb_loop(context);
+	    }
 	}
 
 	/* default/error catch */
@@ -454,10 +469,15 @@ static void menu_cb_record_start(void)
 {
     struct ng_writer *wr = ng_find_writer_name("mp3");
     char *recfile = record_filename("radio",current,NULL,"mp3");
+    char line[128];
 
     if (mm && wr) {
 	if (debug)
 	    fprintf(stderr,"start recording to %s\n", recfile);
+	if (status) {
+	    snprintf(line,sizeof(line),"Rec to %s",recfile);
+	    set_status(line);
+	}
 	av_media_start_recording(mm, wr, recfile);
     }
 }
@@ -467,6 +487,7 @@ static void menu_cb_record_stop(void)
     if (mm && mm->writer) {
 	if (debug)
 	    fprintf(stderr,"stop recording\n");
+	set_status("Recording stopped.");
 	av_media_stop_recording(mm);
     }
 }
@@ -644,12 +665,19 @@ static void main_create_window(void)
     gtk_widget_colors(label, &green, &black);
     gtk_widget_colors(box, &green, &black);
     
+    /* other widgets */
+    status = gtk_widget_new(GTK_TYPE_LABEL,
+			    "label",  "Ready.",
+			    "xalign", 0.0,
+			    NULL);
+
     /* put stuff into boxes */
     vbox = gtk_vbox_new(FALSE, 1);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
     gtk_container_add(GTK_CONTAINER(main_win), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), status, FALSE, TRUE, 0);
 
     return;
 }
@@ -771,7 +799,7 @@ main(int argc, char *argv[])
 	/* tty only */
 	if (argc > 1) {
 	    siginit();
-	    fprintf(stderr,"tuning \"%s\", press Ctrl-C to quit\n",argv[1]);
+	    fprintf(stderr,"Playing \"%s\", press Ctrl-C to quit\n",argv[1]);
 	    main_loop(g_main_context_default(), argv[1]);
 	    fprintf(stderr,"bye...\n");
 	} else {
