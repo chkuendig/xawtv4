@@ -4,7 +4,8 @@ enum display_mode {
     DISPLAY_OVERLAY = 1,  // overlay (pcipci dma grabber => vga)
     DISPLAY_GRAB    = 2,  // grabdisplay (capture from grabber => vga)
     DISPLAY_DVB     = 3,  // DVB playback (software mpeg2 decoding)
-    DISPLAY_FILE    = 4,  // movie file playback
+    DISPLAY_MPEG    = 4,  // MPEG playback (directly from video device)
+    DISPLAY_FILE    = 5,  // movie file playback
 };
 
 enum tuning_mode {

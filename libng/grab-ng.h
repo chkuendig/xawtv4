@@ -123,6 +123,11 @@ extern int  ng_mpeg_apid;
 #define CAN_CAPTURE          2
 #define CAN_TUNE             4
 #define NEEDS_CHROMAKEY      8
+#define CAN_MPEG_PS         16
+#define CAN_MPEG_TS         32
+
+#define MPEG_FLAGS_PS        1
+#define MPEG_FLAGS_TS        2
 
 /* --------------------------------------------------------------------- */
 
@@ -364,6 +369,9 @@ struct ng_vid_driver {
     void  (*stopvideo)(void *handle);
     struct ng_video_buf* (*nextframe)(void *handle); /* video frame  */
     struct ng_video_buf* (*getimage)(void *handle);  /* single image */
+
+    /* read MPEG stream */
+    char* (*setup_mpeg)(void *handle, int flags);
 
     /* tuner */
     unsigned long (*getfreq)(void *handle);

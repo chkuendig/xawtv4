@@ -234,6 +234,74 @@ static void __init attr_x11_hooks_init(void)
 }
 
 /* ------------------------------------------------------------------------ */
+/* onscreen display                                                         */
+
+static GtkWidget *on_win, *on_label;
+static guint on_timer;
+
+void create_onscreen(void)
+{
+    GdkColormap *cmap;
+    GdkColor black = { .red = 0x0000, .green = 0x0001, .blue = 0x0000 };
+    GdkColor green = { .red = 0x0000, .green = 0xffff, .blue = 0x0000 };
+    PangoFontDescription *font;
+    
+    on_win   = gtk_window_new(GTK_WINDOW_POPUP);
+    on_label = gtk_widget_new(GTK_TYPE_LABEL,
+			      "xalign", 0,
+			      NULL);
+    gtk_container_add(GTK_CONTAINER(on_win), on_label);
+    gtk_window_set_resizable(GTK_WINDOW(on_win), TRUE);
+    gtk_widget_set_sensitive(on_win,   FALSE);
+    gtk_widget_set_sensitive(on_label, FALSE);
+
+    cmap = gtk_widget_get_colormap(on_label);
+    gdk_colormap_alloc_color(cmap, &black, FALSE, TRUE);
+    gdk_colormap_alloc_color(cmap, &green, FALSE, TRUE);
+    font = pango_font_description_from_string("led fixed 36");
+
+#if 0
+    /* Hmm, bg doesn't work ... */
+    gtk_widget_modify_bg(on_label, GTK_STATE_INSENSITIVE, &black);
+    gtk_widget_modify_fg(on_label, GTK_STATE_INSENSITIVE, &green);
+#else
+    gtk_widget_modify_fg(on_label, GTK_STATE_INSENSITIVE, &black);
+#endif
+    gtk_widget_modify_font(on_label, font);
+}
+
+static gboolean popdown_onscreen(gpointer data)
+{
+    if (debug)
+	fprintf(stderr,"osd: hide\n");
+    gtk_widget_hide(on_win);
+    on_timer = 0;
+    return FALSE;
+}
+
+void display_onscreen(char *title)
+{
+    if (!fs)
+	return;
+    if (!cfg_get_bool("options","global","osd",1))
+	return;
+
+    if (debug)
+	fprintf(stderr,"osd: show (%s)\n",title);
+
+    gtk_label_set_text(GTK_LABEL(on_label), title);
+    gtk_window_move(GTK_WINDOW(on_win),
+		    cfg_get_int("options","global","osd-x",30),
+		    cfg_get_int("options","global","osd-y",20));
+    gtk_widget_show_all(on_win);
+
+    if (on_timer)
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(), on_timer));
+    on_timer = g_timeout_add(TITLE_TIME, popdown_onscreen, NULL);
+}
+
+/* ------------------------------------------------------------------------ */
 
 static void menu_cb_setdevice(GtkMenuItem *menuitem, gchar *string)
 {
@@ -243,13 +311,22 @@ static void menu_cb_setdevice(GtkMenuItem *menuitem, gchar *string)
     command_pending++;
 }
 
-static void menu_cb_fullscreen(void)
+void menu_cb_fullscreen(void)
 {
     fs = !fs;
     if (fs)
 	gtk_window_fullscreen(GTK_WINDOW(main_win));
-    else
+    else {
 	gtk_window_unfullscreen(GTK_WINDOW(main_win));
+
+	/* hide osd */
+	gtk_widget_hide(on_win);
+	if (on_timer) {
+	    g_source_destroy(g_main_context_find_source_by_id
+			     (g_main_context_default(), on_timer));
+	    on_timer = 0;
+	}
+    }
 }
 
 static void menu_cb_mute(void)
@@ -295,6 +372,20 @@ static void menu_cb_fine_next(void)
 static void menu_cb_fine_prev(void)
 {
     // do_va_cmd(2,"setchannel","prev");
+}
+
+static void menu_cb_about(void)
+{
+    static char *text =
+	"\n"
+	"This is xawtv, a TV application for X11, using the gtk2 toolkit\n"
+	"\n"
+	THIS_IS_GPLv2
+	"\n"
+	"(c) 1997-2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]"
+	"\n";
+
+    gtk_about_box(GTK_WINDOW(control_win), "xawtv", VERSION, text);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -578,7 +669,8 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/_Help",
 	.item_type   = "<LastBranch>",
     },{
-	.path        = "/Help/_About",
+	.path        = "/Help/_About ...",
+	.callback    = menu_cb_about,
 	.item_type   = "<Item>",
     }
 };

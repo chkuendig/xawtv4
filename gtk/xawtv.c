@@ -5,6 +5,7 @@
  *
  */
 
+#define _GNU_SOURCE
 #include "config.h"
 
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 #include <inttypes.h>
 
 #include <sys/types.h>
@@ -21,9 +23,11 @@
 #include <sys/shm.h>
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
+#include <sys/wait.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <X11/extensions/XShm.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
@@ -139,6 +143,69 @@ struct cfg_cmdline cmd_opts_only[] = {
 
 /* ------------------------------------------------------------------------ */
 
+static void childsig(int signal)
+{
+    int pid,stat;
+
+    if (debug)
+	fprintf(stderr,"got sigchild\n");
+    pid = waitpid(-1,&stat,WUNTRACED|WNOHANG);
+    if (debug) {
+	if (-1 == pid) {
+	    perror("waitpid");
+	} else if (0 == pid) {
+	    fprintf(stderr,"oops: got sigchild and waitpid returns 0 ???\n");
+	} else if (WIFEXITED(stat)){
+	    fprintf(stderr,"[%d]: normal exit (%d)\n",pid,WEXITSTATUS(stat));
+	} else if (WIFSIGNALED(stat)){
+	    fprintf(stderr,"[%d]: %s\n",pid,strsignal(WTERMSIG(stat)));
+	} else if (WIFSTOPPED(stat)){
+	    fprintf(stderr,"[%d]: %s\n",pid,strsignal(WSTOPSIG(stat)));
+	}
+    }
+}
+
+static void termsig(int signal)
+{
+    if (debug)
+	fprintf(stderr,"received signal %d [%s]\n",signal,strsignal(signal));
+    command_pending++;
+    exit_application++;
+}
+
+static void segfault(int signal)
+{
+    fprintf(stderr,"[pid=%d] segfault catched, aborting\n",getpid());
+    abort();
+}
+
+static void siginit(void)
+{
+    struct sigaction act,old;
+
+    memset(&act,0,sizeof(act));
+    sigemptyset(&act.sa_mask);
+
+    act.sa_handler = SIG_IGN;
+    sigaction(SIGHUP,  &act, &old);
+    sigaction(SIGPIPE, &act, &old);
+    
+    act.sa_handler = childsig;
+    sigaction(SIGCHLD, &act, &old);
+
+    act.sa_handler = termsig;
+    sigaction(SIGINT,  &act, &old);
+    sigaction(SIGTERM, &act, &old);
+
+    if (debug) {
+	act.sa_handler = segfault;
+	sigaction(SIGSEGV, &act, &old);
+	fprintf(stderr,"main thread [pid=%d]\n",getpid());
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+
 static void
 grabber_init(char *dev)
 {
@@ -153,10 +220,12 @@ grabber_init(char *dev)
 	    do_va_cmd(2,"setnorm",val);
 	if (NULL != (val = cfg_get_str(O_INPUT)))
 	    do_va_cmd(2,"setinput",val);
-	if (devs.video.flags & CAN_CAPTURE)
-	    display_mode = DISPLAY_GRAB;
 	if (devs.video.flags & CAN_OVERLAY)
 	    display_mode = DISPLAY_OVERLAY;
+	else if (devs.video.flags & (CAN_MPEG_PS|CAN_MPEG_TS))
+	    display_mode = DISPLAY_MPEG;
+	else if (devs.video.flags & CAN_CAPTURE)
+	    display_mode = DISPLAY_GRAB;
 
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
@@ -179,57 +248,21 @@ grabber_fini(void)
     device_fini();
 }
 
-/* ------------------------------------------------------------------------ */
-/* onscreen display                                                         */
-
-static GtkWidget *on_win, *on_label;
-static guint on_timer;
-
-static void create_onscreen(void)
-{
-    on_win   = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    on_label = gtk_widget_new(GTK_TYPE_LABEL,
-			      "xalign", 0,
-			      NULL);
-    gtk_container_add(GTK_CONTAINER(on_win), on_label);
-}
-
-static gboolean popdown_onscreen(gpointer data)
-{
-    if (debug)
-	fprintf(stderr,"osd: hide\n");
-    gtk_widget_hide(on_win);
-    on_timer = 0;
-    return FALSE;
-}
-
 static void
-display_onscreen(char *title)
+set_property(void)
 {
-    /* not working yet ... */
-    return;
-    
-    if (!fs)
-	return;
-    if (!cfg_get_bool("options","global","osd",1))
-	return;
+    Window win;
+    int    len;
+    char   line[80];
 
-    if (debug)
-	fprintf(stderr,"osd: show (%s)\n",title);
-
-    gtk_label_set_text(GTK_LABEL(on_label), title);
-#if 0
-    XtVaSetValues(on_shell,
-		  XtNx, x + cfg_get_int("options","global","osd-x",30),
-		  XtNy, y + cfg_get_int("options","global","osd-y",20),
-		  NULL);
-#endif
-    gtk_widget_show_all(on_win);
-
-    if (on_timer)
-	g_source_destroy(g_main_context_find_source_by_id
-			 (g_main_context_default(), on_timer));
-    on_timer = g_timeout_add(TITLE_TIME, popdown_onscreen, NULL);
+    len  = sprintf(line,     "%s", curr_details)+1;
+    len += sprintf(line+len, "%s", curr_channel ? curr_channel : "?") +1;
+    len += sprintf(line+len, "%s", curr_station ? curr_station : "?") +1;
+    win  = gdk_x11_drawable_get_xid(main_win->window);
+    if (win)
+	XChangeProperty(dpy, win, _XAWTV_STATION, XA_STRING,
+			8, PropModeReplace,
+			line, len);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -285,7 +318,7 @@ static void new_station(void)
 	     curr_channel,
 	     curr_station);
     gtk_label_set_text(GTK_LABEL(control_status), label);
-    // set_property();
+    set_property();
 }
 
 /* ------------------------------------------------------------------------ */
@@ -404,6 +437,74 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
 
 #endif
 
+static void
+mpeg_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
+{
+    struct media_stream mm;
+    struct ng_audio_fmt *afmt;
+    struct ng_video_fmt *vfmt;
+    int flags = 0;
+    char *path;
+    
+    if (debug) fprintf(stderr,"%s: enter\n",__FUNCTION__);
+
+    memset(&mm,0,sizeof(mm));
+    mm.blit = blit;
+    mm.speed = 1;
+
+    /* find mpeg parser */
+    if (devs.video.flags & CAN_MPEG_PS) {
+	mm.reader = ng_find_reader_name("mpeg-ps");
+	flags     = MPEG_FLAGS_PS;
+    }
+    else if (devs.video.flags & CAN_MPEG_TS) {
+	mm.reader = ng_find_reader_name("mpeg-ts");
+	flags     = MPEG_FLAGS_TS;
+    }
+    if (NULL == mm.reader) {
+	fprintf(stderr,"Oops: mpeg stream parser not found\n");
+	return;
+    }
+
+    /* init driver */
+    ng_dev_open(&devs.video);
+    path = devs.video.v->setup_mpeg(devs.video.handle, flags);
+    if (NULL == path) {
+	fprintf(stderr,"Oops: driver mpeg setup failed\n");
+	ng_dev_close(&devs.video);
+	return;
+    }
+    ng_dev_close(&devs.video);
+
+    mm.rhandle = mm.reader->rd_open(path);
+    if (NULL == mm.rhandle) {
+	fprintf(stderr,"can't open: %s\n",path);
+	return;
+    }
+
+    /* audio + video setup */
+    vfmt = mm.reader->rd_vfmt(mm.rhandle,NULL,0);
+    if (vfmt && (0 == vfmt->width || 0 == vfmt->height))
+	vfmt = NULL;
+    afmt = mm.reader->rd_afmt(mm.rhandle);
+
+    if (vfmt)
+	av_media_reader_video(&mm);
+    if (afmt)
+	av_media_reader_audio(&mm,afmt);
+
+    /* go playback stuff */
+    av_media_mainloop(context, &mm);
+
+    /* cleanup */
+    BUG_ON(NULL != mm.as,"mm.as isn't NULL");
+    BUG_ON(NULL != mm.vs,"mm.vs isn't NULL");
+    mm.reader->rd_close(mm.rhandle);
+
+    if (debug) fprintf(stderr,"%s: exit\n",__FUNCTION__);
+    return;
+}
+
 static int main_loop(GMainContext *context)
 {
     struct blit_handle *blit;
@@ -447,6 +548,10 @@ static int main_loop(GMainContext *context)
 	    if (devs.video.type != NG_DEV_NONE)
 		grabdisplay_loop(context,video,blit);
 	    break;
+	case DISPLAY_MPEG:
+	    if (devs.video.type != NG_DEV_NONE)
+		mpeg_loop(context,video,blit);
+	    break;
 #ifdef HAVE_DVB
 	case DISPLAY_DVB:
 	    if (devs.dvb)
@@ -471,9 +576,9 @@ static int main_loop(GMainContext *context)
 
 /* ------------------------------------------------------------------------ */
 
-static gboolean mouse_button(GtkWidget *widget,
-			     GdkEventButton *event,
-			     gpointer user_data)
+static gboolean mouse_button_eh(GtkWidget *widget,
+				GdkEventButton *event,
+				gpointer user_data)
 {
     if (NULL != control_win  &&  3 == event->button) {
 	if (GTK_WIDGET_VISIBLE(control_win))
@@ -492,14 +597,14 @@ static gboolean mouse_button(GtkWidget *widget,
     return FALSE;
 }
 
-static gboolean resize(GtkWidget *widget,
-		       GdkEventConfigure *event,
-		       gpointer user_data)
+static gboolean configure_eh(GtkWidget *widget,
+			     GdkEventConfigure *event,
+			     gpointer user_data)
 {
     static int ww,wh;
     
     if (event->width == ww && event->height == wh)
-	return 0;
+	return FALSE;
     ww = event->width;
     wh = event->height;
 
@@ -513,7 +618,70 @@ static gboolean resize(GtkWidget *widget,
 	/* nothing */
 	break;
     };
-    return 0;
+    return FALSE;
+}
+
+static gboolean expose_eh(GtkWidget *widget,
+			  GdkEventExpose *event,
+			  gpointer user_data)
+{
+    if (debug)
+	fprintf(stderr,"%s\n",__FUNCTION__);
+
+    if (event->count)
+	return FALSE;
+    switch (display_mode) {
+    case DISPLAY_OVERLAY:
+	/* trigger reblit */
+	command_pending++;
+	break;
+    default:
+	/* nothing */
+	break;
+    };
+    return FALSE;
+}
+
+static gboolean property_eh(GtkWidget *widget,
+			    GdkEventProperty *event,
+			    gpointer user_data)
+{
+    Atom atom = gdk_x11_atom_to_xatom_for_display
+	(gtk_widget_get_display(widget), event->atom);
+    Window win = gdk_x11_drawable_get_xid(widget->window);
+
+    Atom            type;
+    int             format, argc;
+    unsigned int    i;
+    char            *argv[32];
+    unsigned long   nitems, bytesafter;
+    unsigned char   *args = NULL;
+
+    if (debug)
+	fprintf(stderr,"%s %s\n", __FUNCTION__,
+		XGetAtomName(dpy,atom));
+
+    if (atom != _XAWTV_REMOTE)
+	return FALSE;
+    if (Success != XGetWindowProperty(dpy, win, atom, 
+				      0, (65536 / sizeof(long)),
+				      True, XA_STRING, &type, &format,
+				      &nitems, &bytesafter, &args))
+	return TRUE;
+    if (nitems == 0)
+	return TRUE;
+
+    for (i = 0, argc = 0; i <= nitems; i += strlen(args + i) + 1) {
+	if (i == nitems || args[i] == '\0') {
+	    argv[argc] = NULL;
+	    do_command(argc,argv);
+	    argc = 0;
+	} else {
+	    argv[argc++] = args+i;
+	}
+    }
+    XFree(args);
+    return TRUE;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -646,12 +814,26 @@ main(int argc, char *argv[])
     main_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     video = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(main_win), video);
-    gtk_widget_add_events(video,GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
+
+    gtk_widget_add_events(video,
+			  GDK_BUTTON_PRESS_MASK   |
+			  GDK_BUTTON_RELEASE_MASK |
+			  GDK_EXPOSURE_MASK       |
+			  GDK_STRUCTURE_MASK      );
+    g_signal_connect(video, "configure-event",
+		     G_CALLBACK(configure_eh), NULL);
+    g_signal_connect(video, "expose-event",
+		     G_CALLBACK(expose_eh), NULL);
+    g_signal_connect(video, "button-release-event",
+		     G_CALLBACK(mouse_button_eh), NULL);
+
+    gtk_widget_add_events(main_win,
+			  GDK_STRUCTURE_MASK      |
+			  GDK_PROPERTY_CHANGE_MASK);
     g_signal_connect(main_win, "delete-event",
 		     G_CALLBACK(gtk_wm_delete_quit), NULL);
-    g_signal_connect(video, "expose-event", G_CALLBACK(resize), NULL);
-    g_signal_connect(video, "button-release-event",
-		     G_CALLBACK(mouse_button), NULL);
+    g_signal_connect(main_win, "property-notify-event",
+		     G_CALLBACK(property_eh), NULL);
 
     /* init X11 visual info */
     visual = gdk_x11_visual_get_xvisual(gtk_widget_get_visual(video));
@@ -666,12 +848,12 @@ main(int argc, char *argv[])
     display_message     = new_message;
     exit_hook           = do_exit;
     setstation_notify   = new_station;
-#if 0 /* FIXME */
+    fullscreen_hook     = menu_cb_fullscreen;
+#if 0 /* TODO */
 #ifdef HAVE_ZVBI
     vtx_subtitle        = display_subtitle;
 #endif
     freqtab_notify      = new_freqtab;
-    fullscreen_hook     = do_fullscreen;
     movie_hook          = do_movie_record;
     rec_status          = do_rec_status;
 #endif
@@ -682,14 +864,14 @@ main(int argc, char *argv[])
 	fprintf(stderr,"main: xinerama extention...\n");
     xfree_xinerama_init(dpy);
     if (debug)
-	fprintf(stderr,"main: install signal handlers...\n");
-    xt_siginit();
-    if (debug)
 	fprintf(stderr,"main: checking wm...\n");
     wm_detect(dpy);
     xt_input_init(dpy);
     XSetIOErrorHandler(x11_ctrl_alt_backspace);
 #endif
+    if (debug)
+	fprintf(stderr,"main: install signal handlers...\n");
+    siginit();
 
     /* create windows */
     if (debug)
@@ -723,6 +905,10 @@ main(int argc, char *argv[])
 	do_va_cmd(2,"setfreqtab",freqtab);
     if (argc > 1)
 	do_va_cmd(2,"setstation",argv[1]);
+    else {
+	/* first in list (FIXME: don't modify when known station tuned?) */
+	do_va_cmd(2,"setstation","0");
+    }
 
     return main_loop(g_main_context_default());
 }

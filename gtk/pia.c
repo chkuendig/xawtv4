@@ -350,11 +350,26 @@ static void next_cb(void)
     command_pending++;
 }
 
+static void about_cb(void)
+{
+    static char *text =
+	"\n"
+	"This is pia, a simple movie player for X11.\n"
+	"\n"
+	THIS_IS_GPLv2
+	"\n"
+	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]"
+	"\n";
+
+    gtk_about_box(GTK_WINDOW(toplevel), "pia", VERSION, text);
+}
+
 static GtkItemFactoryEntry menu_items[] = {
-    { "/_Next",       "space", next_cb,       0, "<Item>"       },
-    { "/_Fullscreen", "F",     fullscreen_cb, 0, "<Item>"       },
-    { "/sep",         NULL,    NULL,          0, "<Separator>"  },
-    { "/_Quit",       "Q",     gtk_quit_cb,   0, "<StockItem>", GTK_STOCK_QUIT },
+    { "/_Next",         "space", next_cb,       0, "<Item>"       },
+    { "/_Fullscreen",   "F",     fullscreen_cb, 0, "<Item>"       },
+    { "/sep",           NULL,    NULL,          0, "<Separator>"  },
+    { "/_About ...",    NULL,    about_cb,      0, "<Item>"       },
+    { "/_Quit",         "Q",     gtk_quit_cb,   0, "<StockItem>", GTK_STOCK_QUIT },
 };
 static gint nmenu_items = sizeof (menu_items)/sizeof (menu_items[0]);
 

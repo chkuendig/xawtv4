@@ -15,6 +15,15 @@ extern void gtk_quit_cb(void);
 extern gboolean gtk_wm_delete_quit(GtkWidget *widget, GdkEvent  *event,
 				   gpointer   data);
 
+extern void gtk_about_box(GtkWindow *parent, char *name, char *version,
+			  char *text);
+
+#define THIS_IS_GPLv2 \
+  "This program is free software; you can redistribute it and/or modify\n" \
+  "it under the terms of the GNU General Public License version 2 as\n" \
+  "published by the Free Software Foundation.\n"
+
+
 /* ------------------------------------------------------------------- */
 /* gui-control.c                                                       */
 
@@ -31,3 +40,7 @@ extern GtkWidget     *control_st_menu;
 extern GtkWidget     *control_status;
 
 extern void create_control(void);
+extern void create_onscreen(void);
+extern void display_onscreen(char *title);
+
+extern void menu_cb_fullscreen(void);

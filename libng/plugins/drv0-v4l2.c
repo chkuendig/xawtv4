@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <signal.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -60,6 +61,9 @@ static void v4l2_stopvideo(void *handle);
 static struct ng_video_buf* v4l2_nextframe(void *handle);
 static struct ng_video_buf* v4l2_getimage(void *handle);
 
+/* mpeg */
+static char *v4l2_setup_mpeg(void *handle, int flags);
+
 /* tuner */
 static unsigned long v4l2_getfreq(void *handle);
 static void v4l2_setfreq(void *handle, unsigned long freq);
@@ -86,6 +90,8 @@ struct v4l2_handle {
     struct v4l2_standard      	std[MAX_NORM];
     struct v4l2_fmtdesc		fmt[MAX_FORMAT];
     struct v4l2_queryctrl	ctl[MAX_CTRL*2];
+    int                         flags;
+    int                         mpeg;
 
     /* attributes */
     int                         nattr;
@@ -112,6 +118,8 @@ struct v4l2_handle {
     int                            ov_enabled;
     int                            ov_on;
 };
+
+static void v4l2_probe_mpeg(struct v4l2_handle *h);
 
 /* ---------------------------------------------------------------------- */
 
@@ -144,6 +152,8 @@ struct ng_vid_driver v4l2_driver = {
     .getfreq       = v4l2_getfreq,
     .setfreq       = v4l2_setfreq,
     .is_tuned      = v4l2_tuned,
+
+    .setup_mpeg    = v4l2_setup_mpeg,
 };
 
 static __u32 xawtv_pixelformat[VIDEO_FMT_COUNT] = {
@@ -530,6 +540,19 @@ v4l2_init(char *device)
 	h->buf_me[i].release = ng_wakeup_video_buf;
     }
 
+    /* init flags */
+#if 0
+    if (h->cap.capabilities & V4L2_CAP_VIDEO_OVERLAY && !h->ov_error)
+	h->flags |= CAN_OVERLAY;
+#endif
+    if (h->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)
+	h->flags |= CAN_CAPTURE;
+    if (h->cap.capabilities & V4L2_CAP_TUNER)
+	h->flags |= CAN_TUNE;
+
+    /* check for MPEG capabilities */
+    v4l2_probe_mpeg(h);
+
     v4l2_close(h);
     return h;
 
@@ -600,17 +623,8 @@ static struct ng_devinfo* v4l2_probe(int verbose)
 static int v4l2_flags(void *handle)
 {
     struct v4l2_handle *h = handle;
-    int ret = 0;
 
-#if 0
-    if (h->cap.capabilities & V4L2_CAP_VIDEO_OVERLAY && !h->ov_error)
-	ret |= CAN_OVERLAY;
-#endif
-    if (h->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)
-	ret |= CAN_CAPTURE;
-    if (h->cap.capabilities & V4L2_CAP_TUNER)
-	ret |= CAN_TUNE;
-    return ret;
+    return h->flags;
 }
 
 static struct ng_attribute* v4l2_attrs(void *handle)
@@ -1127,6 +1141,109 @@ v4l2_getimage(void *handle)
 	v4l2_stop_streaming(h);
     }
     return buf;
+}
+
+/* ---------------------------------------------------------------------- */
+
+#define MPEG_TYPE_V4L2 1
+#define MPEG_TYPE_IVTV 2
+
+/* from ivtv.h */
+#define IVTV_IOC_G_CODEC        0xFFEE7703
+#define IVTV_IOC_S_CODEC        0xFFEE7704
+
+#define IVTV_STREAM_PS          0
+#define IVTV_STREAM_TS          1
+/* more follow .... */
+
+struct ivtv_ioctl_codec {
+        uint32_t aspect;
+        uint32_t audio_bitmap;
+        uint32_t bframes;
+        uint32_t bitrate_mode;
+        uint32_t bitrate;
+        uint32_t bitrate_peak;
+        uint32_t dnr_mode;
+        uint32_t dnr_spatial;
+        uint32_t dnr_temporal;
+        uint32_t dnr_type;
+        uint32_t framerate;
+        uint32_t framespergop;
+        uint32_t gop_closure;
+        uint32_t pulldown;
+        uint32_t stream_type;
+};
+
+static void v4l2_probe_mpeg(struct v4l2_handle *h)
+{
+    struct ivtv_ioctl_codec codec;
+    int i;
+
+    /* check for v4l2 device */
+    for (i = 0; i < h->nfmts; i++) {
+	if (h->fmt[i].pixelformat == V4L2_PIX_FMT_MPEG) {
+	    /* saa7134 sets this and deliveres a transport stream */
+	    /* FIXME: v4l2 API needs some refinements for this... */
+	    h->flags |= CAN_MPEG_TS;
+	    h->mpeg = MPEG_TYPE_V4L2;
+	}
+    }
+    if (h->mpeg)
+	goto done;
+
+    /* check for ivtv driver */
+    if (0 == ioctl(h->fd, IVTV_IOC_G_CODEC, &codec)) {
+	h->flags |= CAN_MPEG_PS;
+	h->flags |= CAN_MPEG_TS;
+	h->mpeg = MPEG_TYPE_IVTV;
+    }
+    if (h->mpeg)
+	goto done;
+
+done:
+    if (!ng_debug)
+	return;
+
+    switch (h->mpeg) {
+    case MPEG_TYPE_V4L2:
+	fprintf(stderr, "v4l2: detected MPEG-capable v4l2 device.\n");
+	break;
+    case MPEG_TYPE_IVTV:
+	fprintf(stderr, "v4l2: detected ivtv driver\n");
+	break;
+    default:
+	return;
+    }
+    if (h->flags & CAN_MPEG_TS)
+	fprintf(stderr, "v4l2:   supports mpeg transport streams\n");
+    if (h->flags & CAN_MPEG_TS)
+	fprintf(stderr, "v4l2:   supports mpeg programs streams\n");
+}
+
+static char *v4l2_setup_mpeg(void *handle, int flags)
+{
+    struct v4l2_handle *h = handle;
+
+    switch (h->mpeg) {
+    case MPEG_TYPE_V4L2:
+	return h->device;
+    case MPEG_TYPE_IVTV:
+    {
+	struct ivtv_ioctl_codec codec;
+
+	if (0 != ioctl(h->fd, IVTV_IOC_G_CODEC, &codec))
+	    return NULL;
+	if (flags & MPEG_FLAGS_PS)
+	    codec.stream_type = IVTV_STREAM_PS;
+	if (flags & MPEG_FLAGS_TS)
+	    codec.stream_type = IVTV_STREAM_TS;
+	if (0 != ioctl(h->fd, IVTV_IOC_S_CODEC, &codec))
+	    return NULL;
+	return h->device;
+    }
+    default:
+	return NULL;
+    }
 }
 
 /* ---------------------------------------------------------------------- */
