@@ -74,6 +74,7 @@ static XVisualInfo vinfo;
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_DEVICE	       	O_CMDLINE, "device"
 #define O_CMD_READCONF	       	O_CMDLINE, "readconf"
+#define O_CMD_GEOMETRY	       	O_CMDLINE, "geometry"
 
 #define O_CMD_HW_LS	       	O_CMDLINE, "hw-ls"
 #define O_CMD_HW_CONFIG	       	O_CMDLINE, "hw-config"
@@ -109,6 +110,7 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.value    = "1",
 	.desc     = "be verbose",
     },{
+	.letter   = 'c',
 	.cmdline  = "debug",
 	.option   = { O_CMD_DEBUG },
 	.needsarg = 1,
@@ -124,6 +126,12 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.option   = { O_CMD_READCONF },
 	.value    = "0",
 	.desc     = "don't read the config file",
+
+    },{
+	.cmdline  = "geometry",
+	.option   = { O_CMD_GEOMETRY },
+	.needsarg = 1,
+	.desc     = "specify window geoemtry",
 
     },{
 	.cmdline  = "hwls",
@@ -889,7 +897,7 @@ main(int argc, char *argv[])
 {
     GdkColor black = { .red = 0x0000, .green = 0x0000, .blue = 0x0000 };
     XVisualInfo *vinfo_list;
-    char *freqtab;
+    char *freqtab, *geometry;
     int n;
 
     hello_world();
@@ -994,8 +1002,11 @@ main(int argc, char *argv[])
     /* finalize X11 init + show windows */
     if (debug)
 	fprintf(stderr,"main: mapping main window ...\n");
-    gtk_widget_set_size_request(GTK_WIDGET(main_win), 320, 240);
-    gtk_widget_show_all(main_win);
+    gtk_widget_show(video);
+    if (NULL == (geometry = cfg_get_str(O_CMD_GEOMETRY)) ||
+	!gtk_window_parse_geometry(GTK_WINDOW(main_win), geometry))
+	gtk_window_set_default_size(GTK_WINDOW(main_win), 320, 240);
+    gtk_widget_show(main_win);
     gtk_unclutter(video);
 
     gc = gdk_gc_new(video->window);
