@@ -117,6 +117,12 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* "dvb2 supportin libzvbi" */
+#undef HAVE_VBI_DVB2
+
+/* "proxy support in libzvbi" */
+#undef HAVE_VBI_PROXY
+
 /* "have xft" */
 #undef HAVE_XFT
 

@@ -270,6 +270,12 @@ if test "$enable_zvbi" != "no"; then
 else
     echo "*** zvbi disabled"
 fi
+if test "$FOUND_ZVBI" = "yes"; then
+    AC_CHECK_LIB(zvbi, vbi_capture_proxy_new,
+        AC_DEFINE(HAVE_VBI_PROXY,1,"proxy support in libzvbi"),,$LIBPTHREAD)
+    AC_CHECK_LIB(zvbi, vbi_capture_dvb_new2,
+        AC_DEFINE(HAVE_VBI_DVB2,1,"dvb2 supportin libzvbi"),,$LIBPTHREAD)
+fi
 
 AC_SUBST(AALIBS)
 AALIBS=""
