@@ -143,7 +143,7 @@ char *psi_charset[0x20] = {
     [ 0x0b ] = "ISO-8859-15",
     [ 0x10 ] = "fixme",
     [ 0x11 ] = "UCS-2BE",        // correct?
-    [ 0x12 ] = "KSC5601-1987",   // Hmm, "iconf --list" hasn't this one
+    [ 0x12 ] = "EUC-KR",
     [ 0x13 ] = "GB2312",
     [ 0x14 ] = "BIG5"
 };

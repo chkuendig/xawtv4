@@ -201,7 +201,8 @@ static struct epgitem* epgitem_get(int tsid, int pnr, int id)
     epg->tsid    = tsid;
     epg->pnr     = pnr;
     epg->id      = id;
-    epg->updated = 1;
+    epg->row     = -1;
+    epg->updated++;
     list_add_tail(&epg->next,&epg_list);
     eit_count_records++;
     return epg;
@@ -480,6 +481,7 @@ static int mpeg_parse_psi_eit(unsigned char *data, int verbose)
 	epg = epgitem_get(tsid,pnr,id);
 	epg->start  = decode_mjd_time(mjd,start);
 	epg->stop   = epg->start + decode_length(length);
+	epg->updated++;
 
 	if (verbose > 1)
 	    fprintf(stderr,"  id %d mjd %d time %06x du %06x r %d ca %d  #",

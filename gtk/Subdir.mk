@@ -37,6 +37,7 @@ gtk/xawtv: \
 	gtk/gui-analog.o \
 	$(OBJS-gtk-dvb) \
 	gtk/gui-misc.o \
+	gtk/epg-store.o \
 	gtk/xscreensaver.o \
 	x11/xv.o \
 	x11/atoms.o \
@@ -81,6 +82,7 @@ gtk/dvbrowse: \
 	gtk/dvbrowse.o \
 	gtk/gui-epg.o \
 	gtk/gui-misc.o \
+	gtk/epg-store.o \
 	gtk/xscreensaver.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture) \

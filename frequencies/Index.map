@@ -53,3 +53,6 @@ file = pal-australia-optus.list
 
 [russia]
 file = secam-russia.list
+
+[multikabel]
+file = multikabel.list

@@ -58,6 +58,9 @@ struct epgitem {
     char                *etext;
     char                *cat[4];
     uint64_t            flags;
+
+    /* for the epg store */
+    int                 row;
 };
 
 extern struct list_head epg_list;
