@@ -49,12 +49,18 @@ static GtkTreeStore  *store;
 static GtkWidget     *view;
 
 static int   current_tsid;
-static int   scan_fast = 10;  // seconds
-static int   scan_slow = 60;  // seconds
+static int   last_ts_switch;
+static int   scan_rescan = 6;   // enougth to refrest pmt's
+static int   scan_full   = 20;  // should also catch NIT tables
+static int   scan_slow   = 60;  // if slow is still to fast
+
+static int   timeout_lock = 30;
+static int   timeout_pat  = 10;
+static int   timeout_data;
 
 static char  *scan_tsid;
-static int   scan_last;
-static int   scan_time;
+static int   scan_tuned;
+static int   scan_locked;
 
 static void  scan_ts_start(void);
 static char* scan_ts_next(void);
@@ -113,13 +119,79 @@ static void menu_cb_tune(void)
 	create_dvbtune(GTK_WINDOW(win));
 }
 
-static gboolean scan_do_next(gpointer data)
+static void scan_do_next(int now)
 {
-    scan_tsid = scan_ts_next();
-    if (!scan_tsid)
-	return FALSE;
-    dvb_frontend_tune(devs.dvb, "dvb-ts", scan_tsid);
-    scan_last = time(NULL);
+    for (;;) {
+	scan_tsid = scan_ts_next();
+	if (NULL == scan_tsid)
+	    break;
+	scan_tuned = now;
+	scan_locked = 0;
+	if (0 == dvb_frontend_tune(devs.dvb, "dvb-ts", scan_tsid))
+	    break;
+    }
+}
+
+static gboolean frontend_poll(gpointer data)
+{
+    char line[128];
+    int pos = 0, next = 0, locked;
+
+    locked = dvb_frontend_is_locked(devs.dvb);
+    if (scan_tsid) {
+	int now = time(NULL);
+
+	pos += snprintf(line+pos,sizeof(line)-pos,
+			"Scan TSID %s | ", scan_tsid);
+
+	if (locked && 0 == scan_locked)
+	    scan_locked = now;
+	if (!locked)
+	    scan_locked = 0;
+
+	if (!scan_locked) {
+	    if (now - scan_tuned > timeout_lock) {
+		pos += snprintf(line+pos,sizeof(line)-pos,
+				"lock timeout");
+		next = 1;
+	    } else {
+		pos += snprintf(line+pos,sizeof(line)-pos,
+				"wait for lock (%d/%d)",
+				now - scan_tuned, timeout_lock);
+	    }
+	} else if (last_ts_switch < scan_tuned) {
+	    if (now - scan_locked > timeout_pat) {
+		pos += snprintf(line+pos,sizeof(line)-pos,
+				"read PAT timeout");
+		next = 1;
+	    } else {
+		pos += snprintf(line+pos,sizeof(line)-pos,
+				"wait for PAT (%d/%d)",
+				now - scan_locked, timeout_data);
+	    }
+	} else {
+	    if (now - last_ts_switch > timeout_data) {
+		pos += snprintf(line+pos,sizeof(line)-pos,
+				"reading tables done");
+		next = 1;
+	    } else {
+		pos += snprintf(line+pos,sizeof(line)-pos,
+				"reading tables (%d/%d)",
+				now - last_ts_switch, timeout_data);
+	    }
+	}
+	if (next)
+	    scan_do_next(now);
+	pos += snprintf(line+pos,sizeof(line)-pos,
+			" | ");
+    }
+
+    pos += snprintf(line+pos,sizeof(line)-pos,"Frontend %s",
+		    locked ? "locked" : "NOT LOCKED");
+    if (locked)
+	pos += snprintf(line+pos,sizeof(line)-pos,", bit errors %d",
+			dvb_frontend_get_biterr(devs.dvb));
+    gtk_label_set_label(GTK_LABEL(status),line);
     return TRUE;
 }
 
@@ -128,27 +200,100 @@ static void scan_do_start(int seconds)
     if (scan_tsid)
 	return;
 
-    scan_time = seconds;
+    timeout_data = seconds;
     mark_stale();
     dvbmon_refresh(dvbmon);
     scan_ts_start();
-    scan_tsid = scan_ts_next();
-    if (!scan_tsid)
-	return;
-    g_timeout_add(seconds * 1000, scan_do_next, NULL);
-    dvb_frontend_tune(devs.dvb, "dvb-ts", scan_tsid);
-    scan_last = time(NULL);
+    scan_do_next(time(NULL));
 }
 
-static void menu_cb_scan_fast(void)
+static void menu_cb_rescan(void)
 {
-    scan_do_start(scan_fast);
+    scan_do_start(scan_rescan);
 }
 
-static void menu_cb_scan_slow(void)
+static void menu_cb_full_scan(void)
+{
+    scan_do_start(scan_full);
+}
+
+static void menu_cb_slow_scan(void)
 {
     scan_do_start(scan_slow);
 }
+
+/* ------------------------------------------------------------------------ */
+
+GtkTargetEntry dnd_targets[] = {
+    { "UTF8_STRING",  0, 10 },
+    { "STRING",       0, 11 },
+    { "TSID",         0, 20 },
+    { "PNR",          0, 21 },
+};
+
+static void drag_data_get(GtkWidget *widget,
+			  GdkDragContext *dc,
+			  GtkSelectionData *sd,
+			  guint info, guint time, gpointer data)
+{
+    GtkTreeSelection *selection;
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+    GList *rows,*item;
+    char **name;
+    char *buf;
+    int i,len,col,val;
+
+    if (debug)
+	fprintf(stderr,"dnd: %d: %s\n",info,gdk_atom_name(sd->target));
+    selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
+    rows = gtk_tree_selection_get_selected_rows(selection, &model);
+
+    switch (info) {
+    case 10:
+    case 11:
+	name = malloc(g_list_length(rows)*sizeof(char*));
+	for (item = g_list_first(rows), i = 0, len = 0;
+	     NULL != item;
+	     item = g_list_next(item), i++) {
+	    gtk_tree_model_get_iter(model, &iter, item->data);
+	    gtk_tree_model_get(model, &iter, ST_COL_NAME, &name[i], -1);
+	    if (debug)
+		fprintf(stderr,"  %s\n",name[i]);
+	    len += strlen(name[i])+1;
+	}
+	buf = malloc(len);
+	for (item = g_list_first(rows), i = 0, len = 0;
+	     NULL != item;
+	     item = g_list_next(item), i++) {
+	    len += sprintf(buf+len,"%s",name[i])+1;
+	}
+	gtk_selection_data_set(sd, gdk_atom_intern("STRING", FALSE),
+			       8, buf, len);
+	free(buf);
+	free(name);
+	break;
+    case 20:
+    case 21:
+	col = (info == 20) ? ST_COL_TSID : ST_COL_PNR;
+	buf = malloc(g_list_length(rows) * 16);
+	for (item = g_list_first(rows), i = 0, len = 0;
+	     NULL != item;
+	     item = g_list_next(item), i++) {
+	    gtk_tree_model_get_iter(model, &iter, item->data);
+	    gtk_tree_model_get(model, &iter, col, &val, -1);
+	    if (debug)
+		fprintf(stderr,"  %d\n",val);
+	    len += sprintf(buf+len,"%d",val)+1;
+	}
+	gtk_selection_data_set(sd, gdk_atom_intern("STRING", FALSE),
+			       8, buf, len);
+	free(buf);
+	break;
+    }
+}
+
+/* ------------------------------------------------------------------------ */
 
 static GtkItemFactoryEntry menu_items[] = {
     {
@@ -172,14 +317,18 @@ static GtkItemFactoryEntry menu_items[] = {
 	.callback    = menu_cb_tune,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/_Fast scan",
-	.accelerator = "F",
-	.callback    = menu_cb_scan_fast,
+	.path        = "/Commands/Fast _Rescan",
+	.accelerator = "R",
+	.callback    = menu_cb_rescan,
 	.item_type   = "<Item>",
     },{
-	.path        = "/Commands/_Slow scan",
+	.path        = "/Commands/Full _Scan",
 	.accelerator = "S",
-	.callback    = menu_cb_scan_slow,
+	.callback    = menu_cb_full_scan,
+	.item_type   = "<Item>",
+    },{
+	.path        = "/Commands/Insane slow Scan",
+	.callback    = menu_cb_slow_scan,
 	.item_type   = "<Item>",
     },{
 
@@ -212,11 +361,11 @@ static void activate(GtkTreeView        *treeview,
     char  section[16];
 
     model = gtk_tree_view_get_model(treeview);
-    if (gtk_tree_model_get_iter(model, &iter, path)) {
-	gtk_tree_model_get(model, &iter, ST_COL_TSID, &tsid, -1);
-	snprintf(section, sizeof(section), "%d", tsid);
-	dvb_frontend_tune(devs.dvb, "dvb-ts", section);
-    }
+    if (!gtk_tree_model_get_iter(model, &iter, path))
+	return;
+    gtk_tree_model_get(model, &iter, ST_COL_TSID, &tsid, -1);
+    snprintf(section, sizeof(section), "%d", tsid);
+    dvb_frontend_tune(devs.dvb, "dvb-ts", section);
 }
 
 static void create_window(void)
@@ -260,6 +409,8 @@ static void create_window(void)
 			    GTK_TREE_MODEL(store));
     scroll = gtk_vscrollbar_new(gtk_tree_view_get_hadjustment(GTK_TREE_VIEW(view)));
     g_signal_connect(view, "row-activated", G_CALLBACK(activate), NULL);
+    gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(view)),
+				GTK_SELECTION_MULTIPLE);
 
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer,
@@ -393,6 +544,14 @@ static void create_window(void)
                                     GINT_TO_POINTER(ST_COL_FREQ), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_FREQ);
 
+    /* dnd */
+    gtk_drag_source_set(view,
+			GDK_BUTTON1_MASK,
+			dnd_targets, DIMOF(dnd_targets),
+			GDK_ACTION_COPY);
+    g_signal_connect(view, "drag-data-get",
+		     G_CALLBACK(drag_data_get), NULL);
+    
     /* other widgets */
     status = gtk_widget_new(GTK_TYPE_LABEL,
 			    "label",  "status line",
@@ -414,29 +573,6 @@ static void create_window(void)
 }
 
 /* ------------------------------------------------------------------------ */
-
-static gboolean frontend_poll(gpointer data)
-{
-    char line[128];
-    int pos = 0, locked;
-
-    locked = dvb_frontend_is_locked(devs.dvb);
-    if (scan_tsid) {
-	int done = time(NULL) - scan_last;
-
-	pos += snprintf(line+pos,sizeof(line)-pos,
-			"Scanning TSID %s [%d/%d sec]  ",
-			scan_tsid, done, scan_time);
-    }
-
-    pos += snprintf(line+pos,sizeof(line)-pos,"Frontend %s",
-		    locked ? "locked" : "NOT LOCKED");
-    if (locked)
-	pos += snprintf(line+pos,sizeof(line)-pos,", bit errors %d",
-			dvb_frontend_get_biterr(devs.dvb));
-    gtk_label_set_label(GTK_LABEL(status),line);
-    return TRUE;
-}
 
 static void switch_ts(void)
 {
@@ -564,6 +700,7 @@ static void dvbwatch_gui(struct psi_info *info, int event,
     switch (event) {
     case DVBMON_EVENT_SWITCH_TS:
 	current_tsid = tsid;
+	last_ts_switch = time(NULL);
 	switch_ts();
 	break;
     case DVBMON_EVENT_UPDATE_TS:
@@ -646,7 +783,7 @@ main(int argc, char *argv[])
 	fprintf(stderr,"no dvb device found\n");
 	exit(1);
     }
-    dvbmon = dvbmon_init(devs.dvb, 2);
+    dvbmon = dvbmon_init(devs.dvb, 0);
     read_config_file("dvb-ts");
     read_config_file("dvb-pr");
 

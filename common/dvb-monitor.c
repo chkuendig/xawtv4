@@ -429,6 +429,15 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	if (stream->polarization)
 	    cfg_set_str("dvb-ts", section, "polarization",
 			stream->polarization);
+
+	cfg_set_int("dvb-ts", section, "inversion", dvb_inv);
+	if (dvb_src)
+	    cfg_set_str("dvb-ts", section, "source", dvb_src);
+	if (dvb_lnb)
+	    cfg_set_str("dvb-ts", section, "lnb", dvb_lnb);
+	if (dvb_sat)
+	    cfg_set_str("dvb-ts", section, "sat", dvb_sat);
+	    
 	break;
     case DVBMON_EVENT_UPDATE_PR:
 	pr = psi_program_get(info, tsid, pnr, 0);

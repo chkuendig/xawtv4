@@ -68,7 +68,7 @@ static struct omenu m_tr[] = {
     { "auto", "0", 1 },
 };
 static struct omenu m_po[] = {
-    { "horitontal", "H", 0 },
+    { "horizontal", "H", 0 },
     { "vertical",   "V", 0 },
 };
 static struct omenu m_gu[] = {
@@ -84,6 +84,15 @@ static struct omenu m_hi[] = {
     { "2",    "2",   0 },
     { "4",    "4",   0 },
     { "auto", "999", 1 },
+};
+static struct omenu m_sat[] = {
+    { "have only one ;)",  "",   0 },
+    { "mini A",            "MA", 0 },
+    { "mini B",            "MB", 0 },
+    { "DiSEqC pos 0",      "D0", 0 },
+    { "DiSEqC pos 1",      "D1", 0 },
+    { "DiSEqC pos 2",      "D2", 0 },
+    { "DiSEqC pos 3",      "D3", 0 },
 };
 
 static GtkWidget *add_omenu(GtkBox *box, char *text,
@@ -132,6 +141,9 @@ static GtkWidget *transmission;
 static GtkWidget *polarization;
 static GtkWidget *guard;
 static GtkWidget *hierarchy;
+static GtkWidget *lnb_c;
+static GtkWidget *lnb_e;
+static GtkWidget *sat;
 
 static void add_frequency(GtkBox *box)
 {
@@ -185,7 +197,7 @@ static void add_transmission(GtkBox *box, int caps)
 
 static void add_polarization(GtkBox *box)
 {
-    transmission = add_omenu(box, "polarization", m_po, DIMOF(m_po), 0);
+    polarization = add_omenu(box, "polarization", m_po, DIMOF(m_po), 0);
 }
 
 static void add_guard(GtkBox *box, int caps)
@@ -198,6 +210,31 @@ static void add_hierarchy(GtkBox *box, int caps)
 {
     hierarchy = add_omenu(box, "hierarchy", m_hi, DIMOF(m_hi),
 			  caps & FE_CAN_HIERARCHY_AUTO);
+}
+
+static void add_lnb(GtkBox *box)
+{
+    GtkBox *hbox;
+    GList *groups;
+
+    hbox   = gtk_add_hbox_with_label(box, "LNB (lo,hi,sw)");
+    lnb_c  = gtk_combo_new();
+    lnb_e  = GTK_COMBO(lnb_c)->entry;
+    gtk_box_pack_start(hbox, lnb_c, TRUE, TRUE, 0);
+
+    groups = NULL;
+    groups = g_list_append(groups, "9750,10600,11700");
+    groups = g_list_append(groups, "11200");
+    groups = g_list_append(groups, "10000");
+    groups = g_list_append(groups, "9750");
+    groups = g_list_append(groups, "5150");
+    gtk_combo_set_popdown_strings(GTK_COMBO(lnb_c), groups);
+    g_list_free(groups);
+}
+
+static void add_sat(GtkBox *box)
+{
+    sat = add_omenu(box, "Satellite", m_sat, DIMOF(m_sat), 0);
 }
 
 static void response(GtkDialog *dialog,
@@ -216,7 +253,7 @@ static void response(GtkDialog *dialog,
 	}
 	if (symbol_rate) {
 	    val = (char*)gtk_entry_get_text(GTK_ENTRY(symbol_rate));
-	    cfg_set_str(d, s, "sylbol_rate", val);
+	    cfg_set_str(d, s, "symbol_rate", val);
 	}
 	if (inversion) {
 	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(inversion));
@@ -252,10 +289,22 @@ static void response(GtkDialog *dialog,
 	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(hierarchy));
 	    cfg_set_str(d, s, "hierarchy", m_hi[n].value);
 	}
+	if (lnb_e) {
+	    val = (char*)gtk_entry_get_text(GTK_ENTRY(lnb_e));
+	    if (strlen(val) > 0)
+		cfg_set_str(d, s, "lnb", val);
+	}
+	if (sat) {
+	    n = gtk_option_menu_get_history(GTK_OPTION_MENU(sat));
+	    if (strlen(m_sat[n].value) > 0)
+		cfg_set_str(d, s, "sat", m_sat[n].value);
+	}
 
-	dvb_debug = 1;
+#if 0
+	if (debug)
+	    write_config_file("tmp");
+#endif
 	dvb_frontend_tune(devs.dvb, d, s);
-	dvb_debug = 0;
 	cfg_del_section(d, s);
     }
 
@@ -293,6 +342,8 @@ void create_dvbtune(GtkWindow *parent)
 	add_symbol_rate(box);
 	add_inversion(box, caps);
 	add_polarization(box);
+	add_lnb(box);
+	add_sat(box);
 	break;
     case FE_QAM:  /* DVB-C */
 	gtk_frame_set_label(GTK_FRAME(frame)," DVB-C ");

@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <inttypes.h>
 #include <X11/Xlib.h>
 
 #include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
 #include "list.h"
@@ -459,6 +461,22 @@ static void x11_station_add(GtkTreeIter *iter)
 		       -1);
 }
 
+static gboolean x11_station_find(GtkTreeIter *iter, char *search)
+{
+    gboolean valid;
+    char *name;
+    
+    for (valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(st_model),iter);
+	 valid;
+	 valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(st_model),iter)) {
+	gtk_tree_model_get(GTK_TREE_MODEL(st_model), iter,
+			   ST_COL_NAME,  &name, -1);
+	if (0 == strcasecmp(name,search))
+	    return TRUE;
+    }
+    return FALSE;
+}
+
 void x11_station_activate(char *current)
 {
     GtkTreeIter iter;
@@ -672,9 +690,10 @@ static void update_station_prop(GtkTreeIter *iter)
 	gr = list_entry(head, struct st_group, list);
 	groups = g_list_append (groups, gr->name);
     }
-    gtk_combo_set_popdown_strings(GTK_COMBO(station_group_c), groups);
+    if (groups)
+	gtk_combo_set_popdown_strings(GTK_COMBO(station_group_c), groups);
     g_list_free(groups);
-    gtk_entry_set_text(GTK_ENTRY(station_group_e), sgroup  ? sgroup  : "");
+    gtk_entry_set_text(GTK_ENTRY(station_group_e), sgroup ? sgroup : "");
     
     /* analog channel menu */
     menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(station_ch_omenu));
@@ -686,13 +705,15 @@ static void update_station_prop(GtkTreeIter *iter)
     gtk_menu_append(menu, item);
     gtk_option_menu_set_history(GTK_OPTION_MENU(station_ch_omenu),active);
     active++;
-    cfg_sections_for_each(freqtab, list) {
-	item = gtk_menu_item_new_with_label(list);
-	g_object_set_data_full(G_OBJECT(item),"channel",strdup(list),free);
-	gtk_menu_append(menu, item);
-	if (channel && 0 == strcmp(channel, list))
-	    gtk_option_menu_set_history(GTK_OPTION_MENU(station_ch_omenu),active);
-	active++;
+    if (freqtab) {
+	cfg_sections_for_each(freqtab, list) {
+	    item = gtk_menu_item_new_with_label(list);
+	    g_object_set_data_full(G_OBJECT(item),"channel",strdup(list),free);
+	    gtk_menu_append(menu, item);
+	    if (channel && 0 == strcmp(channel, list))
+		gtk_option_menu_set_history(GTK_OPTION_MENU(station_ch_omenu),active);
+	    active++;
+	}
     }
 
     /* digital dvb menu */
@@ -1014,6 +1035,114 @@ static gint nmenu_items = sizeof(menu_items)/sizeof (menu_items[0]);
 static GtkItemFactory *item_factory;
 
 /* ------------------------------------------------------------------------ */
+/* dnd                                                                      */
+
+GtkTargetEntry dnd_targets[] = {
+    { "TARGETS",      0, 42 },
+    { "UTF8_STRING",  0,  0 },
+    { "TSID",         0,  1 },
+    { "PNR",          0,  2 },
+};
+static int  dnd_pending;
+static char *dnd_data[3];
+static int  dnd_len[3];
+
+static void drag_data_received(GtkWidget *widget,
+			       GdkDragContext *dc,
+			       gint x, gint y,
+			       GtkSelectionData *sd,
+			       guint info, guint time, gpointer data)
+{
+    GtkTreeIter iter;
+    GdkAtom *targets;
+    char *atom,*name;
+    int pos[3];
+    int i,tsid,pnr;
+    
+    fprintf(stderr,"%s: %s %s %s fmt=%d ptr=%p len=%d id=%d\n",__FUNCTION__,
+	    gdk_atom_name(sd->selection),
+	    gdk_atom_name(sd->target),
+	    gdk_atom_name(sd->type),
+	    sd->format, sd->data, sd->length, info);
+
+    switch (info) {
+    case 42: // TARGETS
+	targets = (void*)sd->data;
+	for (i = 0; i < sd->length/sizeof(targets[0]); i++) {
+	    atom = gdk_atom_name(targets[i]);
+	    fprintf(stderr,"  %s\n",atom);
+	    if (0 == strcmp(atom,"UTF8_STRING")  ||
+		0 == strcmp(atom,"TSID")         ||
+		0 == strcmp(atom,"PNR")) {
+		dnd_pending++;
+		gtk_drag_get_data(widget, dc, targets[i], time);
+	    }
+	}
+	break;
+    case 0:
+    case 1:
+    case 2:
+	if (dnd_data[info])
+	    free(dnd_data[info]);
+	dnd_data[info] = malloc(sd->length);
+	dnd_len[info] = sd->length;
+	memcpy(dnd_data[info], sd->data, sd->length);
+	break;
+    }
+    dnd_pending--;
+    if (0 != dnd_pending)
+	return;
+
+    fprintf(stderr,"%s: all done\n",__FUNCTION__);
+    gtk_drag_finish(dc, TRUE, FALSE, time);
+
+    pos[0] = 0;
+    pos[1] = 0;
+    pos[2] = 0;
+    while (pos[0] < dnd_len[0] &&
+	   pos[1] < dnd_len[1] &&
+	   pos[2] < dnd_len[2]) {
+	name = dnd_data[0]+pos[0];
+	tsid = atoi(dnd_data[1]+pos[1]);
+	pnr  = atoi(dnd_data[2]+pos[2]);
+	if (0 == tsid || 0 == pnr)
+	    continue;
+
+	if (debug)
+	    fprintf(stderr,"drop: %d-%d %s\n",tsid,pnr,name);
+	cfg_set_int("stations",name,"tsid",tsid);
+	cfg_set_int("stations",name,"pnr", pnr);
+	if (!x11_station_find(&iter,name))
+	    x11_station_add(&iter);
+	x11_station_apply(&iter,name);
+	
+	pos[0] += strlen(dnd_data[0]+pos[0])+1;
+	pos[1] += strlen(dnd_data[1]+pos[1])+1;
+	pos[2] += strlen(dnd_data[2]+pos[2])+1;
+    }
+}
+
+static void drag_drop(GtkWidget *widget,
+		      GdkDragContext *dc,
+		      gint x, gint y,
+		      guint time, gpointer data)
+{
+    GdkAtom targets = gdk_atom_intern("TARGETS", FALSE);
+    int i;
+
+    fprintf(stderr,"%s\n",__FUNCTION__);
+
+    for (i = 0; i < 3; i++) {
+    	if (dnd_data[i])
+	    free(dnd_data[i]);
+	dnd_data[i] = NULL;
+	dnd_len[i]  = 0;
+    }
+    dnd_pending = 1;
+    gtk_drag_get_data(widget, dc, targets, time);
+}
+
+/* ------------------------------------------------------------------------ */
 
 static void init_channel_list(void)
 {
@@ -1248,6 +1377,17 @@ void create_control(void)
 				    gtk_sort_iter_compare_int,
                                     GINT_TO_POINTER(ST_COL_TSID), NULL);
     gtk_tree_view_column_set_sort_column_id(col, ST_COL_TSID);
+
+    /* dnd */
+    gtk_drag_dest_set(st_view,
+		      // GTK_DEST_DEFAULT_ALL,
+		      GTK_DEST_DEFAULT_MOTION | GTK_DEST_DEFAULT_HIGHLIGHT,
+		      dnd_targets, DIMOF(dnd_targets),
+                      GDK_ACTION_COPY);
+    g_signal_connect(st_view, "drag-data-received",
+		     G_CALLBACK(drag_data_received), NULL);
+    g_signal_connect(st_view, "drag-drop",
+		     G_CALLBACK(drag_drop), NULL);
 
     /* other widgets */
     control_status = gtk_widget_new(GTK_TYPE_LABEL,

@@ -23,6 +23,12 @@
 
 int dvb_debug = 0;
 
+/* maintain current state for these ... */
+char *dvb_src   = NULL;
+char *dvb_lnb   = NULL;
+char *dvb_sat   = NULL;
+int  dvb_inv    = INVERSION_AUTO;
+
 /* ----------------------------------------------------------------------- */
 /* map vdr config file numbers to enums                                    */
 
@@ -120,7 +126,7 @@ xioctl(int fd, int cmd, void *arg, int mayfail)
     return rc;
 }
 
-static int exec_diseqc(int fd, char *action)
+static int exec_vdr_diseqc(int fd, char *action)
 {
     struct dvb_diseqc_master_cmd cmd;
     int wait,len,done;
@@ -188,7 +194,7 @@ static int exec_diseqc(int fd, char *action)
     return 0;
 }
 
-static char *find_diseqc(char *domain, char *section)
+static char *find_vdr_diseqc(char *domain, char *section)
 {
     char *source = cfg_get_str(domain, section, "source");
     char *pol    = cfg_get_str(domain, section, "polarization");
@@ -209,6 +215,73 @@ static char *find_diseqc(char *domain, char *section)
 	    return list;
     }
     return NULL;
+}
+
+static int sat_switch(int fd, char *domain, char *section)
+{
+    char *pol = cfg_get_str(domain, section, "polarization");
+    int freq  = cfg_get_int(domain, section, "frequency", 0);
+    int lo,hi,sw,lof,nr;
+    fe_sec_tone_mode_t tone;
+    fe_sec_voltage_t volt;
+    
+    dvb_lnb = cfg_get_str(domain, section, "lnb");
+    dvb_sat = cfg_get_str(domain, section, "sat");
+
+    if (NULL == dvb_lnb) {
+	fprintf(stderr,"dvb-s: lnb config missing\n");
+	return -1;
+    }
+    if (NULL == pol) {
+	fprintf(stderr,"dvb-s: polarisation config missing\n");
+	return -1;
+    }
+
+    if (3 != sscanf(dvb_lnb,"%d,%d,%d",&lo,&hi,&sw)) {
+	if (1 != sscanf(dvb_lnb,"%d",&lo))
+	    return -1;
+	hi = 0;
+	sw = 0;
+    }
+    if (sw && freq > sw) {
+	tone = SEC_TONE_ON;
+	lof  = hi;
+    } else {
+	tone = SEC_TONE_OFF;
+	lof  = lo;
+    }
+    
+    if (0 == strcasecmp(pol,"h"))
+	volt = SEC_VOLTAGE_18;
+    else
+	volt = SEC_VOLTAGE_13;
+
+    xioctl(fd, FE_SET_TONE, (void*)SEC_TONE_OFF, 0);
+    usleep(15*1000);
+
+    xioctl(fd, FE_SET_VOLTAGE, (void*)volt, 0);
+    usleep(15*1000);
+
+    if (NULL != dvb_sat) {
+	if (0 == strcasecmp(dvb_sat,"MA")) {
+	    xioctl(fd, FE_DISEQC_SEND_BURST, (void*)SEC_MINI_A, 0);
+	} else if (0 == strcasecmp(dvb_sat,"MB")) {
+	    xioctl(fd, FE_DISEQC_SEND_BURST, (void*)SEC_MINI_B, 0);
+	} else if (1 == sscanf(dvb_sat,"D%d",&nr)) {
+	    char diseqc[] = { 0xE0, 0x10, 0x38, 0xF0 };
+	    if (tone == SEC_TONE_ON)
+		diseqc[3] |= 0x01;
+	    if (volt == SEC_VOLTAGE_18)
+		diseqc[3] |= 0x02;
+	    diseqc[3] |= (nr & 0x03) << 2;
+	    xioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &diseqc, 0);
+	}
+    }
+
+    usleep(15*1000);
+    xioctl(fd, FE_SET_TONE, (void*)tone, 0);
+
+    return lof;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -240,101 +313,149 @@ void dvb_frontend_release(struct dvb_state *h, int write)
     }
 }
 
-static void dvb_tune_fixups(struct dvb_state *h)
+static void fixup_numbers(struct dvb_state *h, int lof)
 {
-    if (!(h->info.caps & FE_CAN_INVERSION_AUTO) &&
-	h->p.inversion == INVERSION_AUTO)
-	h->p.inversion = INVERSION_OFF;
-}
-
-int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
-{
-    char *diseqc;
-    char *action;
-    int lof;
-    int val;
-
-    if (-1 == dvb_frontend_open(h,1))
-	return -1;
-
     switch (h->info.type) {
     case FE_QPSK:
 	/*
 	 * DVB-S
 	 *   - kernel API uses kHz here.
 	 *   - /etc/vdr/channel.conf + diseqc.conf use MHz
+	 *   - scan (from linuxtv.org dvb utils) uses KHz
 	 */
-	diseqc = find_diseqc(domain,section);
-	if (!diseqc) {
-	    fprintf(stderr,"no diseqc info for \"%s\"\n", section);
-	    return -1;
-	}
-	action = cfg_get_str("diseqc", diseqc, "action");
-	if (dvb_debug)
-	    fprintf(stderr,"diseqc action: \"%s\"\n", action);
-	exec_diseqc(h->fdwr,action);
-
-	lof = cfg_get_int("diseqc", diseqc, "lof", 0);
-	val = cfg_get_int(domain, section, "frequency", 0);
-	h->p.frequency = val - lof;
-	val = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
-	h->p.inversion = val;
-
-	val = cfg_get_int(domain, section, "symbol_rate", 0);
-	h->p.u.qpsk.symbol_rate = val * 1000;
-	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
-
-	dvb_tune_fixups(h);
-	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d+%d MHz, inv=%s "
-		    "symbol_rate=%d fec_inner=%s\n",
-		    lof, h->p.frequency,
-		    dvb_fe_inversion [ h->p.inversion ],
-		    h->p.u.qpsk.symbol_rate,
-		    dvb_fe_rates [ h->p.u.qpsk.fec_inner ]);
-	}
-	h->p.frequency *= 1000; // MHz => kHz
+        if (lof < 1000000)
+	    lof *= 1000;
+        if (h->p.frequency < 1000000)
+	    h->p.frequency *= 1000;
+	h->p.frequency -= lof;
+	if (h->p.u.qpsk.symbol_rate < 1000000)
+	    h->p.u.qpsk.symbol_rate *= 1000;
 	break;
-
     case FE_QAM:
+    case FE_OFDM:
 	/*
-	 * DVB-C
+	 * DVB-C,T
 	 *   - kernel API uses Hz here.
 	 *   - /etc/vdr/channel.conf allows Hz, kHz and MHz
 	 */
-	val = cfg_get_int(domain, section, "frequency", 0);
-	h->p.frequency = val;
-	while (h->p.frequency && h->p.frequency < 1000000)
+	if (h->p.frequency < 1000000)
 	    h->p.frequency *= 1000;
-	val = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
-	h->p.inversion = val;
+	if (h->p.frequency < 1000000)
+	    h->p.frequency *= 1000;
+	break;
+    }
+}
+
+static void dump_fe_info(struct dvb_state *h)
+{
+    switch (h->info.type) {
+    case FE_QPSK:
+	fprintf(stderr,"dvb fe: tuning freq=lof+%d kHz, inv=%s "
+		"symbol_rate=%d fec_inner=%s\n",
+		h->p.frequency,
+		dvb_fe_inversion [ h->p.inversion ],
+		h->p.u.qpsk.symbol_rate,
+		dvb_fe_rates [ h->p.u.qpsk.fec_inner ]);
+	break;
+    case FE_QAM:
+	fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%s "
+		"symbol_rate=%d fec_inner=%s modulation=%s\n",
+		h->p.frequency,
+		dvb_fe_inversion  [ h->p.inversion       ],
+		h->p.u.qam.symbol_rate,
+		dvb_fe_rates      [ h->p.u.qam.fec_inner  ],
+		dvb_fe_modulation [ h->p.u.qam.modulation ]);
+	break;
+    case FE_OFDM:
+	fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%s "
+		"bandwidth=%s code_rate=[%s-%s] constellation=%s "
+		"transmission=%s guard=%s hierarchy=%s\n",
+		h->p.frequency,
+		dvb_fe_inversion    [ h->p.inversion                    ],
+		dvb_fe_bandwidth    [ h->p.u.ofdm.bandwidth             ],
+		dvb_fe_rates        [ h->p.u.ofdm.code_rate_HP          ],
+		dvb_fe_rates        [ h->p.u.ofdm.code_rate_LP          ],
+		dvb_fe_modulation   [ h->p.u.ofdm.constellation         ],
+		dvb_fe_transmission [ h->p.u.ofdm.transmission_mode     ],
+		dvb_fe_guard        [ h->p.u.ofdm.guard_interval        ],
+		dvb_fe_hierarchy    [ h->p.u.ofdm.hierarchy_information ]);
+	break;
+    }
+}
+
+int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
+{
+    char *diseqc;
+    char *action;
+    int lof = 0;
+    int val;
+    int rc;
+
+    if (-1 == dvb_frontend_open(h,1))
+	return -1;
+
+    dvb_src = NULL;
+    dvb_lnb = NULL;
+    dvb_sat = NULL;
+    
+    switch (h->info.type) {
+    case FE_QPSK:
+	dvb_src = cfg_get_str(domain, section, "source");
+	if (NULL != dvb_src) {
+	    /* use vdr's diseqc.conf */
+	    diseqc = find_vdr_diseqc(domain,section);
+	    if (!diseqc) {
+		fprintf(stderr,"no entry in /etc/vdr/diseqc.conf for \"%s\"\n",
+			section);
+		return -1;
+	    }
+	    action = cfg_get_str("diseqc", diseqc, "action");
+	    if (dvb_debug)
+		fprintf(stderr,"diseqc action: \"%s\"\n", action);
+	    exec_vdr_diseqc(h->fdwr,action);
+	    lof = cfg_get_int("diseqc", diseqc, "lof", 0);
+	} else {
+	    /* use my stuff */
+	    lof = sat_switch(h->fdwr,domain,section);
+	    if (-1 == lof)
+		return -1;
+	}
+
+	val = cfg_get_int(domain, section, "frequency", 0);
+	if (0 == val)
+	    return -1;
+	h->p.frequency = val;
+	dvb_inv = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
+	h->p.inversion = dvb_inv;
+
+	val = cfg_get_int(domain, section, "symbol_rate", 0);
+	h->p.u.qpsk.symbol_rate = val;
+	h->p.u.qpsk.fec_inner = FEC_AUTO; // FIXME 
+
+	break;
+
+    case FE_QAM:
+	val = cfg_get_int(domain, section, "frequency", 0);
+	if (0 == val)
+	    return -1;
+	h->p.frequency = val;
+	dvb_inv = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
+	h->p.inversion = dvb_inv;
 	
 	val = cfg_get_int(domain, section, "symbol_rate", 0);
 	h->p.u.qam.symbol_rate = val;
 	h->p.u.qam.fec_inner = FEC_AUTO; // FIXME
 	val = cfg_get_int(domain, section, "modulation", 0);
 	h->p.u.qam.modulation = fe_vdr_modulation [ val ];
-
-	dvb_tune_fixups(h);
-	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%s "
-		    "symbol_rate=%d fec_inner=%s modulation=%s\n",
-		    h->p.frequency,
-		    dvb_fe_inversion  [ h->p.inversion       ],
-		    h->p.u.qam.symbol_rate,
-		    dvb_fe_rates      [ h->p.u.qam.fec_inner  ],
-		    dvb_fe_modulation [ h->p.u.qam.modulation ]);
-	}
 	break;
 
     case FE_OFDM:
-	/* DVB-T  --  same as DVB-C */
 	val = cfg_get_int(domain, section, "frequency", 0);
+	if (0 == val)
+	    return -1;
 	h->p.frequency = val;
-	while (h->p.frequency && h->p.frequency < 1000000)
-	    h->p.frequency *= 1000;
-	val = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
-	h->p.inversion = val;
+	dvb_inv = cfg_get_int(domain, section, "inversion", INVERSION_AUTO);
+	h->p.inversion = dvb_inv;
 	
 	val = cfg_get_int(domain, section, "bandwidth", BANDWIDTH_AUTO);
 	h->p.u.ofdm.bandwidth = fe_vdr_bandwidth [ val ];
@@ -350,38 +471,34 @@ int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
 	h->p.u.ofdm.guard_interval = fe_vdr_guard [ val ];
 	val = cfg_get_int(domain, section, "hierarchy", HIERARCHY_AUTO);
 	h->p.u.ofdm.hierarchy_information = fe_vdr_hierarchy [ val ];
-
-	dvb_tune_fixups(h);
-	if (dvb_debug) {
-	    fprintf(stderr,"dvb fe: tuning freq=%d Hz, inv=%s "
-		    "bandwidth=%s code_rate=[%s-%s] constellation=%s "
-		    "transmission=%s guard=%s hierarchy=%s\n",
-		    h->p.frequency,
-		    dvb_fe_inversion    [ h->p.inversion                    ],
-		    dvb_fe_bandwidth    [ h->p.u.ofdm.bandwidth             ],
-		    dvb_fe_rates        [ h->p.u.ofdm.code_rate_HP          ],
-		    dvb_fe_rates        [ h->p.u.ofdm.code_rate_LP          ],
-		    dvb_fe_modulation   [ h->p.u.ofdm.constellation         ],
-		    dvb_fe_transmission [ h->p.u.ofdm.transmission_mode     ],
-		    dvb_fe_guard        [ h->p.u.ofdm.guard_interval        ],
-		    dvb_fe_hierarchy    [ h->p.u.ofdm.hierarchy_information ]);
-	}
 	break;
     }
+    fixup_numbers(h,lof);
 
     if (0 == memcmp(&h->p, &h->plast, sizeof(h->plast))) {
 	if (dvb_frontend_is_locked(h)) {
 	    /* same frequency and frontend still locked */
 	    if (dvb_debug)
 		fprintf(stderr,"dvb fe: skipped tuning\n");
-	    return 0;
+	    rc = 0;
+	    goto done;
 	}
     }
 
-    if (-1 == xioctl(h->fdwr,FE_SET_FRONTEND,&h->p, 0))
-	return -1;
+    rc = -1;
+    if (-1 == xioctl(h->fdwr,FE_SET_FRONTEND,&h->p, 0)) {
+	dump_fe_info(h);
+	goto done;
+    }
+    if (dvb_debug)
+	dump_fe_info(h);
     memcpy(&h->plast, &h->p, sizeof(h->plast));
-    return 0;
+    rc = 0;
+
+done:
+    // Hmm, the driver seems not to like that :-/
+    // dvb_frontend_release(h,1);
+    return rc;
 }
 
 void dvb_frontend_status_title(void)
@@ -626,6 +743,11 @@ struct dvb_state* dvb_init(char *adapter)
 	perror("dvb fe: ioctl FE_GET_INFO");
 	goto oops;
     }
+
+#if 0
+    /* hacking DVB-S without hardware ;) */
+    h->info.type = FE_QPSK;
+#endif
     return h;
 
  oops:

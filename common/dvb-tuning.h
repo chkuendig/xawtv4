@@ -3,6 +3,11 @@
 /* print debug info? */
 extern int dvb_debug;
 
+extern char *dvb_src;
+extern char *dvb_lnb;
+extern char *dvb_sat;
+extern int  dvb_inv;
+
 /* open/close/probe/... */
 struct dvb_state;
 struct dvb_state* dvb_init(char *adapter);
