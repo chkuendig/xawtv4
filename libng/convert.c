@@ -74,8 +74,11 @@ struct ng_process_handle* ng_filter_init(struct ng_video_filter *filter,
 {
     struct ng_process_handle *h;
 
-    if (!(filter->fmts & (1 << fmt->fmtid)))
+    if (!(filter->fmts & (1 << fmt->fmtid))) {
+	fprintf(stderr,"filter \"%s\" doesn't support video format \"%s\"\n",
+		filter->name, ng_vfmt_to_desc[fmt->fmtid]);
 	return NULL;
+    }
 
     h = malloc(sizeof(*h));
     if (NULL == h)
@@ -96,7 +99,7 @@ struct ng_process_handle* ng_filter_init(struct ng_video_filter *filter,
 	break;
     }
 
-    if (1 || ng_debug)
+    if (ng_debug)
 	fprintf(stderr,"filtering: %s\n", filter->name);
     processes++;
     return h;

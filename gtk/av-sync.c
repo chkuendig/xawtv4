@@ -192,10 +192,12 @@ void av_video_add_filter(struct video_stream    *v,
     p->ofmt = p->ifmt;
 
     p->handle = ng_filter_init(filter, &p->ifmt);
-    if (p->handle)
+    if (p->handle) {
 	list_add(&p->next,&v->processes);
-    else
+    } else {
+	av_filter = NULL;
 	free(p);
+    }
 }
 
 static void av_video_process_setup(struct video_stream *v,
