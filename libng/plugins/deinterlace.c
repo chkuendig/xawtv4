@@ -26,8 +26,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "grab-ng.h"
+
+#if 0 /* ---------- old linear blend code ---------- */
 
 #define PAVGB(a,b)  "pavgb " #a ", " #b " \n\t"
 
@@ -101,37 +104,116 @@ static inline void linearBlend(unsigned char *src, int stride)
 #endif
 }
 
-static void inline
-deinterlace (struct ng_video_buf *frame)
+#endif /* ---------- old linear blend code ---------- */
+
+static inline void linear_blend_line(unsigned char *dst, unsigned char *src,
+				     int bpl)
 {
+    unsigned char restrict *srcp = src - bpl;
+    unsigned char restrict *srch = src;
+    unsigned char restrict *srcn = src + bpl;
+    int val,x = bpl;
+
+    while (x--) {
+	val  = 2*(*srch++);
+	val += *(srcp++);
+	val += *(srcn++);
+	*(dst++) = val >> 2;
+    }
 }
 
-
-static void *
-init (struct ng_video_fmt *out)
+static void linear_blend_frame(unsigned char *dst, unsigned char *src,
+			       int width, int height)
 {
-    /* no status info needed */
-    static int dummy; 
-    return &dummy;
+    int y = 0;
+
+    memcpy(dst,src,width);
+    dst += width;
+    src += width;
+    y++;
+
+    for (; y < height - 1; y++) {
+	linear_blend_line(dst, src, width);
+	dst += width;
+	src += width;
+    }
+
+    memcpy(dst,src,width);
+}
+
+static void*
+init_linear_blend(struct ng_video_fmt *out)
+{
+    return linear_blend_frame;
 } 
 
-static void
-frame(void *handle, struct ng_video_buf *out, struct ng_video_buf *in)
-{
-#if 0
-  unsigned int x, y, bytes = frame->fmt.bytesperline;
-  unsigned char *src;
+/* ------------------------------------------------------------------- */
 
-  for (y = 1; y < frame->fmt.height - 8; y+=8)
-  {
-        for (x = 0; x < bytes; x+=8)
-        {
-            src = frame->data + x + y * bytes;
-            linearBlend(src, bytes);
-        } 
-  }
-  emms();
-#endif
+static void line_double_frame(unsigned char *dst, unsigned char *src,
+			      int width, int height)
+{
+    int y;
+    
+    for (y = 0; y < height - 1; y += 2) {
+	memcpy(dst, src, width);
+	dst += width;
+	memcpy(dst, src, width);
+	dst += width;
+	src += width*2;
+    }
+}
+
+static void*
+init_line_double(struct ng_video_fmt *out)
+{
+    return line_double_frame;
+} 
+
+/* ------------------------------------------------------------------- */
+
+static void
+process_frame(void *handle, struct ng_video_buf *out, struct ng_video_buf *in)
+{
+    void (*process_plane)(unsigned char *dst, unsigned char *src,
+			  int width, int height) = handle;
+    int width, height;
+    unsigned char *src,*dst;
+
+    switch (in->fmt.fmtid) {
+    case VIDEO_YUV422P:
+    case VIDEO_YUV420P:
+	src = in->data;
+	dst = out->data;
+	// y
+	width  = in->fmt.width;
+	height = in->fmt.height;
+	process_plane(dst, src, width, height);
+	src += width * height;
+	dst += width * height;
+	// u
+	if (VIDEO_YUV422P == in->fmt.fmtid) {
+	    width  = in->fmt.width  >> 1;
+	    height = in->fmt.height;
+	} else {
+	    width  = in->fmt.width  >> 1;
+	    height = in->fmt.height >> 1;
+	}
+	process_plane(dst, src, width, height);
+	src += width * height;
+	dst += width * height;
+	// v
+	process_plane(dst, src, width, height);
+	break;
+    default:
+	width  = in->fmt.width;
+	if (in->fmt.bytesperline)
+	    width = in->fmt.bytesperline;
+	else
+	    width  = in->fmt.width * ng_vfmt_to_depth[in->fmt.fmtid] >> 3;
+	height = in->fmt.height;
+	process_plane(out->data, in->data, width, height);
+	break;
+    }
 }                 
 
 static void
@@ -142,25 +224,49 @@ fini (void *handle)
 
 /* ------------------------------------------------------------------- */
 
-static struct ng_video_filter filter = {
-    .name     = "linear blend",
+static struct ng_video_filter linear_blend = {
+    .name     = "deinterlace (linear blend)",
     .fmts     = (
-	(1 << VIDEO_GRAY) |
-	(1 << VIDEO_RGB15_NATIVE) |
-	(1 << VIDEO_RGB16_NATIVE) |
-	(1 << VIDEO_BGR24) |
-	(1 << VIDEO_RGB24) |
-	(1 << VIDEO_BGR32) |
-	(1 << VIDEO_RGB32) |
-	(1 << VIDEO_YUYV)  |
-	(1 << VIDEO_UYVY)),
-    .init     = init,
-    .p.frame  = frame,
+	(1 << VIDEO_GRAY)    |
+	(1 << VIDEO_BGR24)   |
+	(1 << VIDEO_RGB24)   |
+	(1 << VIDEO_BGR32)   |
+	(1 << VIDEO_RGB32)   |
+	(1 << VIDEO_YUYV)    |
+	(1 << VIDEO_UYVY)    |
+	(1 << VIDEO_YUV422P) |
+	(1 << VIDEO_YUV420P) ),
+    .init     = init_linear_blend,
+    .p.mode   = NG_MODE_TRIVIAL,
+    .p.frame  = process_frame,
+    .p.fini   = fini,
+};
+
+static struct ng_video_filter linea_double = {
+    .name     = "deinterlace (line doubler)",
+    .fmts     = (
+	(1 << VIDEO_GRAY)     |
+	(1 << VIDEO_RGB15_LE) |
+	(1 << VIDEO_RGB16_LE) |
+	(1 << VIDEO_RGB15_BE) |
+	(1 << VIDEO_RGB16_BE) |
+	(1 << VIDEO_BGR24)    |
+	(1 << VIDEO_RGB24)    |
+	(1 << VIDEO_BGR32)    |
+	(1 << VIDEO_RGB32)    |
+	(1 << VIDEO_YUYV)     |
+	(1 << VIDEO_UYVY)     |
+	(1 << VIDEO_YUV422P)  |
+	(1 << VIDEO_YUV420P)  ),
+    .init     = init_line_double,
+    .p.mode   = NG_MODE_TRIVIAL,
+    .p.frame  = process_frame,
     .p.fini   = fini,
 };
 
 static void __init plugin_init(void)
 {
-    ng_filter_register (NG_PLUGIN_MAGIC,__FILE__,&filter);
+    ng_filter_register(NG_PLUGIN_MAGIC,__FILE__, &linea_double);
+    ng_filter_register(NG_PLUGIN_MAGIC,__FILE__, &linear_blend);
 }
 

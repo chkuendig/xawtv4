@@ -22,6 +22,7 @@
 #include "devs.h"
 #include "dvb.h"
 
+#include "av-sync.h"
 #include "gui.h"
 
 /* ------------------------------------------------------------------------ */
@@ -48,6 +49,7 @@ static GtkTreeRowReference *station_edit;
 
 static GtkWidget     *control_dev_menu;
 static GtkWidget     *control_freq_menu;
+static GtkWidget     *control_filter_menu;
 static GtkWidget     *control_attr_bool_menu;
 static GtkWidget     *control_attr_choice_menu;
 
@@ -520,6 +522,19 @@ static void menu_cb_fine_next(void)
 static void menu_cb_fine_prev(void)
 {
     // do_va_cmd(2,"setchannel","prev");
+}
+
+static void menu_cb_setfilter(GtkMenuItem *widget, void *userdata)
+{
+    struct ng_video_filter *filter = userdata;
+    av_filter = filter;
+    command_pending++;
+}
+
+static void menu_cb_nofilter(void)
+{
+    av_filter = NULL;
+    command_pending++;
 }
 
 static void menu_cb_about(void)
@@ -1121,6 +1136,16 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = noop("/Settings/Frequency _Table"),
 	.item_type   = "<Branch>",
     },{
+	.path        = noop("/Settings/_Filter"),
+	.item_type   = "<Branch>",
+    },{
+	.path        = noop("/Settings/Filter/none"),
+	.item_type   = "<Item>",
+	.callback    = menu_cb_nofilter,
+    },{
+	.path        = "/Settings/Filter/sep1",
+	.item_type   = "<Separator>",
+    },{
 	.path        = "/Settings/sep1",
 	.item_type   = "<Separator>",
     },{
@@ -1398,6 +1423,21 @@ static void init_freqtab_list(void)
     }
 }
 
+static void init_filter_list(void)
+{
+    struct ng_video_filter *filter;
+    struct list_head *item;
+    GtkWidget *widget;
+
+    list_for_each(item,&ng_filters) {
+	filter = list_entry(item, struct ng_video_filter, list);
+	widget = gtk_menu_item_new_with_label(filter->name);
+	gtk_menu_shell_append(GTK_MENU_SHELL(control_filter_menu),widget);
+	g_signal_connect(G_OBJECT(widget), "activate",
+			 G_CALLBACK(menu_cb_setfilter), filter);
+    }
+}
+
 static struct toolbarbutton toolbaritems[] = {
     {
 	.text     = noop("prev"),
@@ -1480,6 +1520,8 @@ void create_control(void)
     control_dev_menu = gtk_item_factory_get_widget(item_factory,"<control>/Devices");
     control_freq_menu = gtk_item_factory_get_widget
 	(item_factory,"<control>/Settings/Frequency Table");
+    control_filter_menu = gtk_item_factory_get_widget
+	(item_factory,"<control>/Settings/Filter");
 
     control_attr_bool_menu = gtk_item_factory_get_widget
 	(item_factory,"<control>/Settings/Device Options");
@@ -1642,6 +1684,7 @@ void create_control(void)
     init_channel_list();
     init_devices_list();
     init_freqtab_list();
+    init_filter_list();
     control_switchdevice();
     enable_accels(menubar,NULL);
 

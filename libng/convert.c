@@ -69,11 +69,37 @@ struct ng_process_handle* ng_conv_init(struct ng_video_conv *conv,
     return h;
 }
 
-struct ng_process_handle* ng_filter_init()
+struct ng_process_handle* ng_filter_init(struct ng_video_filter *filter,
+					 struct ng_video_fmt *fmt)
 {
-    //struct ng_process_handle *h;
+    struct ng_process_handle *h;
 
-    BUG_ON(1,"not implemented yet");
+    if (!(filter->fmts & (1 << fmt->fmtid)))
+	return NULL;
+
+    h = malloc(sizeof(*h));
+    if (NULL == h)
+	return NULL;
+    memset(h,0,sizeof(*h));
+
+    h->ifmt    = *fmt;
+    h->ofmt    = *fmt;
+    h->p       = &filter->p;
+    h->phandle = filter->init(fmt);
+
+    switch (h->p->mode) {
+    case NG_MODE_TRIVIAL:
+    case NG_MODE_COMPLEX:
+	break;
+    default:
+	BUG_ON(1,"mode not initialited");
+	break;
+    }
+
+    if (1 || ng_debug)
+	fprintf(stderr,"filtering: %s\n", filter->name);
+    processes++;
+    return h;
 }
 
 void ng_process_setup(struct ng_process_handle *h, ng_get_video_buf get, void *ghandle)

@@ -32,68 +32,68 @@ struct omenu {
 };
 
 static struct omenu m_inv[] = {
-    { "off",  "0", 0 },
-    { "on",   "1", 0 },
-    { "auto", "2", 1 },
+    { noop("off"),  "0", 0 },
+    { noop("on"),   "1", 0 },
+    { noop("auto"), "2", 1 },
 };
 static struct omenu m_bw[] = {
-    { "8 MHz", "8",  0 },
-    { "7 MHz", "7",  0 },
-    { "6 MHz", "6",  0 },
-    { "auto",  "0",  1 },
+    { "8 MHz",       "8",  0 },
+    { "7 MHz",       "7",  0 },
+    { "6 MHz",       "6",  0 },
+    { noop("auto"),  "0",  1 },
 };
 static struct omenu m_rate[] = {
-    { "none",  "0",   0 },
-    { "1-2",   "12",  0 },
-    { "2-3",   "23",  0 },
-    { "3-4",   "34",  0 },
-    { "4-5",   "45",  0 },
-    { "5-6",   "56",  0 },
-    { "6-7",   "67",  0 },
-    { "7-8",   "78",  0 },
-    { "8-9",   "89",  0 },
-    { "auto",  "999", 1 },
+    { noop("none"),  "0",   0 },
+    { "1-2",         "12",  0 },
+    { "2-3",         "23",  0 },
+    { "3-4",         "34",  0 },
+    { "4-5",         "45",  0 },
+    { "5-6",         "56",  0 },
+    { "6-7",         "67",  0 },
+    { "7-8",         "78",  0 },
+    { "8-9",         "89",  0 },
+    { noop("auto"),  "999", 1 },
 };
 static struct omenu m_mo[] = {
-    { "QPSK",     "0",   0 },
-    { "QAM 16",   "16",  0 },
-    { "QAM 32",   "32",  0 },
-    { "QAM 64",   "64",  0 },
-    { "QAM 128",  "128", 0 },
-    { "QAM 256",  "256", 0 },
-    { "auto",     "999", 1 },
+    { "QPSK",           "0",   0 },
+    { "QAM 16",         "16",  0 },
+    { "QAM 32",         "32",  0 },
+    { "QAM 64",         "64",  0 },
+    { "QAM 128",        "128", 0 },
+    { "QAM 256",        "256", 0 },
+    { noop("auto"),     "999", 1 },
 };
 static struct omenu m_tr[] = {
-    { "2K",   "2", 0 },
-    { "8K",   "8", 0 },
-    { "auto", "0", 1 },
+    { "2K",         "2", 0 },
+    { "8K",         "8", 0 },
+    { noop("auto"), "0", 1 },
 };
 static struct omenu m_po[] = {
-    { "horizontal", "H", 0 },
-    { "vertical",   "V", 0 },
+    { noop("horizontal"), "H", 0 },
+    { noop("vertical"),   "V", 0 },
 };
 static struct omenu m_gu[] = {
-    { "1/32", "32", 0 },
-    { "1/16", "16", 0 },
-    { "1/8",  "8",  0 },
-    { "1/4",  "4",  0 },
-    { "auto", "0",  1 },
+    { "1/32",       "32", 0 },
+    { "1/16",       "16", 0 },
+    { "1/8",        "8",  0 },
+    { "1/4",        "4",  0 },
+    { noop("auto"), "0",  1 },
 };
 static struct omenu m_hi[] = {
-    { "none", "0",   0 },
-    { "1",    "1",   0 },
-    { "2",    "2",   0 },
-    { "4",    "4",   0 },
-    { "auto", "999", 1 },
+    { noop("none"), "0",   0 },
+    { "1",          "1",   0 },
+    { "2",          "2",   0 },
+    { "4",          "4",   0 },
+    { noop("auto"), "999", 1 },
 };
 static struct omenu m_sat[] = {
-    { "have only one ;)",  "",   0 },
-    { "mini A",            "MA", 0 },
-    { "mini B",            "MB", 0 },
-    { "DiSEqC pos 0",      "D0", 0 },
-    { "DiSEqC pos 1",      "D1", 0 },
-    { "DiSEqC pos 2",      "D2", 0 },
-    { "DiSEqC pos 3",      "D3", 0 },
+    { noop("have only one ;)"),  "",   0 },
+    { noop("mini A"),            "MA", 0 },
+    { noop("mini B"),            "MB", 0 },
+    { noop("DiSEqC pos 0"),      "D0", 0 },
+    { noop("DiSEqC pos 1"),      "D1", 0 },
+    { noop("DiSEqC pos 2"),      "D2", 0 },
+    { noop("DiSEqC pos 3"),      "D3", 0 },
 };
 
 static GtkWidget *add_omenu(GtkBox *box, char *text,
@@ -112,7 +112,7 @@ static GtkWidget *add_omenu(GtkBox *box, char *text,
 	    else
 		continue;
 	}
-	item = gtk_menu_item_new_with_label(items[i].label);
+	item = gtk_menu_item_new_with_label(gettext(items[i].label));
 	gtk_menu_append(menu,item);
     }
     if (-1 != a)
@@ -154,7 +154,7 @@ static void add_frequency(GtkBox *box)
 {
     GtkBox *hbox;
 
-    hbox = gtk_add_hbox_with_label(box, "frequency");
+    hbox = gtk_add_hbox_with_label(box, _("frequency"));
     frequency = gtk_entry_new();
     gtk_box_pack_start(hbox, frequency, TRUE, TRUE, 0);
 }
@@ -163,57 +163,57 @@ static void add_symbol_rate(GtkBox *box)
 {
     GtkBox *hbox;
 
-    hbox = gtk_add_hbox_with_label(box, "symbol rate");
+    hbox = gtk_add_hbox_with_label(box, _("symbol rate"));
     symbol_rate = gtk_entry_new();
     gtk_box_pack_start(hbox, symbol_rate, TRUE, TRUE, 0);
 }
 
 static void add_inversion(GtkBox *box, int caps)
 {
-    inversion = add_omenu(box, "inversion", m_inv, DIMOF(m_inv),
+    inversion = add_omenu(box, _("inversion"), m_inv, DIMOF(m_inv),
 			  caps & FE_CAN_INVERSION_AUTO);
 }
 
 static void add_bandwidth(GtkBox *box, int caps)
 {
-    bandwidth = add_omenu(box, "bandwidth", m_bw, DIMOF(m_bw),
+    bandwidth = add_omenu(box, _("bandwidth"), m_bw, DIMOF(m_bw),
 			  caps & FE_CAN_BANDWIDTH_AUTO);
 }
 
 static void add_code_rate(GtkBox *box, int caps)
 {
-    rate_high = add_omenu(box, "code rate high", m_rate, DIMOF(m_rate),
+    rate_high = add_omenu(box, _("code rate high"), m_rate, DIMOF(m_rate),
 			  caps & FE_CAN_FEC_AUTO);
-    rate_low  = add_omenu(box, "code rate low",  m_rate, DIMOF(m_rate),
+    rate_low  = add_omenu(box, _("code rate low"),  m_rate, DIMOF(m_rate),
 			  caps & FE_CAN_FEC_AUTO);
 }
 
 static void add_modulation(GtkBox *box, int caps)
 {
-    modulation = add_omenu(box, "modulation", m_mo, DIMOF(m_mo),
+    modulation = add_omenu(box, _("modulation"), m_mo, DIMOF(m_mo),
 			   caps & FE_CAN_QAM_AUTO);
 }
 
 static void add_transmission(GtkBox *box, int caps)
 {
-    transmission = add_omenu(box, "transmission", m_tr, DIMOF(m_tr),
+    transmission = add_omenu(box, _("transmission"), m_tr, DIMOF(m_tr),
 			     caps & FE_CAN_TRANSMISSION_MODE_AUTO);
 }
 
 static void add_polarization(GtkBox *box)
 {
-    polarization = add_omenu(box, "polarization", m_po, DIMOF(m_po), 0);
+    polarization = add_omenu(box, _("polarization"), m_po, DIMOF(m_po), 0);
 }
 
 static void add_guard(GtkBox *box, int caps)
 {
-    guard = add_omenu(box, "guard interval", m_gu, DIMOF(m_gu),
+    guard = add_omenu(box, _("guard interval"), m_gu, DIMOF(m_gu),
 		      caps & FE_CAN_GUARD_INTERVAL_AUTO);
 }
 
 static void add_hierarchy(GtkBox *box, int caps)
 {
-    hierarchy = add_omenu(box, "hierarchy", m_hi, DIMOF(m_hi),
+    hierarchy = add_omenu(box, _("hierarchy"), m_hi, DIMOF(m_hi),
 			  caps & FE_CAN_HIERARCHY_AUTO);
 }
 
@@ -222,7 +222,7 @@ static void add_lnb(GtkBox *box)
     GtkBox *hbox;
     GList *groups;
 
-    hbox   = gtk_add_hbox_with_label(box, "LNB (lo,hi,sw)");
+    hbox   = gtk_add_hbox_with_label(box, _("LNB (lo,hi,sw)"));
     lnb_c  = gtk_combo_new();
     lnb_e  = GTK_COMBO(lnb_c)->entry;
     gtk_box_pack_start(hbox, lnb_c, TRUE, TRUE, 0);
@@ -239,7 +239,7 @@ static void add_lnb(GtkBox *box)
 
 static void add_sat(GtkBox *box)
 {
-    sat = add_omenu(box, "Satellite", m_sat, DIMOF(m_sat), 0);
+    sat = add_omenu(box, _("Satellite"), m_sat, DIMOF(m_sat), 0);
 }
 
 static void tune_response(GtkDialog *dialog,
@@ -316,7 +316,7 @@ void create_dvbtune(GtkWindow *parent)
     int32_t caps;
 
     dvbtune_dialog =
-	gtk_dialog_new_with_buttons("Tune DVB frontend", parent, 0,
+	gtk_dialog_new_with_buttons(_("Tune DVB frontend"), parent, 0,
 				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 				    GTK_STOCK_APPLY,  GTK_RESPONSE_APPLY,
 				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
@@ -396,13 +396,13 @@ void create_satellite(GtkWindow *parent)
 
     if (dvb_frontend_get_type(devs.dvb) != FE_QPSK) {
 	gtk_error_box(parent,"Error",
-		      "You don't have a DVB-S card, thus there is\n"
-		      "no need to setup satellite parameters ;)\n");
+		      _("You don't have a DVB-S card, thus there is\n"
+			"no need to setup satellite parameters ;)\n"));
 	return;
     }
     
     satellite_dialog =
-	gtk_dialog_new_with_buttons("Satellite Parameters", parent, 0,
+	gtk_dialog_new_with_buttons(_("Satellite Parameters"), parent, 0,
 				    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 				    GTK_STOCK_OK,     GTK_RESPONSE_OK,
 				    NULL);

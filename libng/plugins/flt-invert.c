@@ -91,8 +91,8 @@ frame(void *handle, struct ng_video_buf *out, struct ng_video_buf *in)
 	    invert_native_rgb16(dst,src,in->fmt.width);
 	    break;
 	}
-	dst += out->fmt.bytesperline;
-	src += in->fmt.bytesperline;
+	dst += out->fmt.bytesperline ? out->fmt.bytesperline : cnt;
+	src += in->fmt.bytesperline  ? in->fmt.bytesperline  : cnt;
     }
 }
 
@@ -116,6 +116,7 @@ static struct ng_video_filter filter = {
 	(1 << VIDEO_YUYV)         |
 	(1 << VIDEO_UYVY)),
     .init      = init,
+    .p.mode    = NG_MODE_TRIVIAL,
     .p.frame   = frame,
     .p.fini    = fini,
 };

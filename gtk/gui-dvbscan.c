@@ -183,7 +183,7 @@ static gboolean frontend_poll(gpointer data)
 	int now = time(NULL);
 
 	pos += snprintf(line+pos,sizeof(line)-pos,
-			"Scan TSID %s | ", scan_tsid);
+			_("Scan TSID %s | "), scan_tsid);
 
 	if (locked && 0 == scan_locked)
 	    scan_locked = now;
@@ -193,31 +193,31 @@ static gboolean frontend_poll(gpointer data)
 	if (!scan_locked) {
 	    if (now - scan_tuned > timeout_lock) {
 		pos += snprintf(line+pos,sizeof(line)-pos,
-				"lock timeout");
+				_("lock timeout"));
 		next = 1;
 	    } else {
 		pos += snprintf(line+pos,sizeof(line)-pos,
-				"wait for lock (%d/%d)",
+				_("wait for lock (%d/%d)"),
 				now - scan_tuned, timeout_lock);
 	    }
 	} else if (last_ts_switch < scan_tuned) {
 	    if (now - scan_locked > timeout_pat) {
 		pos += snprintf(line+pos,sizeof(line)-pos,
-				"read PAT timeout");
+				_("read PAT timeout"));
 		next = 1;
 	    } else {
 		pos += snprintf(line+pos,sizeof(line)-pos,
-				"wait for PAT (%d/%d)",
+				_("wait for PAT (%d/%d)"),
 				now - scan_locked, timeout_pat);
 	    }
 	} else {
 	    if (now - last_ts_switch > timeout_data) {
 		pos += snprintf(line+pos,sizeof(line)-pos,
-				"reading tables done");
+				_("reading tables done"));
 		next = 1;
 	    } else {
 		pos += snprintf(line+pos,sizeof(line)-pos,
-				"reading tables (%d/%d)",
+				_("reading tables (%d/%d)"),
 				now - last_ts_switch, timeout_data);
 	    }
 	}
@@ -227,11 +227,13 @@ static gboolean frontend_poll(gpointer data)
 			" | ");
     }
 
-    pos += snprintf(line+pos,sizeof(line)-pos,"Frontend %s",
-		    locked ? "locked" : "NOT LOCKED");
-    if (locked)
-	pos += snprintf(line+pos,sizeof(line)-pos,", bit errors %d",
+    if (locked) {
+	pos += snprintf(line+pos,sizeof(line)-pos,
+			_("Frontend locked, bit errors %d"),
 			dvb_frontend_get_biterr(devs.dvb));
+    } else
+	pos += snprintf(line+pos,sizeof(line)-pos,_("Frontend NOT LOCKED"));
+
     gtk_label_set_label(GTK_LABEL(status),line);
     return TRUE;
 }
@@ -245,10 +247,10 @@ static void scan_do_start(int seconds)
     mark_stale();
     dvbmon_refresh(devs.dvbmon);
     if (0 == scan_ts_start())
-	gtk_error_box(GTK_WINDOW(dvbscan_win), "Sorry",
-		      "I need at least one DVB stream as starting point\n"
-		      "for a scan, please tune one from the database\n"
-		      "or by specifying the parameters manually.\n");
+	gtk_error_box(GTK_WINDOW(dvbscan_win), _("Sorry"),
+		      _("I need at least one DVB stream as starting point\n"
+			"for a scan, please tune one from the database\n"
+			"or by specifying the parameters manually.\n"));
     scan_do_next(time(NULL));
 }
 
@@ -639,7 +641,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Name", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Name"), renderer,
 	 "text",           ST_COL_NAME,
 	 "weight-set",     ST_STATE_ACTIVE,
 	 "foreground-set", ST_STATE_STALE,
@@ -651,7 +653,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Net", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Net"), renderer,
 	 "text",           ST_COL_NET,
 	 "weight-set",     ST_STATE_ACTIVE,
 	 "foreground-set", ST_STATE_STALE,
@@ -692,7 +694,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Freq", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Freq"), renderer,
 	 "text",           ST_COL_FREQ,
 	 "visible",        ST_COL_FREQ,
 	 "weight-set",     ST_STATE_ACTIVE,
@@ -734,7 +736,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Type", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Type"), renderer,
 	 "text",           ST_COL_TYPE,
 	 "visible",        ST_COL_TYPE,
 	 "weight-set",     ST_STATE_ACTIVE,
@@ -748,7 +750,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Video", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Video"), renderer,
 	 "text",           ST_COL_VIDEO,
 	 "visible",        ST_COL_VIDEO,
 	 "weight-set",     ST_STATE_ACTIVE,
@@ -762,7 +764,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Audio", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Audio"), renderer,
 	 "text",           ST_COL_AUDIO,
 	 "visible",        ST_COL_AUDIO,
 	 "weight-set",     ST_STATE_ACTIVE,
@@ -776,7 +778,7 @@ void dvbscan_create_window(int s)
 		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
-	(GTK_TREE_VIEW(view), -1, "Teletext", renderer,
+	(GTK_TREE_VIEW(view), -1, _("Teletext"), renderer,
 	 "text",           ST_COL_TELETEXT,
 	 "visible",        ST_COL_TELETEXT,
 	 "weight-set",     ST_STATE_ACTIVE,

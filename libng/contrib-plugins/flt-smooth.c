@@ -457,7 +457,6 @@ static void
 frame(void *h, struct ng_video_buf *out, struct ng_video_buf *in)
 {
     SMOOTH_BUFFER *handle = h;
-    ;
     unsigned char *dst;
     unsigned char *src;
     unsigned char *last;
@@ -506,9 +505,9 @@ frame(void *h, struct ng_video_buf *out, struct ng_video_buf *in)
 				in->fmt.width);
 	    break;
 	}
-	dst += out->fmt.bytesperline;
-	src += in->fmt.bytesperline;
-	last += in->fmt.bytesperline;
+	dst  += out->fmt.bytesperline ? out->fmt.bytesperline : cnt;
+	src  += in->fmt.bytesperline  ? in->fmt.bytesperline  : cnt;
+	last += in->fmt.bytesperline  ? in->fmt.bytesperline  : cnt;
     }
 }
 
@@ -572,6 +571,7 @@ static struct ng_attribute attrs[] = {
 };
 
 
+
 static struct ng_video_filter filter = {
     .name      = "smooth",
     .attrs     = attrs,
@@ -586,11 +586,14 @@ static struct ng_video_filter filter = {
 	(1 << VIDEO_YUYV)         |
 	(1 << VIDEO_UYVY)),
     .init      = init,
+    .p.mode    = NG_MODE_TRIVIAL,
     .p.frame   = frame,
     .p.fini    = fini,
 };
 
 static void __init plugin_init(void)
 {
-    ng_filter_register(NG_PLUGIN_MAGIC,__FILE__,&filter);
+    if (0)
+	/* FIXME: semms to be broken ... */
+	ng_filter_register(NG_PLUGIN_MAGIC,__FILE__,&filter);
 }

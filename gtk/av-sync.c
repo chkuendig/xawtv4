@@ -20,6 +20,8 @@
 #define DRIFT_BIG ((int64_t)1<<60)
 extern int          debug;
 
+struct ng_video_filter *av_filter = NULL;
+
 /* ------------------------------------------------------------------------ */
 
 void av_audio_fini(struct audio_stream *a)
@@ -153,9 +155,7 @@ struct video_stream* av_video_init(struct ng_video_fmt *ifmt)
 }
 
 void av_video_add_convert(struct video_stream  *v,
-			  struct ng_video_conv *conv,
-			  ng_get_video_buf get_obuf,
-			  void *ohandle)
+			  struct ng_video_conv *conv)
 {
     struct video_process *p;
 
@@ -170,13 +170,48 @@ void av_video_add_convert(struct video_stream  *v,
     p->ofmt.bytesperline = 0; // hmm, fixme?
 
     p->handle = ng_conv_init(conv,&p->ifmt,&p->ofmt);
-    ng_process_setup(p->handle,get_obuf,ohandle);
-    //list_add_tail(&p->next,&v->processes);
     list_add(&p->next,&v->processes);
     if (debug)
 	fprintf(stderr,"video conv [%s] => [%s]\n",
 		ng_vfmt_to_desc[p->ifmt.fmtid],
 		ng_vfmt_to_desc[p->ofmt.fmtid]);
+}
+
+void av_video_add_filter(struct video_stream    *v,
+			 struct ng_video_filter *filter,
+			 int fmtid)
+{
+    struct video_process *p;
+
+    p = malloc(sizeof(*p));
+    memset(p,0,sizeof(*p));
+
+    p->ifmt = *v->ifmt;
+    p->ifmt.fmtid = fmtid;
+    p->ifmt.bytesperline = 0; // hmm, fixme?
+    p->ofmt = p->ifmt;
+
+    p->handle = ng_filter_init(filter, &p->ifmt);
+    if (p->handle)
+	list_add(&p->next,&v->processes);
+    else
+	free(p);
+}
+
+static void av_video_process_setup(struct video_stream *v,
+				   ng_get_video_buf get,
+				   void *ghandle)
+{
+    struct video_process *p = NULL;
+
+    if (list_empty(&v->processes))
+	return;
+    p = list_entry(v->processes.next, struct video_process, next);
+    ng_process_setup(p->handle, get, ghandle);
+    while (p->next.next != &v->processes) {
+	p = list_entry(p->next.next, struct video_process, next);
+	ng_process_setup(p->handle, ng_malloc_video_buf, NULL);
+    }
 }
 
 void av_video_put_frame(struct video_stream  *v,
@@ -403,6 +438,7 @@ void av_media_setup_video_reader(struct media_stream *mm)
     unsigned int fmtids[2*VIDEO_FMT_COUNT],i;
     struct ng_video_fmt *vfmt;
     struct ng_video_conv *vconv1,*vconv2;
+    int ofmtid = 0;
 
     blit_get_formats(mm->blit,fmtids,DIMOF(fmtids));
     vfmt = mm->reader->rd_vfmt(mm->rhandle,fmtids,sizeof(fmtids)/sizeof(int));
@@ -413,26 +449,32 @@ void av_media_setup_video_reader(struct media_stream *mm)
 
     /* try direct */
     for (i = 0; i < DIMOF(fmtids); i++)
-	if (fmtids[i] == vfmt->fmtid)
+	if (fmtids[i] == vfmt->fmtid) {
+	    ofmtid = fmtids[i];
 	    goto done;
+	}
 
     /* try to convert once */
     for (i = 0; i < sizeof(fmtids)/sizeof(int); i++)
-	if (NULL != (vconv1 = ng_conv_find_match(vfmt->fmtid,fmtids[i])))
+	if (NULL != (vconv1 = ng_conv_find_match(vfmt->fmtid,fmtids[i]))) {
+	    ofmtid = fmtids[i];
 	    break;
+	}
     if (vconv1) {
-	av_video_add_convert(mm->vs,vconv1,blit_get_buf,mm->blit);
+	av_video_add_convert(mm->vs,vconv1);
 	goto done;
     }
 
     /* try to convert twice via VIDEO_YUV420P */
     if (NULL != (vconv1 = ng_conv_find_match(vfmt->fmtid,VIDEO_YUV420P)))
 	for (i = 0; i < sizeof(fmtids)/sizeof(int); i++)
-	    if (NULL != (vconv2 = ng_conv_find_match(VIDEO_YUV420P,fmtids[i])))
+	    if (NULL != (vconv2 = ng_conv_find_match(VIDEO_YUV420P,fmtids[i]))) {
+		ofmtid = fmtids[i];
 		break;
+	    }
     if (vconv1 && vconv2) {
-	av_video_add_convert(mm->vs,vconv1,ng_malloc_video_buf,NULL);
-	av_video_add_convert(mm->vs,vconv2,blit_get_buf,mm->blit);
+	av_video_add_convert(mm->vs,vconv1);
+	av_video_add_convert(mm->vs,vconv2);
 	goto done;
     }
 
@@ -443,6 +485,9 @@ void av_media_setup_video_reader(struct media_stream *mm)
     return;
 
  done:
+    if (av_filter)
+	av_video_add_filter(mm->vs, av_filter, ofmtid);
+    av_video_process_setup(mm->vs, blit_get_buf, mm->blit);
     mm->frame = mm->reader->frame_time(mm->rhandle);
     mm->vs->blit = mm->blit;
 }
@@ -472,6 +517,7 @@ void av_media_setup_video_grab(struct media_stream *mm,
     }
     
     mm->vs = av_video_init(&mm->capfmt);
+    av_video_process_setup(mm->vs, blit_get_buf, mm->blit);
     mm->frame = (int64_t)1000000000 / 25;  // FIXME
     mm->vs->blit = mm->blit;
 }

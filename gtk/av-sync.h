@@ -65,6 +65,8 @@ struct media_stream {
     int                         frames;
 };
 
+extern struct ng_video_filter *av_filter;
+
 /* ---------------------------------------------------------------------------- */
 
 struct audio_stream* av_audio_init(struct ng_audio_fmt *ifmt);
@@ -79,9 +81,10 @@ struct video_stream* av_video_init(struct ng_video_fmt *ifmt);
 void av_video_fini(struct video_stream *v);
 
 void av_video_add_convert(struct video_stream  *v,
-			  struct ng_video_conv *conv,
-			  ng_get_video_buf get_obuf,
-			  void *ohandle);
+			  struct ng_video_conv *conv);
+void av_video_add_filter(struct video_stream    *v,
+			 struct ng_video_filter *filter,
+			 int fmtid);
 void av_video_put_frame(struct video_stream  *v,
 			struct ng_video_buf *buf);
 struct ng_video_buf *av_video_get_frame(struct video_stream  *v);

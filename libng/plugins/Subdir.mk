@@ -1,15 +1,17 @@
 
 # targets to build
 TARGETS-plugins := \
-	libng/plugins/flt-gamma.so \
 	libng/plugins/flt-invert.so \
-	libng/plugins/flt-disor.so \
+	libng/plugins/deinterlace.so \
 	libng/plugins/conv-mjpeg.so \
 	libng/plugins/conv-audio.so \
 	libng/plugins/read-avi.so \
 	libng/plugins/read-mpeg.so \
 	libng/plugins/write-avi.so \
 	libng/plugins/write-mpeg.so
+# controls not settable yet ...
+#	libng/plugins/flt-gamma.so \
+#	libng/plugins/flt-disor.so \
 
 ifeq ($(FOUND_LQT),yes)
 TARGETS-plugins += \
@@ -84,6 +86,7 @@ libng/plugins/flt-debug.so:  libng/plugins/flt-debug.o
 libng/plugins/flt-disor.so:  libng/plugins/flt-disor.o
 libng/plugins/flt-gamma.so:  libng/plugins/flt-gamma.o
 libng/plugins/flt-invert.so: libng/plugins/flt-invert.o
+libng/plugins/deinterlace.so: libng/plugins/deinterlace.o
 libng/plugins/read-avi.so:   libng/plugins/read-avi.o
 libng/plugins/read-dv.so:    libng/plugins/read-dv.o
 libng/plugins/read-qt.so:    libng/plugins/read-qt.o

@@ -516,7 +516,8 @@ struct ng_process_handle;
 struct ng_process_handle* ng_conv_init(struct ng_video_conv *conv,
 				       struct ng_video_fmt *i,
 				       struct ng_video_fmt *o);
-struct ng_process_handle* ng_filter_init(void /* TODO */);
+struct ng_process_handle* ng_filter_init(struct ng_video_filter *filter,
+					 struct ng_video_fmt *fmt);
 void ng_process_setup(struct ng_process_handle*, ng_get_video_buf get, void *ghandle);
 void ng_process_put_frame(struct ng_process_handle*, struct ng_video_buf*);
 struct ng_video_buf* ng_process_get_frame(struct ng_process_handle*);

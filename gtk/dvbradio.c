@@ -807,6 +807,6 @@ main(int argc, char *argv[])
 	}
     }
 
-    /* store config & quit */
+    /* quit */
     exit(0);
 }
