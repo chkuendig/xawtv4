@@ -273,23 +273,23 @@ PopupAction(Widget widget, XEvent *event,
 	XtPopdown(*(my_toplevels[i].shell));
 	my_toplevels[i].mapped = 0;
     } else {
-	XtPopup(*(my_toplevels[i].shell), XtGrabNone);
+	Widget shell = *(my_toplevels[i].shell);
+	XtPopup(shell, XtGrabNone);
+	if (fs)
+	    XRaiseWindow(XtDisplay(shell), XtWindow(shell));
 	if (wm_stay_on_top && stay_on_top > 0)
-	    wm_stay_on_top(dpy,XtWindow(*(my_toplevels[i].shell)),1);
+	    wm_stay_on_top(dpy,XtWindow(shell),1);
 	my_toplevels[i].mapped = 1;
 	if (!my_toplevels[i].first) {
-	    XSetWMProtocols(XtDisplay(*(my_toplevels[i].shell)),
-			    XtWindow(*(my_toplevels[i].shell)),
+	    XSetWMProtocols(XtDisplay(shell),
+			    XtWindow(shell),
 			    &WM_DELETE_WINDOW, 1);
 	    mh = h = 0;
-	    XtVaGetValues(*(my_toplevels[i].shell),
-			  XtNmaxHeight,&mh,
-			  XtNheight,&h,
-			  NULL);
+	    XtVaGetValues(shell, XtNmaxHeight,&mh, XtNheight,&h, NULL);
 	    if (mh > 0 && h > mh) {
 		if (debug)
 		    fprintf(stderr,"height fixup: %d => %d\n",h,mh);
-		XtVaSetValues(*(my_toplevels[i].shell),XtNheight,mh,NULL);
+		XtVaSetValues(shell, XtNheight,mh, NULL);
 	    }
 	    my_toplevels[i].first = 1;
 	}

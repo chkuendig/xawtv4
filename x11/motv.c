@@ -357,9 +357,12 @@ PopupAction(Widget widget, XEvent *event,
 
     /* popup/down window */
     if (!my_toplevels[i].mapped) {
-	XtPopup(*(my_toplevels[i].shell), XtGrabNone);
+	Widget shell = *(my_toplevels[i].shell);
+	XtPopup(shell, XtGrabNone);
+	if (fs)
+	    XRaiseWindow(XtDisplay(shell), XtWindow(shell));
 	if (wm_stay_on_top && stay_on_top > 0)
-	    wm_stay_on_top(dpy,XtWindow(*(my_toplevels[i].shell)),1);
+	    wm_stay_on_top(dpy,XtWindow(shell),1);
 	my_toplevels[i].mapped = 1;
     } else {
 	XtPopdown(*(my_toplevels[i].shell));
