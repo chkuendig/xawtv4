@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <inttypes.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/time.h>
