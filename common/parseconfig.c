@@ -834,13 +834,13 @@ cfg_get_signed_int(char *dname, char *sname, char *ename, unsigned int def)
 }
 
 float
-cfg_get_float(char *dname, char *sname, char *ename)
+cfg_get_float(char *dname, char *sname, char *ename, float def)
 {
     char *val;
 
     val = cfg_get_str(dname,sname,ename);
     if (NULL == val)
-	return -1;
+	return def;
     return atof(val);
 }
 

@@ -137,7 +137,7 @@ static void do_scan(int fullscan)
 	     NULL != channel;
 	     channel = cfg_sections_next(freqtab,channel)) {
 	    fprintf(stderr,"%-4s (%6.2f MHz): ",
-		    channel,cfg_get_float(freqtab,channel,"freq")/1000);
+		    channel,cfg_get_float(freqtab,channel,"freq",0)/1000);
 	    tune_analog_channel(channel);
 	    usleep(200000); /* 0.2 sec */
 	    if (0 == devs.video.v->is_tuned(devs.video.handle)) {

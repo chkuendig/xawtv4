@@ -1,3 +1,4 @@
+
 #define _GNU_SOURCE
 
 #include "config.h"
@@ -835,15 +836,19 @@ static int snap_handler(char *hname, int argc, char **argv)
 
     if (jpeg) {
 	if (-1 == write_jpeg(tmpfilename, buf, ng_jpeg_quality, 0)) {
-	    sprintf(message,"open %s: %s\n",tmpfilename,strerror(errno));
+	    snprintf(message,sizeof(message),"open %s: %s\n",
+		     tmpfilename,strerror(errno));
 	} else {
-	    sprintf(message,"saved jpeg: %s",filename);
+	    snprintf(message,sizeof(message),"saved jpeg: %s",
+		     filename);
 	}
     } else {
 	if (-1 == write_ppm(tmpfilename, buf)) {
-	    sprintf(message,"open %s: %s\n",tmpfilename,strerror(errno));
+	    snprintf(message,sizeof(message),"open %s: %s\n",
+		     tmpfilename,strerror(errno));
 	} else {
-	    sprintf(message,"saved ppm: %s",filename);
+	    snprintf(message,sizeof(message),"saved ppm: %s",
+		     filename);
 	}
     }
     unlink(filename);

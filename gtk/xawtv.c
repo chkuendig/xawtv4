@@ -35,20 +35,22 @@
 #include "dvb.h"
 #include "parseconfig.h"
 #include "tv-config.h"
+#include "tuning.h"
 #include "commands.h"
 #include "av-sync.h"
+#include "atoms.h"
 #include "gui.h"
 
 /* ------------------------------------------------------------------------ */
 
 /* misc globals */
 int debug = 0;
+Display *dpy;
 
 /* video window */
 static GtkWidget *video;
 
 /* x11 stuff */
-static Display *dpy;
 static Visual *visual;
 static XVisualInfo vinfo;
 
@@ -178,6 +180,116 @@ grabber_fini(void)
 }
 
 /* ------------------------------------------------------------------------ */
+/* onscreen display                                                         */
+
+static GtkWidget *on_win, *on_label;
+static guint on_timer;
+
+static void create_onscreen(void)
+{
+    on_win   = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    on_label = gtk_widget_new(GTK_TYPE_LABEL,
+			      "xalign", 0,
+			      NULL);
+    gtk_container_add(GTK_CONTAINER(on_win), on_label);
+}
+
+static gboolean popdown_onscreen(gpointer data)
+{
+    if (debug)
+	fprintf(stderr,"osd: hide\n");
+    gtk_widget_hide(on_win);
+    on_timer = 0;
+    return FALSE;
+}
+
+static void
+display_onscreen(char *title)
+{
+    /* not working yet ... */
+    return;
+    
+    if (!fs)
+	return;
+    if (!cfg_get_bool("options","global","osd",1))
+	return;
+
+    if (debug)
+	fprintf(stderr,"osd: show (%s)\n",title);
+
+    gtk_label_set_text(GTK_LABEL(on_label), title);
+#if 0
+    XtVaSetValues(on_shell,
+		  XtNx, x + cfg_get_int("options","global","osd-x",30),
+		  XtNy, y + cfg_get_int("options","global","osd-y",20),
+		  NULL);
+#endif
+    gtk_widget_show_all(on_win);
+
+    if (on_timer)
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(), on_timer));
+    on_timer = g_timeout_add(TITLE_TIME, popdown_onscreen, NULL);
+}
+
+/* ------------------------------------------------------------------------ */
+/* hooks                                                                    */
+
+static char default_title[256];
+static guint title_timer;
+
+static gboolean title_timeout(gpointer data)
+{
+    keypad_timeout();
+    gtk_window_set_title(GTK_WINDOW(main_win), default_title);
+    title_timer = 0;
+    return FALSE;
+}
+
+static void new_message(char *txt)
+{
+    gtk_window_set_title(GTK_WINDOW(main_win), txt);
+    display_onscreen(txt);
+
+    if (title_timer)
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(),title_timer));
+    title_timer = g_timeout_add(TITLE_TIME, title_timeout, NULL);
+}
+
+static void new_title(char *txt)
+{
+    snprintf(default_title,sizeof(default_title),"%s",txt);
+    gtk_window_set_title(GTK_WINDOW(main_win), default_title);
+    display_onscreen(default_title);
+
+    if (title_timer) {
+	g_source_destroy(g_main_context_find_source_by_id
+			 (g_main_context_default(),title_timer));
+	title_timer = 0;
+    }
+}
+
+static void do_exit(void)
+{
+    command_pending++;
+    exit_application++;
+}
+
+static void new_station(void)
+{
+    char label[256];
+
+    snprintf(label, sizeof(label), "%s | %s | %s",
+	     curr_details,
+	     curr_channel,
+	     curr_station);
+    gtk_label_set_text(GTK_LABEL(control_status), label);
+    // set_property();
+}
+
+/* ------------------------------------------------------------------------ */
+/* main loop                                                                */
 
 static void
 grabdisplay_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
@@ -504,11 +616,18 @@ int
 main(int argc, char *argv[])
 {
     XVisualInfo *vinfo_list;
+    char *freqtab;
     int n;
 
-    /* basic init */
     hello_world();
+
+    /* lowlevel X11 init */
     gtk_init(&argc, &argv);
+    dpy = gdk_x11_display_get_xdisplay(gdk_display_get_default());
+    fcntl(ConnectionNumber(dpy),F_SETFD,FD_CLOEXEC);
+    init_atoms(dpy);
+
+    /* basic init */
     ng_init();
     parse_args(&argc,argv);
 
@@ -534,33 +653,27 @@ main(int argc, char *argv[])
     g_signal_connect(video, "button-release-event",
 		     G_CALLBACK(mouse_button), NULL);
 
-    /* lowlevel X11 initializations */
-    dpy = gdk_x11_display_get_xdisplay(gtk_widget_get_display(video));
-    fcntl(ConnectionNumber(dpy),F_SETFD,FD_CLOEXEC);
+    /* init X11 visual info */
     visual = gdk_x11_visual_get_xvisual(gtk_widget_get_visual(video));
     vinfo.visualid = XVisualIDFromVisual(visual);
     vinfo_list = XGetVisualInfo(dpy, VisualIDMask, &vinfo, &n);
     vinfo = vinfo_list[0];
     XFree(vinfo_list);
     x11_init_visual(dpy,&vinfo);
-    // init_atoms(dpy);
 
     /* set hooks (command.c) */
-#if 0 /* FIXME */
     update_title        = new_title;
     display_message     = new_message;
+    exit_hook           = do_exit;
+    setstation_notify   = new_station;
+#if 0 /* FIXME */
 #ifdef HAVE_ZVBI
     vtx_subtitle        = display_subtitle;
 #endif
     freqtab_notify      = new_freqtab;
-    setstation_notify   = new_channel;
     fullscreen_hook     = do_fullscreen;
     movie_hook          = do_movie_record;
     rec_status          = do_rec_status;
-    exit_hook           = do_exit;
-    set_capture_hook    = do_capture;
-    capture_get_hook    = video_gd_suspend;
-    capture_rel_hook    = video_gd_restart;
 #endif
 
 #if 0
@@ -582,12 +695,12 @@ main(int argc, char *argv[])
     if (debug)
 	fprintf(stderr,"main: creating windows ...\n");
 #if 0
-    create_onscreen(labelWidgetClass);
     create_vtx();
     create_strwin();
     init_movie_menus();
 #endif
     create_control();
+    create_onscreen();
     gtk_window_add_accel_group(GTK_WINDOW(main_win), control_accel_group);
     
     /* finalize X11 init + show windows */
@@ -605,18 +718,11 @@ main(int argc, char *argv[])
     mouse_event(tv,NULL,NULL,NULL);
 #endif
 
-    /* build channel list */
-    if (GET_CMD_READCONF()) {
-	if (debug)
-	    fprintf(stderr,"main: parse channels from config file ...\n");
-	// apply_config();
-    }
-
-#if 0
-    channel_menu();
-    if (optind+1 == argc)
-	do_va_cmd(2,"setstation",argv[optind]);
-#endif
+    /* set some values */
+    if (NULL != (freqtab = cfg_get_str(O_FREQTAB)))
+	do_va_cmd(2,"setfreqtab",freqtab);
+    if (argc > 1)
+	do_va_cmd(2,"setstation",argv[1]);
 
     return main_loop(g_main_context_default());
 }

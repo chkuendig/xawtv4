@@ -18,6 +18,8 @@
 
 /* ------------------------------------------------------------------------ */
 
+int           fs;
+
 char          *curr_station;
 char          *pick_device_new;
 
@@ -25,6 +27,7 @@ GtkWidget     *main_win;
 GtkWidget     *control_win;
 GtkAccelGroup *control_accel_group;
 GtkWidget     *control_st_menu;
+GtkWidget     *control_status;
 
 static GtkWidget     *control_dev_menu;
 static GtkWidget     *control_freq_menu;
@@ -242,10 +245,8 @@ static void menu_cb_setdevice(GtkMenuItem *menuitem, gchar *string)
 
 static void menu_cb_fullscreen(void)
 {
-    static int on = 0;
-
-    on = !on;
-    if (on)
+    fs = !fs;
+    if (fs)
 	gtk_window_fullscreen(GTK_WINDOW(main_win));
     else
 	gtk_window_unfullscreen(GTK_WINDOW(main_win));
@@ -463,10 +464,11 @@ static GtkItemFactoryEntry menu_items[] = {
     },{
 	.path        = "/File/_Record ...",
 	.accelerator = "<control>R",
-	.item_type   = "<Item>"
+	.item_type   = "<StockItem>",
+	.extra_data  = GTK_STOCK_SAVE,
     },{
 	.path        = "/File/sep1",
-	.item_type   = "<Separator>"
+	.item_type   = "<Separator>",
     },{
 	.path        = "/File/_Quit",
 	.accelerator = "Q",
@@ -539,12 +541,14 @@ static GtkItemFactoryEntry menu_items[] = {
 	.path        = "/Commands/Next Station",
 	.accelerator = "space",  // Page_Up
 	.callback    = menu_cb_station_next,
-	.item_type   = "<Item>",
+	.item_type   = "<StockItem>",
+	.extra_data  = GTK_STOCK_GO_FORWARD,
     },{
 	.path        = "/Commands/Previous Station",
 	// .accelerator = "Page_Down",
 	.callback    = menu_cb_station_prev,
-	.item_type   = "<Item>",
+	.item_type   = "<StockItem>",
+	.extra_data  = GTK_STOCK_GO_BACK,
     },{
 	.path        = "/Commands/Tuning",
 	.item_type   = "<Branch>",
@@ -609,22 +613,56 @@ static void init_devices_list(void)
 
 static void init_freqtab_list(void)
 {
-    GSList *group = NULL;
+    // GSList *group = NULL;
     GtkWidget *item;
     char *list;
 
     cfg_sections_for_each("freqtabs",list) {
-	item = gtk_radio_menu_item_new_with_label(group,list);
-	group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
+	// item = gtk_radio_menu_item_new_with_label(group,list);
+	// group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
+	item = gtk_menu_item_new_with_label(list);
 	gtk_menu_shell_append(GTK_MENU_SHELL(control_freq_menu),item);
 	command_cb_add(GTK_MENU_ITEM(item), 2, "setfreqtab", list);
     }
 }
 
+static struct {
+    char           *text;
+    char           *tooltip;
+    char           *priv;
+    char           *stock;
+    GtkSignalFunc  callback;
+} toolbaritems[] = {
+    {
+	.text     = "prev",
+	.tooltip  = "previous station",
+	.stock    = GTK_STOCK_GO_BACK,
+	.callback = menu_cb_station_prev,
+    },{
+	.text     = "next",
+	.tooltip  = "next station",
+	.stock    = GTK_STOCK_GO_FORWARD,
+	.callback = menu_cb_station_next,
+    },{
+	.text     = "mute",
+	.tooltip  = "mute sound",
+	.callback = menu_cb_mute,
+    },{
+	/* nothing */
+    },{
+	.text     = "quit",
+	.tooltip  = "quit application",
+	.stock    = GTK_STOCK_QUIT,
+	.callback = gtk_quit_cb,
+    }
+};
+
 void create_control(void)
 {
-    GtkWidget *vbox,*hbox,*menubar,*status,*scroll;
+    GtkWidget *vbox,*hbox,*menubar,*scroll;
+    GtkWidget *handlebox,*toolbar,*icon;
     GtkCellRenderer *renderer;
+    int i;
 
     control_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(control_win),_("control window"));
@@ -650,6 +688,25 @@ void create_control(void)
     control_attr_choice_menu = gtk_item_factory_get_widget
 	(item_factory,"<control>/Settings");
 
+    /* toolbar */
+    toolbar = gtk_toolbar_new();
+    for (i = 0; i < DIMOF(toolbaritems); i++) {
+	icon = NULL;
+	if (toolbaritems[i].stock)
+	    icon = gtk_image_new_from_stock(toolbaritems[i].stock,
+					    GTK_ICON_SIZE_SMALL_TOOLBAR);
+	if (!toolbaritems[i].text)
+	    gtk_toolbar_append_space(GTK_TOOLBAR(toolbar));
+	else
+	    gtk_toolbar_append_item(GTK_TOOLBAR(toolbar),
+				    toolbaritems[i].text,
+				    toolbaritems[i].tooltip,
+				    toolbaritems[i].priv,
+				    icon,
+				    toolbaritems[i].callback,
+				    NULL /* user_data */);
+    }
+
     /* station list */
     st_view  = gtk_tree_view_new();
     st_model = gtk_list_store_new(ST_NUM_COLS,
@@ -669,21 +726,24 @@ void create_control(void)
     scroll = gtk_vscrollbar_new(gtk_tree_view_get_hadjustment(GTK_TREE_VIEW(st_view)));
 
     /* other widgets */
-    status = gtk_widget_new(GTK_TYPE_LABEL,
-			    "label",  "status line",
-			    "xalign", 0,
-			    NULL);
+    control_status = gtk_widget_new(GTK_TYPE_LABEL,
+				    "label",  "status line",
+				    "xalign", 0,
+				    NULL);
 
     /* Make a vbox and put stuff in */
     vbox = gtk_vbox_new(FALSE, 1);
     hbox = gtk_hbox_new(FALSE, 1);
+    handlebox = gtk_handle_box_new();
+    gtk_container_add(GTK_CONTAINER(handlebox), toolbar);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
     gtk_container_add(GTK_CONTAINER(control_win), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), handlebox, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(hbox), st_view, TRUE, TRUE, 0);
     gtk_box_pack_end(GTK_BOX(hbox), scroll, FALSE, TRUE, 0);
-    gtk_box_pack_end(GTK_BOX(vbox), status, FALSE, TRUE, 0);
+    gtk_box_pack_end(GTK_BOX(vbox), control_status, FALSE, TRUE, 0);
 
     /* dynamic stuff */
     init_channel_list();

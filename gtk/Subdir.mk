@@ -18,6 +18,8 @@ gtk/xawtv: \
 	gtk/blit.o \
 	gtk/gui-misc.o \
 	gtk/gui-control.o \
+	x11/xv.o \
+	x11/atoms.o \
 	common/parseconfig.o \
 	$(OBJS-common-capture)
 
