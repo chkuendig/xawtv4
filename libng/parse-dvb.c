@@ -164,7 +164,7 @@ static void parse_nit_desc_2(unsigned char *desc, int dlen,
 	    stream->frequency     = unbcd(freq)    * 10;
 	    stream->symbol_rate   = unbcd(rate*16) * 10;
 	    stream->fec_inner     = ra_sc[fec];
-	    stream->polarization  = po[   mpeg_getbits(desc+i+2, 53, 2) ];
+	    stream->polarization  = po[   mpeg_getbits(desc+i+2, 49, 2) ];
 	    break;
 	case 0x44: /* dvb-c */
 	    freq = mpeg_getbits(desc+i+2,  0, 32);
