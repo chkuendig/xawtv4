@@ -423,11 +423,11 @@ int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
 			section);
 		return -1;
 	    }
-	    action = cfg_get_str("diseqc", diseqc, "action");
+	    action = cfg_get_str("vdr-diseqc", diseqc, "action");
 	    if (dvb_debug)
 		fprintf(stderr,"diseqc action: \"%s\"\n", action);
 	    exec_vdr_diseqc(h->fdwr,action);
-	    lof = cfg_get_int("diseqc", diseqc, "lof", 0);
+	    lof = cfg_get_int("vdr-diseqc", diseqc, "lof", 0);
 	} else {
 	    /* use my stuff */
 	    lof = sat_switch(h->fdwr,domain,section);
@@ -745,17 +745,13 @@ int dvb_demux_req_section(struct dvb_state *h, int fd, int pid, int sec,
     return -1;
 }
 
-int dvb_demux_get_section(int *fd, unsigned char *buf, int len, int oneshot)
+int dvb_demux_get_section(int fd, unsigned char *buf, int len)
 {
     int rc;
     
     memset(buf,0,len);
-    if ((rc = read(*fd, buf, len)) < 0)
+    if ((rc = read(fd, buf, len)) < 0)
 	fprintf(stderr,"dvb mux: read: %s\n", strerror(errno));
-    if (oneshot) {
-	close(*fd);
-	*fd = -1;
-    }
     return rc;
 }
 
@@ -907,15 +903,17 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     unsigned char buf[4096];
     struct list_head   *item;
     struct psi_program *pr;
-    int sdt, pat;
+    int sdt = 0;
+    int pat = 0;
 
     if (names)
 	sdt = dvb_demux_req_section(dvb, -1, 0x11, 0x42, 1, 60);
     pat = dvb_demux_req_section(dvb, -1, 0x00, 0x00, 1, 20);
 
     /* program association table */
-    if (dvb_demux_get_section(&pat, buf, sizeof(buf), 1) < 0)
+    if (dvb_demux_get_section(pat, buf, sizeof(buf)) < 0)
 	goto oops;
+    close(pat);
     mpeg_parse_psi_pat(info, buf, verbose);
     
     /* program maps */
@@ -925,15 +923,17 @@ int dvb_get_transponder_info(struct dvb_state *dvb,
     }
     list_for_each(item,&info->programs) {
         pr = list_entry(item, struct psi_program, next);
-	if (dvb_demux_get_section(&pr->fd, buf, sizeof(buf), 1) < 0)
+	if (dvb_demux_get_section(pr->fd, buf, sizeof(buf)) < 0)
 	    goto oops;
+	close(pr->fd);
 	mpeg_parse_psi_pmt(pr, buf, verbose);
     }
 
     /* service descriptor */
     if (names) {
-	if (dvb_demux_get_section(&sdt, buf, sizeof(buf), 1) < 0)
+	if (dvb_demux_get_section(sdt, buf, sizeof(buf)) < 0)
 	    goto oops;
+	close(sdt);
 	mpeg_parse_psi_sdt(info, buf, verbose);
     }
 

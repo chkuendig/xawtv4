@@ -766,7 +766,7 @@ static void update_station_prop(GtkTreeIter *iter)
 	type  = cfg_get_int("dvb-pr", list, "type",0);
 	if (1 != type || NULL == video)
 	    continue;
-	snprintf(label,sizeof(label),"%s",name);
+	snprintf(label,sizeof(label),"%s (%s)",list,name);
 	item = gtk_menu_item_new_with_label(label);
 	g_object_set_data_full(G_OBJECT(item),"dvb-pr",strdup(list),free);
 	gtk_menu_append(menu, item);
@@ -1119,10 +1119,11 @@ static GtkTargetEntry dnd_targets[] = {
     { "PNR",          0,  2 },
     { "VPID",         0,  3 },
     { "APID",         0,  4 },
+    { "CHANNEL",      0,  5 },
 };
 static int  dnd_pending;
-static char *dnd_data[5];
-static int  dnd_len[5];
+static char *dnd_data[6];
+static int  dnd_len[6];
 
 static void drag_data_received(GtkWidget *widget,
 			       GdkDragContext *dc,
@@ -1132,8 +1133,8 @@ static void drag_data_received(GtkWidget *widget,
 {
     GtkTreeIter iter;
     GdkAtom *targets;
-    char *atom,*name;
-    int pos[5];
+    char *atom,*name,*channel;
+    int pos[6];
     int i,tsid,pnr,audio,video;
 
     if (debug)
@@ -1148,18 +1149,20 @@ static void drag_data_received(GtkWidget *widget,
 	targets = (void*)sd->data;
 	for (i = 0; i < sd->length/sizeof(targets[0]); i++) {
 	    atom = gdk_atom_name(targets[i]);
-	    fprintf(stderr,"  %s\n",atom);
+	    if (debug)
+		fprintf(stderr,"  %s\n",atom);
 	    if (0 == strcmp(atom,"UTF8_STRING")  ||
 		0 == strcmp(atom,"TSID")         ||
 		0 == strcmp(atom,"PNR")          ||
 		0 == strcmp(atom,"VPID")         ||
-		0 == strcmp(atom,"APID")) {
+		0 == strcmp(atom,"APID")         ||
+		0 == strcmp(atom,"CHANNEL")) {
 		dnd_pending++;
 		gtk_drag_get_data(widget, dc, targets[i], time);
 	    }
 	}
 	break;
-    case 0 ... 4:
+    case 0 ... 5:
  	if (dnd_data[info])
 	    free(dnd_data[info]);
 	dnd_data[info] = malloc(sd->length);
@@ -1175,37 +1178,50 @@ static void drag_data_received(GtkWidget *widget,
 	fprintf(stderr,"%s: all done\n",__FUNCTION__);
     gtk_drag_finish(dc, TRUE, FALSE, time);
 
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 6; i++)
 	pos[i] = 0;
     for (;;) {
-	for (i = 0; i < 5; i++)
-	    if (pos[i] >= dnd_len[i]) {
+	for (i = 0; i < 6; i++) {
+	    if (dnd_data[i] && pos[i] >= dnd_len[i]) {
 		fprintf(stderr,"pos %d %d %d\n",i,pos[i],dnd_len[i]);
 		return;
 	    }
+	}
+	name    = dnd_data[0] ? dnd_data[0]+pos[0]       : NULL;
+	channel = dnd_data[5] ? dnd_data[5]+pos[5]       : NULL;
+	tsid    = dnd_data[1] ? atoi(dnd_data[1]+pos[1]) : 0;
+	pnr     = dnd_data[2] ? atoi(dnd_data[2]+pos[2]) : 0;
+	video   = dnd_data[3] ? atoi(dnd_data[3]+pos[3]) : 0;
+	audio   = dnd_data[4] ? atoi(dnd_data[4]+pos[4]) : 0;
 
-	name  = dnd_data[0]+pos[0];
-	tsid  = atoi(dnd_data[1]+pos[1]);
-	pnr   = atoi(dnd_data[2]+pos[2]);
-	video = atoi(dnd_data[4]+pos[3]);
-	audio = atoi(dnd_data[3]+pos[4]);
-	if (0 == tsid || 0 == pnr || 0 == video || 0 == audio) {
-	    if (debug)
-		fprintf(stderr,"ignore: %s tsid=%d pnr=%d video=%d audio=%d\n",
-			name, tsid, pnr, video, audio);
-	} else {
-	    if (debug)
-		fprintf(stderr,"received: %s tsid=%d pnr=%d video=%d audio=%d\n",
+	if (NULL != name && 0 != tsid && 0 != pnr && 0 != audio) {
+	    /* DVB channel (TV or radio) */
+	    if (1 || debug)
+		fprintf(stderr,"add dvb: %s tsid=%d pnr=%d video=%d audio=%d\n",
 			name, tsid, pnr, video, audio);
 	    cfg_set_int("stations",name,"tsid",tsid);
 	    cfg_set_int("stations",name,"pnr", pnr);
 	    if (!x11_station_find(&iter,name))
 		x11_station_add(&iter);
 	    x11_station_apply(&iter,name);
+	} else if (NULL != name && NULL != channel) {
+	    /* analog channel */
+	    if (1 || debug)
+		fprintf(stderr,"add analog: %s ch=%s\n", name, channel);
+	    cfg_set_str("stations",name,"channel",channel);
+	    if (!x11_station_find(&iter,name))
+		x11_station_add(&iter);
+	    x11_station_apply(&iter,name);
+	} else {
+	    /* no channel -- ignore */
+	    if (debug)
+		fprintf(stderr,"ignore: %s tsid=%d pnr=%d video=%d audio=%d ch=%s\n",
+			name, tsid, pnr, video, audio, channel);
 	}
 
-	for (i = 0; i < 5; i++)
-	    pos[i] += strlen(dnd_data[i]+pos[i])+1;
+	for (i = 0; i < 6; i++)
+	    if (dnd_data[i])
+		pos[i] += strlen(dnd_data[i]+pos[i])+1;
     }
 }
 

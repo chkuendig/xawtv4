@@ -31,6 +31,8 @@ struct table {
     int                 fd;
     GIOChannel          *ch;
     guint               id;
+    int                 once;
+    int                 done;
 };
 
 struct version {
@@ -48,7 +50,10 @@ struct callback {
 
 struct dvbmon {
     int                 verbose;
+    int                 tabdebug;
     int                 timeout;
+    int                 tabfds;
+    int                 tablimit;
     struct dvb_state    *dvb;
     struct psi_info     *info;
 
@@ -57,9 +62,13 @@ struct dvbmon {
     struct list_head    callbacks;
 };
 
-static void table_open(struct dvbmon *dm, char *name, int pid, int sec);
-static void table_close(struct dvbmon *dm, int pid, int sec);
+static void table_add(struct dvbmon *dm, char *name, int pid, int sec,
+		      int oneshot);
+static void table_open(struct dvbmon *dm, struct table *tab);
 static void table_refresh(struct dvbmon *dm, struct table *tab);
+static void table_close(struct dvbmon *dm, struct table *tab);
+static void table_del(struct dvbmon *dm, int pid, int sec);
+static void table_next(struct dvbmon *dm);
 
 /* ----------------------------------------------------------------------------- */
 /* internal functions                                                            */
@@ -122,11 +131,15 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
     }
     
     /* get data */
-    if (dvb_demux_get_section(&tab->fd, buf, sizeof(buf), 0) < 0) {
+    if (dvb_demux_get_section(tab->fd, buf, sizeof(buf)) < 0) {
 	fprintf(stderr,"dvbmon: reading %s failed (frontend not locked?), "
 		"fd %d, trying to re-init.\n", tab->name, tab->fd);
 	table_refresh(dm,tab);
 	return TRUE;
+    }
+    if (tab->once) {
+	table_close(dm,tab);
+	table_next(dm);
     }
     id      = mpeg_getbits(buf,24,16);
     version = mpeg_getbits(buf,42,5);
@@ -173,12 +186,12 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
 	list_for_each(item,&dm->info->programs) {
 	    pr = list_entry(item, struct psi_program, next);
 	    if (!pr->seen)
-		table_close(dm, pr->p_pid, 2);
+		table_del(dm, pr->p_pid, 2);
 	}
 	list_for_each(item,&dm->info->programs) {
 	    pr = list_entry(item, struct psi_program, next);
 	    if (pr->seen && pr->p_pid)
-		table_open(dm, "pmt", pr->p_pid, 2);
+		table_add(dm, "pmt", pr->p_pid, 2, 1);
 	    pr->seen = 0;
 	}
     }
@@ -215,7 +228,63 @@ static struct table* table_find(struct dvbmon *dm, int pid, int sec)
     return NULL;
 }
 
-static void table_open(struct dvbmon *dm, char *name, int pid, int sec)
+static void table_open(struct dvbmon *dm, struct table *tab)
+{
+    if (tab->once && dm->tabfds >= dm->tablimit)
+	return;
+
+    tab->fd = dvb_demux_req_section(dm->dvb, -1, tab->pid, tab->sec,
+				    tab->once, dm->timeout);
+    if (-1 == tab->fd)
+	return;
+
+    dm->tabfds++;
+    tab->ch  = g_io_channel_unix_new(tab->fd);
+    tab->id  = g_io_add_watch(tab->ch, G_IO_IN, table_data, dm);
+    if (dm->tabdebug)
+	fprintf(stderr,"dvbmon: open:  %s %4d | fd=%d n=%d\n",
+		tab->name, tab->pid, tab->fd, dm->tabfds);
+}
+
+static void table_close(struct dvbmon *dm, struct table *tab)
+{
+    if (-1 == tab->fd)
+	return;
+
+    g_source_remove(tab->id);
+    g_io_channel_unref(tab->ch);
+    close(tab->fd);
+    tab->id = 0;
+    tab->ch = 0;
+    tab->fd = -1;
+    if (tab->once)
+	tab->done = 1;
+
+    dm->tabfds--;
+    if (dm->tabdebug)
+	fprintf(stderr,"dvbmon: close: %s %4d | n=%d\n",
+		tab->name, tab->pid, dm->tabfds);
+}
+
+static void table_next(struct dvbmon *dm)
+{
+    struct table      *tab;
+    struct list_head  *item;
+
+    list_for_each(item,&dm->tables) {
+	tab = list_entry(item, struct table, next);
+	if (tab->fd != -1)
+	    continue;
+	if (tab->done)
+	    continue;
+	table_open(dm,tab);
+	if (dm->tabfds >= dm->tablimit)
+	    return;
+    }
+}
+
+static void table_add(struct dvbmon *dm, char *name, int pid, int sec,
+		      int oneshot)
 {
     struct table *tab; 
 
@@ -227,32 +296,28 @@ static void table_open(struct dvbmon *dm, char *name, int pid, int sec)
     tab->name = name;
     tab->pid  = pid;
     tab->sec  = sec;
-    tab->fd   = dvb_demux_req_section(dm->dvb, -1, pid, sec, 0, dm->timeout);
-    if (-1 == tab->fd) {
-	free(tab);
-	return;
-    }
-    tab->ch  = g_io_channel_unix_new(tab->fd);
-    tab->id  = g_io_add_watch(tab->ch, G_IO_IN, table_data, dm);
+    tab->fd   = -1;
+    tab->once = oneshot;
+    tab->done = 0;
     list_add_tail(&tab->next,&dm->tables);
-    if (dm->verbose)
-	fprintf(stderr,"dvbmon: new:   %s  fd=%2d  sec=0x%02x  pid=%d\n",
-		tab->name, tab->fd, tab->sec, tab->pid);
+    if (dm->tabdebug)
+	fprintf(stderr,"dvbmon: add:   %s %4d | sec=0x%02x once=%d\n",
+		tab->name, tab->pid, tab->sec, tab->once);
+
+    table_open(dm,tab);
 }
 
-static void table_close(struct dvbmon *dm, int pid, int sec)
+static void table_del(struct dvbmon *dm, int pid, int sec)
 {
     struct table      *tab;
 
     tab = table_find(dm, pid, sec);
     if (NULL == tab)
 	return;
-    if (dm->verbose)
-	fprintf(stderr,"dvbmon: done:  %s  fd=%2d   sec=0x%02x  pid=%d\n",
-		tab->name, tab->fd, tab->sec, tab->pid);
-    g_source_remove(tab->id);
-    g_io_channel_unref(tab->ch);
-    close(tab->fd);
+    table_close(dm,tab);
+
+    if (dm->tabdebug)
+	fprintf(stderr,"dvbmon: del:   %s %4d\n", tab->name, tab->pid);
     list_del(&tab->next);
     free(tab);
 }
@@ -275,7 +340,7 @@ static void table_refresh(struct dvbmon *dm, struct table *tab)
 /* external interface                                                            */
 
 struct dvbmon*
-dvbmon_init(struct dvb_state *dvb, int verbose)
+dvbmon_init(struct dvb_state *dvb, int verbose, int others, int pmts)
 {
     struct dvbmon *dm;
 
@@ -285,18 +350,22 @@ dvbmon_init(struct dvb_state *dvb, int verbose)
     INIT_LIST_HEAD(&dm->versions);
     INIT_LIST_HEAD(&dm->callbacks);
 
-    dm->verbose = verbose;
-    dm->timeout = 60;
-    dm->dvb  = dvb;
-    dm->info = psi_info_alloc();
+    dm->verbose  = verbose;
+    dm->tabdebug = 0;
+    dm->tablimit = (others ? 5 : 3) + pmts;
+    dm->timeout  = 60;
+    dm->dvb      = dvb;
+    dm->info     = psi_info_alloc();
     if (dm->dvb) {
 	if (dm->verbose)
 	    fprintf(stderr,"dvbmon: hwinit ok\n");
-	table_open(dm, "pat",   0x00, 0x00);
-	table_open(dm, "nit",   0x10, 0x40);
-	table_open(dm, "nit",   0x10, 0x41);
-	table_open(dm, "sdt",   0x11, 0x42);
-	table_open(dm, "sdt",   0x11, 0x46);
+	table_add(dm, "pat",   0x00, 0x00, 0);
+	table_add(dm, "nit",   0x10, 0x40, 0);
+	table_add(dm, "sdt",   0x11, 0x42, 0);
+	if (others) {
+	    table_add(dm, "nit",   0x10, 0x41, 0);
+	    table_add(dm, "sdt",   0x11, 0x46, 0);
+	}
     } else {
 	fprintf(stderr,"dvbmon: hwinit FAILED\n");
     }
@@ -313,7 +382,7 @@ void dvbmon_fini(struct dvbmon* dm)
     call_callbacks(dm, DVBMON_EVENT_DESTROY, 0, 0);
     list_for_each_safe(item,safe,&dm->tables) {
 	tab = list_entry(item, struct table, next);
-	table_close(dm, tab->pid, tab->sec);
+	table_del(dm, tab->pid, tab->sec);
     };
     list_for_each_safe(item,safe,&dm->versions) {
 	ver = list_entry(item, struct version, next);
@@ -475,6 +544,8 @@ void dvbwatch_scanner(struct psi_info *info, int event,
 	    cfg_set_int("dvb-pr", section, "video", pr->v_pid);
 	if (pr->a_pid)
 	    cfg_set_int("dvb-pr", section, "audio", pr->a_pid);
+	if (0 != strlen(pr->audio))
+	    cfg_set_str("dvb-pr", section, "audio_details", pr->audio);
 	if (pr->t_pid)
 	    cfg_set_int("dvb-pr", section, "teletext", pr->t_pid);
 	break;

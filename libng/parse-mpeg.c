@@ -830,7 +830,8 @@ static void parse_pmt_desc(unsigned char *desc, int dlen,
 
 	switch (t) {
 	case 0x56:
-	    program->t_pid = pid;
+	    if (!program->t_pid)
+		program->t_pid = pid;
 	    break;
 	}
     }
@@ -857,6 +858,20 @@ static void parse_sdt_desc(unsigned char *desc, int dlen,
 	    break;
 	}
     }
+}
+
+static char* get_lang_tag(unsigned char *desc, int dlen)
+{
+    int i,t,l;
+
+    for (i = 0; i < dlen; i += desc[i+1] +2) {
+	t = desc[i];
+	l = desc[i+1];
+
+	if (0x0a == t)
+	    return desc+i+2;
+    }
+    return NULL;
 }
 
 static void dump_data(unsigned char *data, int len)
@@ -989,7 +1004,8 @@ int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose)
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose)
 {
     int pnr,version,current;
-    int j,len,dlen,type,pid;
+    int j,len,dlen,type,pid,slen;
+    char *lang;
 
     len     = mpeg_getbits(data,12,12) + 3 - 4;
     pnr     = mpeg_getbits(data,24,16);
@@ -1017,6 +1033,10 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
 	fprintf(stderr,"\n");
     }
     j = 96 + dlen*8;
+    program->v_pid = 0;
+    program->a_pid = 0;
+    program->t_pid = 0;
+    memset(program->audio,0,sizeof(program->audio));
     while (j < len*8) {
 	type = mpeg_getbits(data,j,8);
 	pid  = mpeg_getbits(data,j+11,13);
@@ -1025,12 +1045,18 @@ int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int ver
 	case 1:
 	case 2:
 	    /* video */
-	    program->v_pid = pid;
+	    if (!program->v_pid)
+		program->v_pid = pid;
 	    break;
 	case 3:
 	case 4:
 	    /* audio */
-	    program->a_pid = pid;
+	    if (!program->a_pid)
+		program->a_pid = pid;
+	    lang = get_lang_tag(data + (j+40)/8, dlen);
+	    slen = strlen(program->audio);
+	    snprintf(program->audio + slen, sizeof(program->audio) - slen,
+		     "%s%.3s:%d", slen ? " " : "", lang ? lang : "xxx", pid);
 	    break;
 	case 6:
 	    /* private data */

@@ -57,6 +57,7 @@ struct psi_program {
     int                  v_pid;             // video
     int                  a_pid;             // audio
     int                  t_pid;             // teletext
+    char                 audio[PSI_STR_MAX];
     char                 net[PSI_STR_MAX];
     char                 name[PSI_STR_MAX];
 

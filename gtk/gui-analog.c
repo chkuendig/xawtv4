@@ -244,7 +244,7 @@ static void drag_data_get(GtkWidget *widget,
 	     NULL != item;
 	     item = g_list_next(item), i++) {
 	    gtk_tree_model_get_iter(model, &iter, item->data);
-	    gtk_tree_model_get(model, &iter, ST_COL_NAME, &name[i], -1);
+	    gtk_tree_model_get(model, &iter, info, &name[i], -1);
 	    if (debug)
 		fprintf(stderr,"  %s\n",name[i]);
 	    len += strlen(name[i])+1;

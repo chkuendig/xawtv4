@@ -236,7 +236,7 @@ grabber_init(char *dev)
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
 	display_mode = DISPLAY_DVB;
-	devs.dvbmon = dvbmon_init(devs.dvb, debug);
+	devs.dvbmon = dvbmon_init(devs.dvb, debug, 1, 2);
 	dvbmon_add_callback(devs.dvbmon,dvbwatch_scanner,NULL);
 	if (debug)
 	    dvbmon_add_callback(devs.dvbmon,dvbwatch_logger,NULL);
@@ -447,7 +447,7 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     struct ng_audio_fmt *afmt;
     struct ng_video_fmt *vfmt;
 
-    if (0 == ng_mpeg_vpid || 0 == ng_mpeg_apid) {
+    if (0 == ng_mpeg_vpid && 0 == ng_mpeg_apid) {
 	fprintf(stderr,"no DVB station tuned\n");
 	return;
     }

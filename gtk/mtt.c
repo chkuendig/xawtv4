@@ -208,7 +208,7 @@ main(int argc, char **argv)
 	if (dvbmode) {
 	    vbi_set_pid(vbi, pid);
 	    dvb    = dvb_init(device);
-	    dvbmon = dvbmon_init(dvb, debug);
+	    dvbmon = dvbmon_init(dvb, debug, 0, 2);
 	}
 #endif
 	vbi_hasdata(vbi);
