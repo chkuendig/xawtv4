@@ -46,7 +46,6 @@ console/scantv: \
 
 console/streamer: \
 	console/streamer.o \
-	$(OBJS-dvb) \
 	$(OBJS-common-capture)
 
 console/webcam: \
@@ -54,7 +53,7 @@ console/webcam: \
 	console/ftp.o \
 	common/parseconfig.o \
 	common/devs.o \
-	$(OBJS-dvb) \
+	$(OBJS-common-dvb) \
 	libng/libng.a
 
 console/v4l-info: \

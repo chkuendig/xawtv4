@@ -19,11 +19,12 @@ endif
 debug/dvb-signal: \
 	debug/dvb-signal.o \
 	common/parseconfig.o \
-	$(OBJS-dvb) \
+	$(OBJS-common-dvb) \
 	libng/libng.a
 
-debug/xvideo: debug/xvideo.o
-debug/sysfs:  debug/sysfs.o
+debug/xvideo:     debug/xvideo.o
+debug/sysfs:      debug/sysfs.o
+debug/alsamixer:  debug/alsamixer.o
 
 debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
 debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)

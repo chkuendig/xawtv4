@@ -603,6 +603,7 @@ int ng_chardev_open(char *device, int flags, int major, int complain);
 
 struct ng_reader* ng_find_reader_magic(char *filename);
 struct ng_reader* ng_find_reader_name(char *name);
+struct ng_writer* ng_find_writer_name(char *name);
 int64_t ng_tofday_to_timestamp(struct timeval *tv);
 int64_t ng_get_timestamp(void);
 void ng_check_clipping(int width, int height, int xadjust, int yadjust,

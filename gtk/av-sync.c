@@ -328,9 +328,14 @@ void av_sync_video(struct media_stream *mm)
 
 static void av_media_process_audio(struct media_stream *mm)
 {
+    struct ng_audio_buf *buf;
+
     if (NULL != mm->abuf_next)
 	return;
-    mm->abuf_next = av_audio_conv_buf(mm->as,mm->reader->rd_adata(mm->rhandle));
+    buf = mm->reader->rd_adata(mm->rhandle);
+    if (mm->writer && AUDIO_NONE != mm->wafmt.fmtid && buf)
+	mm->writer->wr_audio(mm->whandle, buf);
+    mm->abuf_next = av_audio_conv_buf(mm->as,buf);
 }
 
 static void av_media_process_video(struct media_stream *mm, int idle)
@@ -346,11 +351,21 @@ static void av_media_process_video(struct media_stream *mm, int idle)
 	if (idle)
 	    break;
 	if (mm->reader) {
-	    vbuf = mm->reader->rd_vdata(mm->rhandle,&mm->drop);
+	    if (mm->writer && VIDEO_NONE != mm->wvfmt.fmtid) {
+		/* don't drop frames when recording ... */
+		int nodrop = 0;
+		vbuf = mm->reader->rd_vdata(mm->rhandle,&nodrop);
+		if (vbuf)
+		    mm->writer->wr_video(mm->whandle, vbuf);
+	    } else {
+		vbuf = mm->reader->rd_vdata(mm->rhandle,&mm->drop);
+	    }
 	    if (mm->drop)
 		mm->blitframe = 0;
 	} else {
 	    vbuf = ng_grabber_grab_image(&devs.video,0);
+	    if (mm->writer && VIDEO_NONE != mm->wvfmt.fmtid && vbuf)
+		mm->writer->wr_video(mm->whandle, vbuf);
 	}
 	if (NULL == vbuf)
 	    break;
@@ -358,8 +373,8 @@ static void av_media_process_video(struct media_stream *mm, int idle)
     }
 }
 
-void av_media_reader_audio(struct media_stream *mm,
-			   struct ng_audio_fmt *afmt)
+void av_media_setup_audio_reader(struct media_stream *mm,
+				 struct ng_audio_fmt *afmt)
 {
     mm->as = av_audio_init(afmt);
     if (NULL == mm->as) {
@@ -370,7 +385,7 @@ void av_media_reader_audio(struct media_stream *mm,
     mm->latency = devs.sndplay.a->latency(devs.sndplay.handle);
 }
 
-void av_media_reader_video(struct media_stream *mm)
+void av_media_setup_video_reader(struct media_stream *mm)
 {
     unsigned int fmtids[2*VIDEO_FMT_COUNT],i;
     struct ng_video_fmt *vfmt;
@@ -419,8 +434,8 @@ void av_media_reader_video(struct media_stream *mm)
     mm->vs->blit = mm->blit;
 }
 
-void av_media_grab_video(struct media_stream *mm,
-			 GtkWidget *widget)
+void av_media_setup_video_grab(struct media_stream *mm,
+			       GtkWidget *widget)
 {
     unsigned int fmtids[2*VIDEO_FMT_COUNT],i;
     gint x,y,width,height,depth;
@@ -448,13 +463,76 @@ void av_media_grab_video(struct media_stream *mm,
     mm->vs->blit = mm->blit;
 }
 
+int av_media_start_recording(struct media_stream *mm,
+			     struct ng_writer *wr,
+			     char *filename)
+{
+    int video = 0, audio = 0, fps;
+
+    /* audio */
+    if (mm->as && mm->as->ifmt) {
+	for (audio = 0; wr->audio && wr->audio[audio].name != NULL; audio++)
+	    if (wr->audio[audio].fmtid == mm->as->ifmt->fmtid)
+		break;
+	if (NULL == wr->audio[audio].name) {
+	    /* todo: try to convert */
+	    fprintf(stderr,"can't record audio (%s in %s)\n",
+		    ng_afmt_to_desc[mm->as->ifmt->fmtid], wr->desc);
+	} else {
+	    mm->wafmt = *(mm->as->ifmt);
+	}
+    }
+
+    /* video */
+    if (mm->vs && mm->vs->ifmt) {
+	for (video = 0; wr->video && wr->video[video].name != NULL; video++)
+	    if (wr->video[video].fmtid == mm->vs->ifmt->fmtid)
+		break;
+	if (NULL == wr->video[video].name) {
+	    /* todo: try to convert */
+	    fprintf(stderr,"can't record video (%s in %s)\n",
+		    ng_vfmt_to_desc[mm->vs->ifmt->fmtid], wr->desc);
+	} else {
+	    mm->wvfmt = *(mm->vs->ifmt);
+	}
+    }
+
+    if (mm->wafmt.fmtid == AUDIO_NONE  &&
+	mm->wvfmt.fmtid == VIDEO_NONE)
+	return -1;
+
+    fps = 1000 / mm->frame;
+    mm->whandle = wr->wr_open(filename, NULL,
+			      &mm->wvfmt, wr->video[video].priv, fps,
+			      &mm->wafmt, wr->audio[audio].priv);
+    if (NULL == mm->whandle) {
+	fprintf(stderr,"init movie writer failed\n");
+	return -1;
+    }
+
+    mm->writer = wr;
+    return 0;
+}
+
+void av_media_stop_recording(struct media_stream *mm)
+{
+    mm->writer->wr_close(mm->whandle);
+    mm->writer  = NULL;
+    mm->whandle = NULL;
+}
+
 static int audio_fill(struct media_stream *mm)
 {
+    struct ng_audio_buf *buf;
+
     devs.sndplay.a->startplay(devs.sndplay.handle);
     for (;;) {
 	if (!av_audio_writeable(mm->as))
 	    break;
-	mm->abuf = av_audio_conv_buf(mm->as,mm->reader->rd_adata(mm->rhandle));
+	buf = mm->reader->rd_adata(mm->rhandle);
+	if (mm->writer && AUDIO_NONE != mm->wafmt.fmtid && buf)
+	    mm->writer->wr_audio(mm->whandle, buf);
+	mm->abuf = av_audio_conv_buf(mm->as, buf);
 	if (NULL == mm->abuf)
 	    break;
 	av_sync_audio(mm);

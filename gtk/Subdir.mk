@@ -26,9 +26,9 @@ gtk/xawtv: \
 	gtk/gui-control.o \
 	x11/xv.o \
 	x11/atoms.o \
-	common/dvb-monitor.o \
 	common/parseconfig.o \
-	$(OBJS-common-capture)
+	$(OBJS-common-capture) \
+	$(OBJS-glib-dvb)
 
 gtk/mtt: \
 	gtk/mtt.o \
@@ -37,18 +37,17 @@ gtk/mtt: \
 	console/vbi-tty.o \
 	common/vbi-data.o \
 	common/vbi-dvb.o \
-	common/dvb-tuning.o \
-	common/dvb-monitor.o \
 	common/parseconfig.o \
-	$(OBJS-common-capture)
+	$(OBJS-common-capture) \
+	$(OBJS-glib-dvb)
 
 gtk/alexplore: \
 	gtk/alexplore.o \
 	gtk/gui-misc.o \
 	gtk/gui-dvbtune.o \
-	common/dvb-monitor.o \
 	common/parseconfig.o \
-	$(OBJS-common-capture)
+	$(OBJS-common-capture) \
+	$(OBJS-glib-dvb)
 
 $(TARGETS-gtk) : CFLAGS  += $(GTK_CFLAGS)
 $(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) $(THREAD_LIBS) -ljpeg -lm

@@ -156,10 +156,14 @@ static void mpeg_put_frame(void *handle, struct ng_video_buf* in)
 		fr->released = 1;
 	    }
 	    break;
-	    break;
-	default:
+	case STATE_GOP:
+	case STATE_SEQUENCE:
+	case STATE_SEQUENCE_REPEATED:
 	    if (ng_debug > 2)
 		fprintf(stderr,"mpeg: state=%d [%s]\n",state,states[state]);
+	    break;
+	default:
+	    fprintf(stderr,"mpeg: state=%d [%s]\n",state,states[state]);
 	    break;
 	}
     } while (state != STATE_BUFFER);

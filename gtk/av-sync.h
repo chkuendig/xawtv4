@@ -51,6 +51,12 @@ struct media_stream {
     /* dest */
     struct blit_handle          *blit;
     
+    /* recording */
+    struct ng_writer            *writer;
+    void                        *whandle;
+    struct ng_audio_fmt         wafmt;
+    struct ng_video_fmt         wvfmt;
+
     /* config */
     int                         speed;
     
@@ -88,8 +94,14 @@ void av_sync_video(struct media_stream *mm);
 /* ---------------------------------------------------------------------------- */
 /* work in progress ...                                                         */
 
-void av_media_reader_audio(struct media_stream *mm,
-			struct ng_audio_fmt *afmt);
-void av_media_reader_video(struct media_stream *mm);
-void av_media_grab_video(struct media_stream *mm, GtkWidget *widget);
+void av_media_setup_audio_reader(struct media_stream *mm,
+				 struct ng_audio_fmt *afmt);
+void av_media_setup_video_reader(struct media_stream *mm);
+void av_media_setup_video_grab(struct media_stream *mm, GtkWidget *widget);
+
+int av_media_start_recording(struct media_stream *mm,
+			     struct ng_writer *wr,
+			     char *filename);
+void av_media_stop_recording(struct media_stream *mm);
+
 void av_media_mainloop(GMainContext *context, struct media_stream *mm);

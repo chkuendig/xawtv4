@@ -45,9 +45,9 @@ static int  dvbmode;
 static char *device;
 static char *vbidev;
 
+#ifdef HAVE_DVB
 static int mtt_dvb_findpid(char *device)
 {
-#ifdef HAVE_DVB
     struct psi_info    *info;
     struct psi_program *program;
     struct list_head   *item;
@@ -77,8 +77,8 @@ static int mtt_dvb_findpid(char *device)
     dvb_fini(h);
     psi_info_free(info);
     return pid;
-#endif
 }
+#endif
 
 static int mtt_device_init(int pid, int findpid)
 {
@@ -201,14 +201,15 @@ main(int argc, char **argv)
 	vbi = vbi_open(vbidev,debug,sim);
 	if (NULL == vbi)
 	    exit(1);
+	dvb    = NULL;
+	dvbmon = NULL;
+#ifdef HAVE_DVB
 	if (dvbmode) {
 	    vbi_set_pid(vbi, pid);
 	    dvb    = dvb_init(device);
 	    dvbmon = dvbmon_init(dvb, debug);
-	} else {
-	    dvb    = NULL;
-	    dvbmon = NULL;
 	}
+#endif
 	vbi_hasdata(vbi);
 	ch = g_io_channel_unix_new(vbi->fd);
 	id = g_io_add_watch(ch, G_IO_IN, vbi_data, vbi);

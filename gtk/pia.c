@@ -56,6 +56,7 @@ static XVisualInfo vinfo;
 #define O_CMD_DEBUG	       	O_CMDLINE, "debug"
 #define O_CMD_DVB	       	O_CMDLINE, "dvb"
 #define O_CMD_VDR	       	O_CMDLINE, "vdr"
+#define O_CMD_REC	       	O_CMDLINE, "rec"
 
 #define O_CMD_XVIDEO	       	O_CMDLINE, "xvideo"
 #define O_CMD_OPENGL	       	O_CMDLINE, "opengl"
@@ -109,6 +110,11 @@ struct cfg_cmdline cmd_opts[] = {
 	.option   = { O_CMD_VDR },
 	.value    = "1",
 	.desc     = "enable dvb mode (vdr station list)",
+    },{
+	.cmdline  = "rec",
+	.option   = { O_CMD_REC },
+	.needsarg = 1,
+	.desc     = "record movie (for dvb)",
 
     },{
 	.cmdline  = "dsp",
@@ -221,6 +227,7 @@ static void play_file(char *filename)
     struct media_stream mm;
     struct ng_audio_fmt *afmt;
     struct ng_video_fmt *vfmt;
+    char *rec;
 
     memset(&mm,0,sizeof(mm));
 
@@ -325,11 +332,19 @@ static void play_file(char *filename)
     if (video)
 	window_setup(&mm,vfmt);
     if (vfmt)
-	av_media_reader_video(&mm);
+	av_media_setup_video_reader(&mm);
 
     /* audio setup */
     if (afmt)
-	av_media_reader_audio(&mm,afmt);
+	av_media_setup_audio_reader(&mm,afmt);
+
+    /* recording */
+    rec = cfg_get_str(O_CMD_REC);
+    if (rec) {
+	struct ng_writer *wr = ng_find_writer_name("mpeg");
+	if (wr)
+	    av_media_start_recording(&mm, wr, rec);
+    }
 
     /* go playback stuff */
     av_media_mainloop(g_main_context_default(), &mm);
@@ -340,6 +355,8 @@ static void play_file(char *filename)
     mm.reader->rd_close(mm.rhandle);
     if (mm.blit)
 	blit_fini(mm.blit);
+    if (mm.writer)
+	av_media_stop_recording(&mm);
     if (command_pending)
 	command_pending--;
 

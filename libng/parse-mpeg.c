@@ -550,7 +550,7 @@ int mpeg_get_video_fmt(struct mpeg_handle *h, unsigned char *header)
     h->vfmt.height = (mpeg_getbits(header,44,12) + 15) & ~15;
     h->ratio  = mpeg_getbits(header,56,4);
     h->rate   = mpeg_getbits(header,60,4);
-    if (1 /* ng_debug */)
+    if (ng_debug)
 	fprintf(stderr,"mpeg: MPEG video, %dx%d [ratio=%s,rate=%s]\n",
 		h->vfmt.width, h->vfmt.height,
 		ratio_s[h->ratio], rate_s[h->rate]);
@@ -626,8 +626,8 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, off_t *pos)
 	    return 0;
 	}
 	if (ng_debug > 1)
-	    fprintf(stderr,"mpeg: packet 0x%x at 0x%08" PRIx64 " [need 0x%x]\n",
-		    (int)buf[3],(int64_t)*pos,packet);
+	    fprintf(stderr,"mpeg: packet 0x%x at 0x%08" PRIx64 "+%d [need 0x%x]\n",
+		    (int)buf[3],(int64_t)*pos,(int)size,packet);
 
 	/* our packet ? */
 	if (buf[3] == packet)
@@ -703,7 +703,7 @@ static void parse_string(unsigned char *src, int slen,
     iconv_string(psi_charset[ch], "UTF-8", src, slen, dest, dlen);
 }
 
-static char parse_nit_desc_1(unsigned char *desc, int dlen,
+static void parse_nit_desc_1(unsigned char *desc, int dlen,
 			     char *dest, int max)
 {
     int i,t,l;
@@ -720,7 +720,7 @@ static char parse_nit_desc_1(unsigned char *desc, int dlen,
     }
 }
 
-static char parse_nit_desc_2(unsigned char *desc, int dlen,
+static void parse_nit_desc_2(unsigned char *desc, int dlen,
 			     struct psi_stream *stream)
 {
     static char *bw[4] = {
@@ -816,7 +816,7 @@ static char parse_nit_desc_2(unsigned char *desc, int dlen,
 	    break;
 	}
     }
-    return 0;
+    return;
 }
 
 static void parse_pmt_desc(unsigned char *desc, int dlen,

@@ -136,5 +136,5 @@ int fifo_max(struct FIFO *fifo)
 
 static void __fini fifo_check(void)
 {
-    OOPS_ON(fifos > 0, "fifos is %d (expeced 0)",fifos);
+    OOPS_ON(fifos > 0, "fifos is %d (expected 0)",fifos);
 }

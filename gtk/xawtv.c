@@ -207,7 +207,9 @@ static void siginit(void)
 
 /* ------------------------------------------------------------------------ */
 
+#ifdef HAVE_DVB
 static struct dvbmon *dvbmon;
+#endif
 
 static void
 grabber_init(char *dev)
@@ -230,6 +232,7 @@ grabber_init(char *dev)
 	else if (devs.video.flags & CAN_CAPTURE)
 	    display_mode = DISPLAY_GRAB;
 
+#ifdef HAVE_DVB
     } else if (NULL != devs.dvb) {
 	/* init dvb device */
 	display_mode = DISPLAY_DVB;
@@ -237,6 +240,7 @@ grabber_init(char *dev)
 	dvbmon_add_callback(dvbmon,dvbwatch_scanner,NULL);
 	if (debug)
 	    dvbmon_add_callback(dvbmon,dvbwatch_logger,NULL);
+#endif
 
     } else {
 	display_mode = DISPLAY_NONE;
@@ -251,10 +255,12 @@ grabber_init(char *dev)
 static void
 grabber_fini(void)
 {
+#ifdef HAVE_DVB
     if (NULL != dvbmon) {
 	dvbmon_fini(dvbmon);
 	dvbmon = NULL;
     }
+#endif
     audio_off();
     device_fini();
 }
@@ -349,7 +355,7 @@ grabdisplay_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *b
     
     /* video setup */
     ng_dev_open(&devs.video);
-    av_media_grab_video(&mm,widget);
+    av_media_setup_video_grab(&mm,widget);
     
     /* go playback stuff */
     if (mm.vs) {
@@ -438,9 +444,9 @@ dvb_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     afmt = mm.reader->rd_afmt(mm.rhandle);
 
     if (vfmt)
-	av_media_reader_video(&mm);
+	av_media_setup_video_reader(&mm);
     if (afmt)
-	av_media_reader_audio(&mm,afmt);
+	av_media_setup_audio_reader(&mm,afmt);
 
     /* go playback stuff */
     av_media_mainloop(context, &mm);
@@ -510,9 +516,9 @@ mpeg_loop(GMainContext *context, GtkWidget *widget, struct blit_handle *blit)
     afmt = mm.reader->rd_afmt(mm.rhandle);
 
     if (vfmt)
-	av_media_reader_video(&mm);
+	av_media_setup_video_reader(&mm);
     if (afmt)
-	av_media_reader_audio(&mm,afmt);
+	av_media_setup_audio_reader(&mm,afmt);
 
     /* go playback stuff */
     av_media_mainloop(context, &mm);

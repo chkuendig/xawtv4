@@ -916,6 +916,21 @@ struct ng_reader* ng_find_reader_name(char *name)
     return NULL;
 }
 
+struct ng_writer* ng_find_writer_name(char *name)
+{
+    struct list_head *item;
+    struct ng_writer *writer;
+
+    list_for_each(item,&ng_writers) {
+	writer = list_entry(item, struct ng_writer, list);
+	if (0 == strcasecmp(writer->name,name))
+	    return writer;
+    }
+    if (ng_debug)
+	fprintf(stderr,"%s: no writer found [name]\n",name);
+    return NULL;
+}
+
 int64_t
 ng_tofday_to_timestamp(struct timeval *tv)
 {
