@@ -23,6 +23,7 @@ struct toolbarbutton {
     char           *priv;
     char           *stock;
     GtkSignalFunc  callback;
+    int            toggle:1;
 };
 
 extern void gtk_quit_cb(void);

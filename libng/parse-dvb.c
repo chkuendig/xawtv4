@@ -213,7 +213,6 @@ static void parse_nit_desc_2(unsigned char *desc, int dlen,
 	    stream->constellation = co_c[ mpeg_getbits(desc+i+2, 52, 4) ];
 	    break;
 	case 0x5a: /* dvb-t */
-	    unbcd(0x12345678);
 	    stream->frequency     = mpeg_getbits(desc+i+2,  0, 32) * 10;
 	    stream->bandwidth     = bw[   mpeg_getbits(desc+i+2, 33, 2) ];
 	    stream->constellation = co_t[ mpeg_getbits(desc+i+2, 40, 2) ];

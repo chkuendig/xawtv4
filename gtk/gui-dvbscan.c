@@ -1,3 +1,4 @@
+#define _GNU_SOURCE 1 /* strcasestr */
 #include "config.h"
 
 #include <stdio.h>
@@ -21,6 +22,8 @@
 
 extern int debug;
 
+#define FOREGROUND "#606060"
+
 /* ------------------------------------------------------------------------ */
 
 GtkWidget *dvbscan_win;
@@ -31,6 +34,9 @@ static GtkWidget     *status;
 static GtkTreeStore  *store;
 static GtkTreeModel  *filter;
 static GtkWidget     *view;
+
+static char  *filter_substr;
+static int   filter_free_to_air;
 
 static int   current_tsid;
 static int   last_ts_switch;
@@ -50,7 +56,7 @@ static gint  fe_poll_id;
 static void  scan_ts_start(void);
 static char* scan_ts_next(void);
 static void  mark_stale(void);
-static void  do_search(const char *str);
+static void  do_search(void);
 static void  find_ts(GtkTreeIter *iter, int tsid);
 static void  find_pr(GtkTreeIter *iter, int tsid, int pnr);
 static void  dvbwatch_gui(struct psi_info *info, int event,
@@ -66,6 +72,7 @@ enum {
     ST_COL_FREQ,
     ST_COL_PNR,
     ST_COL_CA,
+    ST_COL_TYPE,
     ST_COL_VIDEO,
     ST_COL_AUDIO,
     ST_COL_TELETEXT,
@@ -432,9 +439,26 @@ static void search_text_changed(GtkWidget *search)
 {
     const char *text = gtk_entry_get_text(GTK_ENTRY(search));
 
+    if (filter_substr) {
+	free(filter_substr);
+	filter_substr = NULL;
+    }
+    if (text && strlen(text) > 0)
+	filter_substr = strdup(text);
+	
     if (debug)
-	fprintf(stderr,"search: \"%s\"\n", text);
-    do_search(text);
+	fprintf(stderr,"search text: \"%s\"\n", filter_substr);
+    do_search();
+}
+
+static void fta_button_changed(GtkWidget *btn)
+{
+    filter_free_to_air = gtk_toggle_tool_button_get_active
+	(GTK_TOGGLE_TOOL_BUTTON(btn));
+    if (debug)
+	fprintf(stderr,"filter fta: %s\n",
+		filter_free_to_air ? "yes" : "no");
+    do_search();
 }
 
 static void dvbscan_init_gui(void)
@@ -463,6 +487,7 @@ static void dvbscan_init_gui(void)
 	    gtk_tree_store_set(store, &iter, ST_COL_NET, val, -1);
 	gtk_tree_store_set(store, &iter,
 			   ST_COL_CA,       cfg_get_int("dvb-pr",list,"ca",0),
+			   ST_COL_TYPE,     cfg_get_int("dvb-pr",list,"type",0),
 			   ST_COL_VIDEO,    cfg_get_int("dvb-pr",list,"video",0),
 			   ST_COL_AUDIO,    cfg_get_int("dvb-pr",list,"audio",0),
 			   ST_COL_TELETEXT, cfg_get_int("dvb-pr",list,"teletext",0),
@@ -491,6 +516,13 @@ static struct toolbarbutton toolbaritems[] = {
 	.tooltip  = "close window",
 	.stock    = GTK_STOCK_QUIT,
 	.callback = menu_cb_close,
+    },{
+	/* nothing */
+    },{
+	.text     = "fta",
+	.tooltip  = "show only free to air channels",
+	.toggle   = 1,
+	.callback = G_CALLBACK(fta_button_changed),
     },{
 	/* nothing */
     }
@@ -546,6 +578,7 @@ void dvbscan_create_window(int s)
 			       G_TYPE_INT,      // freq
 			       G_TYPE_INT,      // pnr
 			       G_TYPE_INT,      // ca
+			       G_TYPE_INT,      // type
 			       G_TYPE_INT,      // video
 			       G_TYPE_INT,      // audio
 			       G_TYPE_INT,      // teletext
@@ -574,7 +607,7 @@ void dvbscan_create_window(int s)
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Name", renderer,
@@ -586,7 +619,7 @@ void dvbscan_create_window(int s)
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Net", renderer,
@@ -600,7 +633,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "TSID", renderer,
@@ -613,7 +646,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "#", renderer,
@@ -627,7 +660,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Freq", renderer,
@@ -641,7 +674,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "PNR", renderer,
@@ -655,7 +688,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "CA", renderer,
@@ -669,7 +702,21 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
+		 NULL);
+    gtk_tree_view_insert_column_with_attributes
+	(GTK_TREE_VIEW(view), -1, "Type", renderer,
+	 "text",           ST_COL_TYPE,
+	 "visible",        ST_COL_TYPE,
+	 "weight-set",     ST_STATE_ACTIVE,
+	 "foreground-set", ST_STATE_STALE,
+	 NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+    g_object_set(renderer,
+		 "xalign",      1.0,
+		 "weight",      PANGO_WEIGHT_BOLD,
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Video", renderer,
@@ -683,7 +730,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Audio", renderer,
@@ -697,7 +744,7 @@ void dvbscan_create_window(int s)
     g_object_set(renderer,
 		 "xalign",      1.0,
 		 "weight",      PANGO_WEIGHT_BOLD,
-		 "foreground",  "gray",
+		 "foreground",  FOREGROUND,
 		 NULL);
     gtk_tree_view_insert_column_with_attributes
 	(GTK_TREE_VIEW(view), -1, "Teletext", renderer,
@@ -886,11 +933,36 @@ static void mark_stale(void)
     }
 }
 
-static void do_search(const char *string)
+static gboolean filter_line(GtkTreeIter *pr)
+{
+    gboolean matches = FALSE;
+    char *name, *net;
+    gint ca;
+
+    gtk_tree_model_get(GTK_TREE_MODEL(store), pr,
+		       ST_COL_NAME,    &name,
+		       ST_COL_NET,     &net,
+		       ST_COL_CA,      &ca,
+		       -1);
+
+    if (NULL != filter_substr) {
+	if (NULL != name  &&  NULL != strcasestr(name,filter_substr))
+	    matches = TRUE;
+	if (NULL != net   &&  NULL != strcasestr(net,filter_substr))
+	    matches = TRUE;
+    } else
+	matches = TRUE;
+
+    if (filter_free_to_air  &&  0 != ca)
+	matches = FALSE;
+    gtk_tree_store_set(store, pr, ST_STATE_MATCHES, matches, -1);
+    return matches;
+}
+
+static void do_search(void)
 {
     GtkTreeIter ts,pr;
     gboolean vts,vpr,matches,submatch;
-    char *name, *net;
 
     for (vts = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store),&ts);
 	 vts;
@@ -900,22 +972,13 @@ static void do_search(const char *string)
 	for (vpr = gtk_tree_model_iter_children(GTK_TREE_MODEL(store),&pr,&ts);
 	     vpr;
 	     vpr = gtk_tree_model_iter_next(GTK_TREE_MODEL(store),&pr)) {
-	    matches = FALSE;
-	    if (NULL == string) {
-		matches = TRUE;
-	    } else {
-		gtk_tree_model_get(GTK_TREE_MODEL(store), &pr,
-				   ST_COL_NAME,    &name,
-				   ST_COL_NET,     &net,
-				   -1);
-		if (name && NULL != NULL != strcasestr(name,string))
-		    matches = TRUE;
-		if (net  && NULL != NULL != strcasestr(net,string))
-		    matches = TRUE;
-		if (matches)
-		    submatch = TRUE;
-	    }
-	    gtk_tree_store_set(store, &pr, ST_STATE_MATCHES, matches, -1);
+	    matches = filter_line(&pr);
+	    if (matches)
+		submatch = TRUE;
+	}
+	if (NULL == filter_substr && !filter_free_to_air) {
+	    /* no filters active */
+	    submatch = TRUE;
 	}
 	gtk_tree_store_set(store, &ts, ST_STATE_MATCHES, submatch, -1);
 	if (submatch)
@@ -972,6 +1035,9 @@ static void dvbwatch_gui(struct psi_info *info, int event,
 	if (pr->ca)
 	    gtk_tree_store_set(store, &iter, ST_COL_CA,
 			       pr->ca, -1);
+	if (pr->type)
+	    gtk_tree_store_set(store, &iter, ST_COL_TYPE,
+			       pr->type, -1);
 	if (pr->v_pid)
 	    gtk_tree_store_set(store, &iter, ST_COL_VIDEO,
 			       pr->v_pid, -1);
