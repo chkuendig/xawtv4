@@ -40,6 +40,7 @@
 #include "parseconfig.h"
 #include "commands.h"
 #include "av-sync.h"
+#include "atoms.h"
 
 /* ------------------------------------------------------------------------ */
 
@@ -205,6 +206,8 @@ static XtActionsRec action_table[] = {
 static String res[] = {
     "pia.winGravity:		 Static",
     "pia.allowShellResize:	 true",
+    "pia.translations:           #override \\n"
+    "       <Message>WM_PROTOCOLS: Quit()",
     "pia.playback.translations:  #override \\n"
     "       <Key>space:          Next()    \\n"
     "       Ctrl<Key>C:          Quit()    \\n"
@@ -305,6 +308,8 @@ static void window_setup(struct media_stream *mm,
 	    while (True == XCheckMaskEvent(dpy, ~0, &event))
 		XtDispatchEvent(&event);
 	}
+	XSetWMProtocols(XtDisplay(app_shell), XtWindow(app_shell),
+			&WM_DELETE_WINDOW, 1);
 	first = 0;
     } else {
 	/* window present -- resize */
@@ -446,6 +451,7 @@ int main(int argc, char *argv[])
 	usage(stderr,argv[0]);
 	exit(1);
     }
+    init_atoms(XtDisplay(app_shell));
     ng_init();
     ng_dsp_init(args.dsp, &devs.sndplay, 0);
 

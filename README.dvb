@@ -25,6 +25,7 @@ use vdr anyway ...
 The applications expect a /etc/vdr/channels.conf file with all the
 tuning information in there.  If you already have one -- fine.
 Otherwise use the scan utility from the dvb package to create one.
+For DVB-S additionally a diseqc.conf file is needed.
 
 using pia
   pia is a movie simple player, but can also handle dvb.  Just start

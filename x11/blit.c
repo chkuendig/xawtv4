@@ -43,6 +43,7 @@ static unsigned int    display_bytes = 0;
 static unsigned int    pixmap_bytes = 0;
 static bool            x11_byteswap = 0;
 static int             no_mitshm = 0;
+static int             gl_error = 0;
 
 #if HAVE_LIBXV
 static int             ver, rel, req, ev, err;
@@ -89,6 +90,14 @@ catch_no_mitshm(Display * dpy, XErrorEvent * event)
 {
     fprintf(stderr,"WARNING: MIT shared memory extention not available\n");
     no_mitshm++;
+    return 0;
+}
+
+static int
+catch_gl_error(Display * dpy, XErrorEvent * event)
+{
+    fprintf(stderr,"WARNING: Your OpenGL setup is broken.\n");
+    gl_error++;
     return 0;
 }
 
@@ -429,11 +438,9 @@ static void xv_image_init(Display *dpy)
 	return;
 
     fo = XvListImageFormats(dpy, im_port, &formats);
-    if (debug)
-	fprintf(stderr,"  image format list for port %d\n",im_port);
     for(i = 0; i < formats; i++) {
 	if (debug)
-	    fprintf(stderr, "    0x%x (%c%c%c%c) %s",
+	    fprintf(stderr, "blit: xv: 0x%x (%c%c%c%c) %s",
 		    fo[i].id,
 		    (fo[i].id)       & 0xff,
 		    (fo[i].id >>  8) & 0xff,
@@ -611,6 +618,7 @@ struct {
 
 static int gl_init(Widget widget)
 {
+    void *old_handler;
     XVisualInfo *visinfo;
     GLXContext ctx;
 
@@ -630,14 +638,20 @@ static int gl_init(Widget widget)
 	    fprintf(stderr,"blit: gl: can't create context\n");
 	return -1;
     }
-    glXMakeCurrent(XtDisplay(widget),XtWindow(widget),ctx);
-    if (debug)
-	fprintf(stderr, "blit: gl: DRI=%s\n",
-		glXIsDirect(XtDisplay(widget), ctx) ? "Yes" : "No");
 
     /* there is no point in using OpenGL for image scaling if it
      * isn't hardware accelerated ... */
+    if (debug)
+	fprintf(stderr, "blit: gl: DRI=%s\n",
+		glXIsDirect(XtDisplay(widget), ctx) ? "Yes" : "No");
     if (!glXIsDirect(XtDisplay(widget), ctx))
+	return -1;
+
+    old_handler = XSetErrorHandler(catch_gl_error);
+    glXMakeCurrent(XtDisplay(widget),XtWindow(widget),ctx);
+    XSync(XtDisplay(widget), False);
+    XSetErrorHandler(old_handler);
+    if (gl_error)
 	return -1;
     
     have_gl = 1;

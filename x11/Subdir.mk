@@ -88,6 +88,7 @@ x11/rootv: \
 
 x11/pia: \
 	x11/pia.o \
+	x11/atoms.o \
 	x11/av-sync.o \
 	x11/blit.o \
 	$(OBJS-common-capture)
