@@ -61,6 +61,8 @@ static struct omenu m_mo[] = {
     { "QAM 64",         "64",  0 },
     { "QAM 128",        "128", 0 },
     { "QAM 256",        "256", 0 },
+    { "VSB 8",          "8",   0 },
+    { "VSB 16",         "1",   0 },
     { noop("auto"),     "999", 1 },
 };
 static struct omenu m_tr[] = {
@@ -359,6 +361,12 @@ void create_dvbtune(GtkWindow *parent)
 	add_guard(box, caps);
 	add_hierarchy(box, caps);
 	break;
+#ifdef FE_ATSC
+    case FE_ATSC:  /* ATSC */
+	gtk_frame_set_label(GTK_FRAME(frame)," ATSC ");
+	add_modulation(box, caps);
+	break;
+#endif
     }
 
     g_signal_connect(dvbtune_dialog, "response",

@@ -78,6 +78,7 @@ static XVisualInfo vinfo;
 #define O_CMD_DVB_S	       	O_CMDLINE, "dvbs"
 #define O_CMD_DVB_C	       	O_CMDLINE, "dvbc"
 #define O_CMD_DVB_T	       	O_CMDLINE, "dvbt"
+#define O_CMD_ATSC	       	O_CMDLINE, "atsc"
 
 #define GET_CMD_READCONF()     	cfg_get_bool(O_CMD_READCONF,   	1)
 #define GET_CMD_HW_LS()    	cfg_get_bool(O_CMD_HW_LS,       0)
@@ -133,6 +134,11 @@ struct cfg_cmdline cmd_opts_only[] = {
 	.option   = { O_CMD_DVB_T },
 	.value    = "1",
 	.desc     = "force DVB-T mode (for hackers only)",
+    },{
+	.cmdline  = "atsc",
+	.option   = { O_CMD_ATSC },
+	.value    = "1",
+	.desc     = "force ATSC mode (for hackers only)",
 
     },{
 	.cmdline  = "geometry",
@@ -1046,6 +1052,14 @@ parse_args(int *argc, char **argv)
 	dvb_type_override = FE_QAM;
     if (cfg_get_bool(O_CMD_DVB_T,0))
 	dvb_type_override = FE_OFDM;
+    if (cfg_get_bool(O_CMD_ATSC,0)) {
+#ifdef FE_ATSC
+	dvb_type_override = FE_ATSC;
+#else
+	fprintf(stderr,"Compiled without ATSC support, sorry.\n");
+	exit(1);
+#endif
+    }
 #endif
 
     /* handle devices */

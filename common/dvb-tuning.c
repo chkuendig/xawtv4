@@ -62,6 +62,10 @@ static fe_modulation_t fe_vdr_modulation[] = {
     [  64 ]           = QAM_64,
     [ 128 ]           = QAM_128,
     [ 256 ]           = QAM_256,
+#ifdef FE_ATSC
+    [   8 ]           = VSB_8,
+    [   1 ]           = VSB_16,
+#endif
 };
 
 static fe_transmit_mode_t fe_vdr_transmission[] = {
@@ -340,6 +344,9 @@ static void fixup_numbers(struct dvb_state *h, int lof)
 	break;
     case FE_QAM:
     case FE_OFDM:
+#ifdef FE_ATSC
+    case FE_ATSC:
+#endif
 	/*
 	 * DVB-C,T
 	 *   - kernel API uses Hz here.
@@ -387,6 +394,13 @@ static void dump_fe_info(struct dvb_state *h)
 		dvb_fe_guard        [ h->p.u.ofdm.guard_interval        ],
 		dvb_fe_hierarchy    [ h->p.u.ofdm.hierarchy_information ]);
 	break;
+#ifdef FE_ATSC
+    case FE_ATSC:
+	fprintf(stderr,"dvb fe: tuning freq=%d Hz, modulation=%s\n",
+		h->p.frequency,
+		dvb_fe_modulation [ h->p.u.vsb.modulation ]);
+	break;
+#endif
     }
 }
 
@@ -491,6 +505,18 @@ int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
 	val = cfg_get_int(domain, section, "hierarchy", HIERARCHY_AUTO);
 	h->p.u.ofdm.hierarchy_information = fe_vdr_hierarchy [ val ];
 	break;
+
+#ifdef FE_ATSC
+    case FE_ATSC:
+	val = cfg_get_int(domain, section, "frequency", 0);
+	if (0 == val)
+	    return -1;
+	h->p.frequency = val;
+	val = cfg_get_int(domain, section, "modulation", 0);
+	h->p.u.vsb.modulation = fe_vdr_modulation [ val ];
+	break;
+#endif
+
     }
     fixup_numbers(h,lof);
 
