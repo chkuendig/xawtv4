@@ -422,6 +422,16 @@ void create_satellite(GtkWindow *parent)
     add_lnb(box);
     add_sat(box);
 
+    /* fill current values */
+    if (dvbtune_lnb)
+	gtk_entry_set_text(GTK_ENTRY(lnb_e),dvbtune_lnb);
+    if (dvbtune_sat) {
+	int i;
+	for (i = 0; i < DIMOF(m_sat); i++)
+	    if (0 == strcasecmp(dvbtune_sat,m_sat[i].value))
+		gtk_option_menu_set_history(GTK_OPTION_MENU(sat),i);
+    }
+
     g_signal_connect(satellite_dialog, "response",
 		     G_CALLBACK(sat_response), NULL);
     gtk_widget_show_all(satellite_dialog);

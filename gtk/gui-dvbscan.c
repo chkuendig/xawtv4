@@ -484,6 +484,7 @@ static void fta_button_changed(GtkWidget *btn)
 
 static void dvbscan_init_gui(void)
 {
+    int type = dvb_frontend_get_type(devs.dvb);
     GtkTreeIter iter;
     int tsid,pnr;
     char *list,*val;
@@ -497,6 +498,10 @@ static void dvbscan_init_gui(void)
 	gtk_tree_store_set(store, &iter,
 			   ST_COL_FREQ, cfg_get_int("dvb-ts",list,"frequency",0),
 			   -1);
+	if (FE_QPSK == type  &&  NULL == dvbtune_lnb) {
+	    dvbtune_lnb = cfg_get_str("dvb-ts",list,"lnb");
+	    dvbtune_sat = cfg_get_str("dvb-ts",list,"sat");
+	}
     }
     cfg_sections_for_each("dvb-pr",list) {
 	if (2 != sscanf(list,"%d-%d",&tsid,&pnr))
@@ -816,6 +821,15 @@ void dvbscan_create_window(int s)
     /* fill data */
     dvbscan_init_gui();
     return;
+}
+
+void dvbscan_show_window(void)
+{
+    int type = dvb_frontend_get_type(devs.dvb);
+
+    gtk_widget_show_all(dvbscan_win);
+    if (FE_QPSK == type  &&  NULL == dvbtune_lnb)
+	create_satellite(GTK_WINDOW(dvbscan_win));
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1152,6 +1166,7 @@ static void add_dbentry(GtkItemFactory *factory, char *filename, int nr, char *l
     entry.callback  = dbentry_cb;
     entry.item_type = "<Item>";
     gtk_item_factory_create_items(factory, 1, &entry, strdup(line));
+    /* FIXME: free the strdup()'ed string on window destruction */
 }
 
 static void scan_dbfile(GtkItemFactory *factory, int type, char *filename)

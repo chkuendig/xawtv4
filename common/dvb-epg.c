@@ -295,7 +295,7 @@ static void parse_eit_desc(unsigned char *desc, int dlen,
 			   struct epgitem *epg, int verbose)
 {
     int i,j,t,l,l2,l3;
-    int dump,len;
+    int dump,len,part,pcount;
 
     for (i = 0; i < dlen; i += desc[i+1] +2) {
 	t = desc[i];
@@ -315,7 +315,13 @@ static void parse_eit_desc(unsigned char *desc, int dlen,
 		memset(epg->stext, 0, sizeof(epg->stext));
 	    break;
 	case 0x4e: /*  event (eid) */
-	    len = (epg->etext ? strlen(epg->etext) : 0);
+	    len    = (epg->etext ? strlen(epg->etext) : 0);
+	    part   = (desc[i+2] >> 4) & 0x0f;
+	    pcount = (desc[i+2] >> 0) & 0x0f;
+	    if (verbose > 1)
+		fprintf(stderr,"eit: ext event: %d/%d\n",part,pcount);
+	    if (0 == part)
+		len = 0;
 	    epg->etext = realloc(epg->etext, len+512);
 	    l2 = desc[i+6];     /* item list (not implemented) */
 	    l3 = desc[i+7+l2];  /* description */

@@ -96,6 +96,7 @@ extern void control_switchdevice(void);
 
 extern GtkWidget *dvbscan_win;
 void dvbscan_create_window(int s);
+void dvbscan_show_window(void);
 
 /* ------------------------------------------------------------------- */
 /* gui-dvbtune.c                                                       */

@@ -101,8 +101,12 @@ static gboolean tune_timeout(gpointer data)
     }
     if (!list)
 	list = cfg_sections_first("dvb-ts");
-    if (!list)
+    if (!list) {
+	fprintf(stderr,
+		"Hmm, no DVB streams found.  Probably you don't have scanned\n"
+		"for stations yet (use \"alexplore\" to scan).\n");
 	return FALSE;
+    }
 
     if (debug)
 	fprintf(stderr,"tune: %s\n",list);

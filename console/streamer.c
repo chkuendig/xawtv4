@@ -287,6 +287,7 @@ find_formats(void)
     }
 }
 
+/* TODO: allow endless recording */
 static int
 parse_time(char *time)
 {

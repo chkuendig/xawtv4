@@ -277,6 +277,8 @@ grabber_fini(void)
 	    gtk_widget_destroy(dvbscan_win);
 	if (dvbtune_dialog)
 	    gtk_widget_destroy(dvbtune_dialog);
+	if (satellite_dialog)
+	    gtk_widget_destroy(satellite_dialog);
 	dvbmon_fini(devs.dvbmon);
 	devs.dvbmon = NULL;
 	write_config_file("dvb-ts");

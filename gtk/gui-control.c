@@ -1017,7 +1017,7 @@ static void menu_cb_scan_dvb(void)
 {
     if (NULL == dvbscan_win)
 	dvbscan_create_window(0);
-    gtk_widget_show_all(dvbscan_win);
+    dvbscan_show_window();
 }
 #endif
 

@@ -111,7 +111,7 @@ main(int argc, char *argv[])
     if (have_x11) {
 	/* setup gtk gui */
 	dvbscan_create_window(1);
-	gtk_widget_show_all(dvbscan_win);
+	dvbscan_show_window();
 	if (!debug)
 	    gtk_redirect_stderr_to_gui(GTK_WINDOW(dvbscan_win));
     } else {
