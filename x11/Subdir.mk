@@ -122,11 +122,6 @@ x11/complete-xaw.o   : CFLAGS += -DATHENA=1
 x11/complete-motif.o : CFLAGS += -DMOTIF=1
 
 
-# i18n
-LANGUAGES := de it fr de_DE.UTF-8
-MOTV-app  := $(patsubst %,x11/MoTV4.%.ad,$(LANGUAGES))
-
-
 # local targets
 x11/complete-xaw.o: x11/complete.c
 	@$(echo_compile_c)
@@ -152,29 +147,17 @@ install::
 	$(INSTALL_DATA) $(srcdir)/x11/Xawtv4.ad $(resdir)/app-defaults/Xawtv4
 endif
 ifeq ($(FOUND_MOTIF),yes)
-install:: $(patsubst %,install-motv-%,$(LANGUAGES))
+install::
 	$(INSTALL_DATA) $(srcdir)/x11/mtt4.ad $(resdir)/app-defaults/mtt4
-	$(INSTALL_DATA) x11/MoTV4.ad $(resdir)/app-defaults/MoTV4
+	$(INSTALL_DATA) $(srcdir)/x11/MoTV4.ad $(resdir)/app-defaults/MoTV4
 endif
 
 distclean::
 	rm -f $(TARGETS-x11)
-	rm -f $(MOTV-app) x11/MoTV4.ad x11/MoTV4.h x11/Xawtv4.h x11/mtt4.h
+	rm -f x11/MoTV4.h x11/Xawtv4.h x11/mtt4.h
 
 # special dependences / rules
 x11/xawtv.o: x11/Xawtv4.h
 x11/motv.o: x11/MoTV4.h
 x11/mtt.o: x11/mtt4.h
 
-x11/MoTV4.ad: $(srcdir)/x11/MoTV-default $(srcdir)/x11/MoTV-fixed
-	cat $(srcdir)/x11/MoTV-default $(srcdir)/x11/MoTV-fixed > x11/MoTV4.ad
-
-x11/MoTV4.%.ad: x11/MoTV-%
-	cat $< $(srcdir)/x11/MoTV-fixed > $@
-
-x11/MoTV4.de_DE.UTF-8.ad: x11/MoTV4.de.ad
-	iconv -f iso-8859-1 -t utf-8 < $< > $@
-
-install-motv-%:
-	$(INSTALL_DIR) $(resdir)/$*/app-defaults
-	$(INSTALL_DATA) x11/MoTV4.$*.ad $(resdir)/$*/app-defaults/MoTV4
