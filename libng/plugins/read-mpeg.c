@@ -22,6 +22,7 @@
 #include <sys/uio.h>
 
 #include "grab-ng.h"
+#include "misc.h"
 #include "parse-mpeg.h"
 
 #define MP3_AUDIO_BUF        (4*1024)

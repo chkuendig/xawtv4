@@ -75,6 +75,9 @@
 /* Define to 1 if you have the <linux/joystick.h> header file. */
 #undef HAVE_LINUX_JOYSTICK_H
 
+/* Define to 1 if you have the `memmem' function. */
+#undef HAVE_MEMMEM
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 

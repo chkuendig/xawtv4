@@ -119,7 +119,7 @@ else
     echo "*** dvb disabled"
 fi
 
-AC_CHECK_FUNCS(ftello fseeko getpt getnameinfo getopt_long strcasestr dlopen iconv_open)
+AC_CHECK_FUNCS(ftello fseeko getpt getnameinfo getopt_long strcasestr memmem dlopen iconv_open)
 AC_SUBST(DLFLAGS)
 DLFLAGS=""
 if test "$ac_cv_func_dlopen" = "no"; then

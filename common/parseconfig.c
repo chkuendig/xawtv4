@@ -15,6 +15,7 @@
 #include <sys/types.h>
 
 #include "list.h"
+#include "misc.h"
 #include "parseconfig.h"
 
 struct cfg_entry {
@@ -38,23 +39,6 @@ struct cfg_domain {
 };
 
 LIST_HEAD(domains);
-
-/* ------------------------------------------------------------------------ */
-/* prehistoric libc ;)                                                      */
-
-#ifndef HAVE_STRCASESTR
-char* strcasestr(char *haystack, char *needle)
-{
-    int hlen = strlen(haystack);
-    int nlen = strlen(needle);
-    int offset;
-
-    for (offset = 0; offset <= hlen - nlen; offset++)
-	if (0 == strncasecmp(haystack+offset,needle,nlen))
-	    return haystack+offset;
-    return NULL;
-}
-#endif
 
 /* ------------------------------------------------------------------------ */
 /* internal stuff                                                           */

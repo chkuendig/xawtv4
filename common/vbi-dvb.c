@@ -17,6 +17,7 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #include "config.h"
+#define _GNU_SOURCE /* for glibc memmem() */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,7 @@
 #if (VBI_VERSION_MAJOR == 0) && (VBI_VERSION_MINOR <= 2) && (VBI_VERSION_MICRO <= 5)
 
 #include "vbi-dvb.h"
+#include "misc.h"
 
 /* ----------------------------------------------------------------------- */
 
@@ -58,18 +60,6 @@ struct vbi_capture_dvb {
 };
 
 /* ----------------------------------------------------------------------- */
-
-static void *memmem(unsigned char *haystack, size_t haystacklen,
-		    unsigned char *needle, size_t needlelen)
-{
-    int i;
-
-    for (i = 0; i < haystacklen - needlelen; i++)
-	if (0 == memcmp(haystack+i,needle,needlelen))
-	    return haystack+i;
-    return NULL;
-}
-
 
 static unsigned char bitswap[256];
 
