@@ -27,10 +27,10 @@
 #include <pthread.h>
 
 #include "grab-ng.h"
+#include "parseconfig.h"
 #include "tv-config.h"
 #include "commands.h"
 #include "sound.h"
-#include "parseconfig.h"
 #include "tuning.h"
 #include "event.h"
 

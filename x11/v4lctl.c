@@ -20,12 +20,12 @@
 #endif
 
 #include "grab-ng.h"
+#include "parseconfig.h"
 #include "tv-config.h"
 #include "commands.h"
 #include "devs.h"
 #include "atoms.h"
 #include "xv.h"
-#include "parseconfig.h"
 
 int debug = 0;
 int have_dga = 0;

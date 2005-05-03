@@ -183,7 +183,7 @@ main(int argc, char *argv[])
 {
     Screen *scr;
     XColor white,red,dummy;
-    int i;
+    int i,len = 0;
     Window root;
     Display *dpy, *spy_dpy;
     char title[1024];
@@ -233,9 +233,8 @@ main(int argc, char *argv[])
     wm_class     = XInternAtom(dpy,"WM_CLASS",         FALSE);
     for (i = 0; i < watch_count; i++) {
 	watch_atom[i] = XInternAtom(spy_dpy,watch_name[i],FALSE);
-	strcat(title,watch_name[i]);
-	if (i < watch_count-1)
-	    strcat(title,", ");
+	len += snprintf(title+len,sizeof(title)-len,
+			"%s%s", i ? ", " : "", watch_name[i]);
     }
     XtVaSetValues(app_shell,XtNtitle,title,NULL);
 

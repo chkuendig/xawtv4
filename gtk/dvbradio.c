@@ -54,7 +54,7 @@
 int debug = 0;
 static gboolean   have_x11;
 
-static GtkWidget  *main_win;
+static GtkWidget  *radio_win;
 static GtkWidget  *label;
 static GtkWidget  *status;
 static GtkWidget  *st_menu;
@@ -137,7 +137,11 @@ static void tune_byname(char *station)
 	if (0 != strcasecmp(station,name))
 	    continue;
 	current = name;
-	tune_dvb_channel(list);
+	if (-1 == tune_dvb_channel(list)) {
+	    if (label)
+	        gtk_label_set_text(GTK_LABEL(label),_("tuning failed"));
+	    ng_mpeg_apid = 0;
+	}
 	if (label)
 	    gtk_label_set_text(GTK_LABEL(label),name);
 	return;
@@ -499,7 +503,7 @@ static void menu_cb_about(void)
 	"\n"
 	"(c) 2004 Gerd Knorr <kraxel@bytesex.org> [SUSE Labs]";
 
-    gtk_about_box(GTK_WINDOW(main_win), APPNAME, VERSION, text);
+    gtk_about_box(GTK_WINDOW(radio_win), APPNAME, VERSION, text);
 }
 
 static GtkItemFactoryEntry menu_items[] = {
@@ -628,9 +632,9 @@ static void main_create_window(void)
     GtkAccelGroup *accel_group;
     GtkItemFactory *item_factory;
 
-    main_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(main_win),_(APPNAME));
-    g_signal_connect(main_win, "delete-event",
+    radio_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(radio_win),_(APPNAME));
+    g_signal_connect(radio_win, "delete-event",
 		     G_CALLBACK(gtk_wm_delete_quit), NULL);
 
     /* build menus */
@@ -642,7 +646,7 @@ static void main_create_window(void)
 					NULL,NULL);
     gtk_item_factory_create_items(item_factory, DIMOF(menu_items),
 				  menu_items, NULL);
-    gtk_window_add_accel_group(GTK_WINDOW(main_win), accel_group);
+    gtk_window_add_accel_group(GTK_WINDOW(radio_win), accel_group);
     menubar = gtk_item_factory_get_widget(item_factory, "<radio>");
     st_menu = gtk_item_factory_get_widget(item_factory,"<radio>/Stations");
 
@@ -667,7 +671,7 @@ static void main_create_window(void)
     /* put stuff into boxes */
     vbox = gtk_vbox_new(FALSE, 1);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 1);
-    gtk_container_add(GTK_CONTAINER(main_win), vbox);
+    gtk_container_add(GTK_CONTAINER(radio_win), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), box, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), status, FALSE, TRUE, 0);
@@ -788,9 +792,9 @@ main(int argc, char *argv[])
 	/* with X11 */
 	main_create_window();
 	conf_create_window();
-	gtk_widget_show_all(main_win);
+	gtk_widget_show_all(radio_win);
 	if (!debug)
-	    gtk_redirect_stderr_to_gui(GTK_WINDOW(main_win));
+	    gtk_redirect_stderr_to_gui(GTK_WINDOW(radio_win));
 	main_loop(g_main_context_default(), (argc > 1) ? argv[1] : NULL);
 	write_config_file("radio");
     } else {

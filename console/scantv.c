@@ -15,12 +15,12 @@
 #include <fcntl.h>
 #include <pthread.h>
 
+#include "grab-ng.h"
+#include "parseconfig.h"
 #include "tv-config.h"
 #include "tuning.h"
-#include "grab-ng.h"
 #include "commands.h"
 #include "devs.h"
-#include "parseconfig.h"
 
 #include "vbi-data.h"
 

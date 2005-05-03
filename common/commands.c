@@ -20,6 +20,7 @@
 
 #include "grab-ng.h"
 
+#include "parseconfig.h"
 #include "capture.h"
 #include "commands.h"
 #include "devs.h"
@@ -28,7 +29,6 @@
 #include "webcam.h"
 #include "tuning.h"
 #include "sound.h"
-#include "parseconfig.h"
 
 /* ----------------------------------------------------------------------- */
 
