@@ -2,6 +2,7 @@
  * Mike Baker (mbm@linux.com)
  * (based on code by timecop@japan.co.jp)
  * Buffer overflow bugfix by Mark K. Kim (dev@cbreak.org), 2003.05.22
+ * -p fix and libzvbi port (C) 2005 Michael H. Schimek <mschimek@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +36,11 @@
 #ifdef HAVE_GETOPT_H
 # include <getopt.h>
 #endif
+#ifdef HAVE_ZVBI
+# include <assert.h>
+# include <libzvbi.h>
+#endif
+
 
 #ifndef X_DISPLAY_MISSING
 # include <X11/X.h>
@@ -595,18 +601,37 @@ int main(int argc,char **argv)
    int args=0;
    int vbifd;
    fd_set rfds;
-
    int x;
+   int verbose;
 
+#ifdef HAVE_ZVBI
+
+   vbi_capture *cap;
+   char *errstr;
+   unsigned int services;
+   int scanning;
+   int strict;
+   int ignore_read_error;
+   vbi_raw_decoder *par;
+   unsigned int src_w;
+   unsigned int src_h;
+   uint8_t *raw;
+   vbi_sliced *sliced;
+   struct timeval timeout;
+
+#endif
+
+   verbose = 0;
+   
    for (;;) //commandline parsing
    {
-           if (-1 == (arg = getopt(argc, argv, "?hxsckpwRr:d:")))
+           if (-1 == (arg = getopt(argc, argv, "?hxsckpwRr:d:v")))
 		   break;
 	   switch (arg)
 	   {
 		   case '?':
 		   case 'h':
-			   printf("CCDecoder 0.9.1a (mbm@linux.com)\n"
+			   printf("CCDecoder 0.10 (mbm@linux.com)\n"
 				  "\tx \t decode XDS info\n"
 				  "\ts \t decode by sentences \n"
 				  "\tc \t decode Closed Caption (includes webtv)\n"
@@ -647,15 +672,99 @@ int main(int argc,char **argv)
 	           case 'd':
 			   vbifile = optarg;
 			   break;
+	           case 'v':
+			   ++verbose;
+			   break;
 	   }
    }
+
+#ifdef HAVE_ZVBI
+
+   errstr = NULL;
+
+   /* What we want. */
+   services = VBI_SLICED_CAPTION_525;
+
+   /* This is a hint in case the device can't tell
+      the current video standard. */
+   scanning = 525;
+
+   /* Strict sampling parameter matching: 0, 1, 2 */
+   strict = 1;
+
+   ignore_read_error = 1;
+
+   do {
+      /* Linux */
+
+      /* DVB interface omitted, doesn't support NTSC/ATSC. */
+
+      cap = vbi_capture_v4l2_new (vbifile,
+				  /* buffers */ 5,
+				  &services,
+				  strict,
+				  &errstr,
+				  !!verbose);
+      if (cap) {
+	 break;
+      }
+
+      fprintf (stderr, "Cannot capture vbi data with v4l2 interface:\n"
+	       "%s\nWill try v4l.\n", errstr);
+
+      free (errstr);
+
+      cap = vbi_capture_v4l_new (vbifile,
+				 scanning,
+				 &services,
+				 strict,
+				 &errstr,
+				 !!verbose);
+      if (cap)
+	 break;
+
+      fprintf (stderr, "Cannot capture vbi data with v4l interface:\n"
+	       "%s\n", errstr);
+
+      /* FreeBSD to do */
+
+      free (errstr);
+
+      exit(EXIT_FAILURE);
+
+   } while (0);
+
+   par = vbi_capture_parameters (cap);
+   assert (NULL != par);
+
+   src_w = par->bytes_per_line / 1;
+   src_h = par->count[0] + par->count[1];
+
+   if (useraw && (unsigned int) rawline >= src_h) {
+      fprintf (stderr, "-r must be in range 0 ... %u\n", src_h - 1);
+      exit (EXIT_FAILURE);
+   }
+
+   raw = calloc (1, src_w * src_h);
+   sliced = malloc (sizeof (vbi_sliced) * src_h);
+
+   assert (NULL != raw);
+   assert (NULL != sliced);
+
+   /* How long to wait for a frame. */
+   timeout.tv_sec = 2;
+   timeout.tv_usec = 0;
+
+#else
 
    if ((vbifd = open(vbifile, O_RDONLY)) < 0) {
 	perror(vbifile);
 	exit(1);
    }
 
-   else if (!args)
+#endif
+
+   if (!args)
 	   exit(0);
    for (x=0;x<keywords;x++)
 	printf("Keyword(%d): %s\n",x,keyword[x]);
@@ -678,7 +787,103 @@ int main(int argc,char **argv)
    }
 #endif
 	
-   
+#ifdef HAVE_ZVBI
+
+   for (;;) {
+      double timestamp;
+      int n_lines;
+      int r;
+      int i;
+
+      r = vbi_capture_read (cap, raw, sliced,
+			    &n_lines, &timestamp, &timeout);
+      switch (r) {
+      case -1:
+	 fprintf (stderr, "VBI read error: %d, %s%s\n",
+		  errno, strerror (errno),
+		  ignore_read_error ? " (ignored)" : "");
+	 if (ignore_read_error)
+	    continue;
+	 else
+	    exit (EXIT_FAILURE);
+
+      case 0: 
+	 fprintf (stderr, "VBI read timeout%s\n",
+		  ignore_read_error ? " (ignored)" : "");
+	 if (ignore_read_error)
+	    continue;
+	 else
+	    exit (EXIT_FAILURE);
+
+      case 1: /* ok */
+	 break;
+
+      default:
+	 assert (0);
+      }
+
+		if (useraw)
+		{
+#ifndef X_DISPLAY_MISSING
+		  if (debugwin) {
+		    XClearArea(dpy,Win,0,0,1024,128,0);
+		    XDrawLine(dpy,Win,WinGC1,0,128-85/2,1024,128-85/2);
+		    for (x=0;x<src_w/2;x++)
+		      if (raw[src_w * rawline+x*2]/2<128 && raw[src_w * rawline+x*2+2]/2 < 128)
+			XDrawLine(dpy,Win,WinGC0,x,128-raw[src_w * rawline+x*2]/2,
+				  x+1,128-raw[src_w * rawline+x*2+2]/2);
+		  }
+#endif
+		  for (i = 0; i < n_lines; ++i) {
+		     if (sliced[i].line == rawline) {
+			RAW(sliced[i].data[0]
+			    + sliced[i].data[1] * 256);
+		     }
+		  }
+#ifndef X_DISPLAY_MISSING
+		  if (debugwin) {
+		    XFlush(dpy);
+		    usleep(100);
+		  }
+#endif
+		}
+
+		if (0 == n_lines && verbose > 2)
+		  fprintf (stderr, "No data in this frame\n");
+
+		for (i = 0; i < n_lines; ++i) {
+		   if (verbose > 2)
+		     fprintf (stderr, "Line %3d %02x %02x\n",
+		    	      sliced[i].line,
+			      sliced[i].data[0],
+			      sliced[i].data[1]);
+		   /* No need to check sliced[i].id because we
+		      requested only caption. */
+		   if (sliced[i].line < 240) {
+		      /* First field. */
+		      if (usecc)
+			 CCdecode(sliced[i].data[0]
+				  + sliced[i].data[1] * 256);
+		      if (usesen)
+			 sentence(sliced[i].data[0]
+				  + sliced[i].data[1] * 256);
+		   } else {
+		      /* Second field. */
+		      if (usexds)
+			 XDSdecode(sliced[i].data[0]
+				  + sliced[i].data[1] * 256);
+		   }
+		}
+#ifndef X_DISPLAY_MISSING
+		if (debugwin) {
+			XFlush(dpy);
+			usleep(100);
+		}
+#endif
+   }
+
+#else /* !HAVE_ZVBI */
+
    //mainloop
    while(1){
 	FD_ZERO(&rfds);
@@ -720,6 +925,8 @@ int main(int argc,char **argv)
 		}
 #endif
 	}
-   }
+
+#endif /* !HAVE_ZVBI */
+
    return 0;
 }
