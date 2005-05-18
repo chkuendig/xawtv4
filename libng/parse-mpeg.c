@@ -365,7 +365,7 @@ unsigned char* mpeg_get_data(struct mpeg_handle *h, off_t pos, size_t size)
 	    fprintf(stderr,"mpeg: %dk file buffer shift\n", (int)(rdbytes >> 10));
     }
     
-    while (pos+size > h->boff + h->balloc  &&  !h->beof) {
+    while (pos+size > h->boff + h->balloc + 2*TS_SIZE  &&  !h->beof) {
 	/* enlarge buffer */
 	if (0 == h->bsize) {
 	    h->balloc = FILE_BUF_MIN;
