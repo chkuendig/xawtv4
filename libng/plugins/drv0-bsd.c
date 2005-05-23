@@ -145,7 +145,7 @@ static struct STRTAB inputs[] = {
     {  3, "CSVIDEO"      },
     { -1, NULL }
 };
-static int inputs_map[] = {
+static long inputs_map[] = {
     METEOR_INPUT_DEV1,
     METEOR_INPUT_DEV0,
     METEOR_INPUT_DEV_SVIDEO,
@@ -162,7 +162,7 @@ static struct STRTAB norms[] = {
     {  6, "RSVD"      },
     { -1, NULL }
 };
-static int norms_map[] = {
+static long norms_map[] = {
     BT848_IFORM_F_NTSCM,
     BT848_IFORM_F_NTSCJ,
     BT848_IFORM_F_PALBDGHI,
@@ -178,7 +178,7 @@ static struct STRTAB audio[] = {
     {  2, "Intern"      },
     { -1, NULL }
 };
-static int audio_map[] = {
+static long audio_map[] = {
     AUDIO_TUNER,
     AUDIO_EXTERN,
     AUDIO_INTERN,
@@ -605,20 +605,21 @@ bsd_get_range(int id, int *get, int *set)
 static int bsd_read_attr(struct ng_attribute *attr)
 {
     struct bsd_handle *h = attr->handle;
-    int arg, get, set, i;
+    int get, set, i;
+    long arg;
     int value = -1;
 
     BUG_ON(h->fd == -1,"device not open");
     switch (attr->id) {
     case ATTR_ID_NORM:
 	if (-1 != xioctl(h->fd,BT848GFMT,&arg))
-	    for (i = 0; i < sizeof(norms_map)/sizeof(int); i++)
+	    for (i = 0; i < sizeof(norms_map)/sizeof(*norms_map); i++)
 		if (arg == norms_map[i])
 		    value = i;
 	break;
     case ATTR_ID_INPUT:
 	if (-1 != xioctl(h->fd,METEORGINPUT,&arg))
-	    for (i = 0; i < sizeof(inputs_map)/sizeof(int); i++)
+	    for (i = 0; i < sizeof(inputs_map)/sizeof(*inputs_map); i++)
 		if (arg == inputs_map[i])
 		    value = i;
 	break;
@@ -636,7 +637,7 @@ static int bsd_read_attr(struct ng_attribute *attr)
 	break;
     case ATTR_ID_COUNT+1: /* AUDIO */
 	if (-1 != xioctl(h->tfd, BT848_GAUDIO, &arg))
-	    for (i = 0; i < sizeof(audio_map)/sizeof(int); i++)
+	    for (i = 0; i < sizeof(audio_map)/sizeof(*audio_map); i++)
 		if (arg == audio_map[i])
 		    value = i;
 	break;
@@ -649,7 +650,8 @@ static int bsd_read_attr(struct ng_attribute *attr)
 static void bsd_write_attr(struct ng_attribute *attr, int value)
 {
     struct bsd_handle *h = attr->handle;
-    int arg, get, set;
+    get, set;
+    long arg;
 
     BUG_ON(h->fd == -1,"device not open");
     switch (attr->id) {
