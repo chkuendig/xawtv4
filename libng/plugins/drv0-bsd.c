@@ -650,7 +650,7 @@ static int bsd_read_attr(struct ng_attribute *attr)
 static void bsd_write_attr(struct ng_attribute *attr, int value)
 {
     struct bsd_handle *h = attr->handle;
-    get, set;
+    int get, set;
     long arg;
 
     BUG_ON(h->fd == -1,"device not open");
