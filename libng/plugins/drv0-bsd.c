@@ -268,7 +268,7 @@ static int signal_off = METEOR_SIG_MODE_MASK;
 #define PREFIX "bktr: ioctl: "
 
 static int
-xioctl(int fd, int cmd, void *arg)
+xioctl(int fd, unsigned long cmd, void *arg)
 {
     int rc;
 
@@ -322,7 +322,7 @@ xioctl(int fd, int cmd, void *arg)
 	break;
     }
     default:
-	fprintf(stderr,PREFIX "UNKNOWN(cmd=0x%x)",cmd);
+	fprintf(stderr,PREFIX "UNKNOWN(cmd=0x%lx)",cmd);
 	break;
     }
     fprintf(stderr,": %s\n",(rc == 0) ? "ok" : strerror(errno));
