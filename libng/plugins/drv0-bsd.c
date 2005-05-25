@@ -577,7 +577,7 @@ static struct ng_attribute* bsd_attrs(void *handle)
 /* ---------------------------------------------------------------------- */
 
 static int
-bsd_get_range(int id, int *get, int *set)
+bsd_get_range(int id, int *get, long *set)
 {
     switch (id) {
     case ATTR_ID_HUE:
@@ -605,8 +605,8 @@ bsd_get_range(int id, int *get, int *set)
 static int bsd_read_attr(struct ng_attribute *attr)
 {
     struct bsd_handle *h = attr->handle;
-    int get, set, i;
-    long arg;
+    int get, i;
+    long arg, set;
     int value = -1;
 
     BUG_ON(h->fd == -1,"device not open");
@@ -650,8 +650,8 @@ static int bsd_read_attr(struct ng_attribute *attr)
 static void bsd_write_attr(struct ng_attribute *attr, int value)
 {
     struct bsd_handle *h = attr->handle;
-    int get, set;
-    long arg;
+    int get;
+    long arg, set;
 
     BUG_ON(h->fd == -1,"device not open");
     switch (attr->id) {
