@@ -415,6 +415,7 @@ int dvb_frontend_tune(struct dvb_state *h, char *domain, char *section)
     if (-1 == dvb_frontend_open(h,1))
 	return -1;
     if (0 != cfg_get_int(domain, section, "ca", 0)) {
+	dvb_demux_filter_setup(h, 0, 0);
 	fprintf(stderr,"encrypted channel, can't handle that, sorry\n");
 	return -1;
     }

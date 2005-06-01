@@ -136,14 +136,15 @@ static void tune_byname(char *station)
 	    continue;
 	if (0 != strcasecmp(station,name))
 	    continue;
-	current = name;
 	if (-1 == tune_dvb_channel(list)) {
-	    if (label)
-	        gtk_label_set_text(GTK_LABEL(label),_("tuning failed"));
+	    set_status(_("Tuning failed."));
 	    ng_mpeg_apid = 0;
+	    current = NULL;
+	} else {
+	    current = name;
+	    if (label)
+		gtk_label_set_text(GTK_LABEL(label),name);
 	}
-	if (label)
-	    gtk_label_set_text(GTK_LABEL(label),name);
 	return;
     }
 }
