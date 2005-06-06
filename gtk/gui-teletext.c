@@ -153,6 +153,7 @@ static int tt_windows = 0;
 static GQuark mtt_font;
 static GQuark mtt_subpage;
 static GQuark mtt_pid;
+static GQuark mtt_pnr;
 
 static struct vbi_font vbi_fonts[] = {
     {
@@ -202,6 +203,7 @@ static struct vbi_font vbi_fonts[] = {
 static void __init quarks(void)
 {
     mtt_pid     = g_quark_from_string("mtt-pid");
+    mtt_pnr     = g_quark_from_string("mtt-pnr");
     mtt_font    = g_quark_from_string("mtt-font");
     mtt_subpage = g_quark_from_string("mtt-subpage");
 }
@@ -1304,7 +1306,7 @@ static GtkWidget* vbi_dvb_get_widget(struct vbi_window *vw,
 {
     GList *children,*item;
     GtkWidget *child;
-    int pid;
+    int pid,pnr;
 
     children = gtk_container_get_children(GTK_CONTAINER(vw->stations));
     for (item = g_list_first(children);
@@ -1312,7 +1314,9 @@ static GtkWidget* vbi_dvb_get_widget(struct vbi_window *vw,
 	 item = g_list_next(item)) {
 	child = item->data;
 	pid = atoi(g_object_get_qdata(G_OBJECT(child),mtt_pid));
-	if (pid == pr->t_pid)
+	pnr = atoi(g_object_get_qdata(G_OBJECT(child),mtt_pnr));
+	if (pid == pr->t_pid &&
+	    pnr == pr->pnr)
 	    return child;
     }
     return NULL;
@@ -1324,7 +1328,7 @@ static void dvbwatch_teletext(struct psi_info *info, int event,
     struct vbi_window *vw = data;
     struct psi_program *pr;
     GtkWidget *item;
-    char label[64],pid[8];
+    char label[64],pid[8],spnr[8];
     
     switch (event) {
     case DVBMON_EVENT_SWITCH_TS:
@@ -1348,9 +1352,12 @@ static void dvbwatch_teletext(struct psi_info *info, int event,
 	snprintf(label,sizeof(label),"[pid %d] %s / %s",
 		 pr->t_pid,pr->net,pr->name);
 	snprintf(pid,sizeof(pid),"%d",pr->t_pid);
+	snprintf(spnr,sizeof(spnr),"%d",pnr);
 	item = gtk_menu_item_new_with_label(label);
 	g_object_set_qdata_full(G_OBJECT(item),mtt_pid,
 				strdup(pid),free);
+	g_object_set_qdata_full(G_OBJECT(item),mtt_pnr,
+				strdup(spnr),free);
 	g_signal_connect(G_OBJECT(item), "activate",
 			 G_CALLBACK(vbi_dvb_pid), vw);
 	gtk_menu_shell_append(GTK_MENU_SHELL(vw->stations),item);
