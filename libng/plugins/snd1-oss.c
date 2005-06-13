@@ -597,8 +597,9 @@ oss_write(void *handle, struct ng_audio_buf *buf)
 	buf = NULL;
 	break;
     case 0:
-	fprintf(stderr,"oss: write: Huh? no data written? (%d/%d)\n",
-                buf->written, buf->size);
+	if (buf->size > 0)
+	    fprintf(stderr,"oss: write: Huh? no data written? (%d/%d)\n",
+		    buf->written, buf->size);
 	ng_free_audio_buf(buf);
 	buf = NULL;
 	break;
