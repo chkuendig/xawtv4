@@ -153,7 +153,7 @@ static int ftp_xfer(struct xfer_state *s, char *image, int width, int height)
 	exit(1);
     }
     write_file(fh, image, width, height);
-    if (ftp_connected(s->data))
+    if (!ftp_connected(s->data))
 	ftp_connect(s->data,s->host,s->user,s->pass,s->dir);
     ftp_upload(s->data,filename,s->file,s->tmpfile);
     unlink(filename);
