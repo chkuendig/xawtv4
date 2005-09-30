@@ -1,5 +1,5 @@
 /*
- * $Id: dvb-lang.c,v 1.2 2004/12/13 11:40:09 kraxel Exp $
+ * $Id: dvb-lang.c,v 1.3 2005/09/30 12:55:31 kraxel Exp $
  *
  * keep track of the language codes seen so far
  */
@@ -36,7 +36,7 @@ static void dvb_lang_add(char *lang)
     // fprintf(stderr,"new language: \"%.3s\"\n",lang);
     l = malloc(sizeof(*l));
     memset(l,0,sizeof(*l));
-    strncpy(l->lang,lang,3);
+    strncpy(l->lang, lang, 3);
     list_add_tail(&l->next,&dvb_langs);
 }
 

@@ -58,8 +58,8 @@ struct xv_handle {
 
     /* encoding */
     struct ENC_MAP       *enc_map;
+    unsigned int         encodings;
     int                  norm, input, enc;
-    int                  encodings;
 };
 
 static const struct XVATTR {
@@ -187,7 +187,7 @@ static unsigned long
 xv_getfreq(void *handle)
 {
     struct xv_handle *h = handle;
-    unsigned int freq;
+    int freq;
 
     XvGetPortAttribute(dpy,h->port,h->xv_freq,&freq);
     return freq;
@@ -211,10 +211,11 @@ xv_tuned(void *handle)
 
 static int
 xv_overlay(void *handle, int enable, int aspect,
-	   long window, int dw, int dh)
+	   long window, unsigned int dw, unsigned int dh)
 {
     struct xv_handle *h = handle;
-    int sx,sy,dx,dy;
+    int dx,dy;
+    int sx,sy;
     int sw,sh;
     
     BUG_ON(0 == h->grabbed, "device not opened");
@@ -315,7 +316,7 @@ static int xv_close(void *handle)
 
 static int xv_check(void)
 {
-    int ver, rel, req, ev, err;
+    unsigned int ver, rel, req, ev, err;
 
     if (Success != XvQueryExtension(dpy,&ver,&rel,&req,&ev,&err)) {
 	if (debug)
@@ -338,8 +339,8 @@ xv_init(char *device)
     XvAttribute      *at;
     XvAdaptorInfo    *ai;
     struct xv_handle *h;
-    int adaptors, attributes;
-    int port, i;
+    unsigned int adaptors;
+    int port, i, attributes;
     char *tmp;
 
     if (1 != sscanf(device,"port:%d",&port))
@@ -385,8 +386,7 @@ xv_init(char *device)
     h->input       = -1;
 
     /* query encoding list */
-    if (Success != XvQueryEncodings(dpy, port,
-				    &h->encodings, &h->ei)) {
+    if (Success != XvQueryEncodings(dpy, port, &h->encodings, &h->ei)) {
 	fprintf(stderr,"Oops: XvQueryEncodings failed\n");
 	exit(1);
     }
@@ -457,7 +457,7 @@ static struct ng_devinfo* xv_probe(int verbose)
 {
     struct ng_devinfo *info = NULL;
     XvAdaptorInfo     *ai;
-    int adaptors;
+    unsigned int adaptors;
     int i,n;
 
     if (0 != xv_check())

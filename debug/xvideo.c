@@ -166,10 +166,11 @@ main(int argc, char *argv[])
     int          found,v;
     char         *class;
 
-    int ver, rel, req, ev, err, val, c;
-    unsigned int adaptors,encodings,attributes,formats;
+    unsigned int ver, rel, req, ev, err, c;
+    unsigned int adaptors,encodings;
     unsigned int i,ui,p;
-
+    int          attributes, formats, val;
+    
     /* init X11 */
     app_shell = XtAppInitialize(&app_context,
 				"xvideo",

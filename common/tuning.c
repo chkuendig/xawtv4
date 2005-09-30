@@ -130,7 +130,7 @@ static int tune_analog(int32_t freq, char *channel, char *station)
     return 0;
 }
 
-int tune_analog_freq(int freq)
+int tune_analog_freq(unsigned int freq)
 {
     return tune_analog(freq, NULL, NULL);
 }
@@ -144,12 +144,12 @@ int tune_analog_channel(char *channel)
     if (freq <= 0)
 	return -1;
 
-    return tune_analog(freq,channel,NULL);
+    return tune_analog(freq, channel, NULL);
 }
 
 int tune_analog_station(char *station)
 {
-    char     *channel;
+    char *channel;
     int32_t  freq;
     int32_t  fine = 0;
 

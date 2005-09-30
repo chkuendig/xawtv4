@@ -47,9 +47,9 @@ static int             no_mitshm = 0;
 static int             gl_error = 0;
 
 #if HAVE_LIBXV
-static int             ver, rel, req, ev, err;
+static unsigned int    ver, rel, req, ev, err;
+static unsigned int    adaptors;
 static int             formats;
-static int             adaptors;
 static XvImageFormatValues  *fo;
 static XvAdaptorInfo        *ai;
 
@@ -148,7 +148,8 @@ struct blit_video_buf_priv {
 /* ------------------------------------------------------------------------ */
 
 static void blit_ratio(struct ng_video_buf *buf,
-		       int *wx, int *wy, int *ww, int *wh)
+		       int *wx, int *wy,
+		       unsigned int *ww, unsigned int *wh)
 {
     struct blit_video_buf_priv *p = buf->priv;
     struct blit_handle *h = p->blit;
@@ -310,7 +311,7 @@ x11_create_ximage(Display *dpy, XVisualInfo *vinfo,
 		  int width, int height, XShmSegmentInfo **shm)
 {
     XImage          *ximage = NULL;
-    unsigned char   *ximage_data;
+    char            *ximage_data;
     XShmSegmentInfo *shminfo = NULL;
     void            *old_handler;
     
@@ -511,11 +512,11 @@ static void xv_image_init(Display *dpy)
 }
 
 static XvImage*
-xv_create_ximage(Display *dpy, int width, int height, int format,
-		 XShmSegmentInfo **shm)
+xv_create_ximage(Display *dpy, unsigned int width, unsigned int height,
+		 int format, XShmSegmentInfo **shm)
 {
     XvImage         *xvimage = NULL;
-    unsigned char   *ximage_data;
+    char            *ximage_data;
     XShmSegmentInfo *shminfo = NULL;
     void            *old_handler;
     
@@ -591,7 +592,8 @@ static void xv_blit(struct ng_video_buf *buf)
 {
     struct blit_video_buf_priv *p = buf->priv;
     struct blit_handle *h = p->blit;
-    int wx,wy,ww,wh;
+    unsigned int ww,wh;
+    int wx,wy;
 
     blit_ratio(buf,&wx,&wy,&ww,&wh);
     if (p->shm)
@@ -758,7 +760,8 @@ static void gl_blit(struct ng_video_buf *buf)
     struct blit_video_buf_priv *p = buf->priv;
     struct blit_handle *h = p->blit;
     float x,y;
-    int wx,wy,ww,wh;
+    unsigned int ww,wh;
+    int wx,wy;
 
     blit_ratio(buf,&wx,&wy,&ww,&wh);
 

@@ -309,9 +309,9 @@ static void parse_eit_desc(unsigned char *desc, int dlen,
 	    l2 = desc[i+5];
 	    l3 = desc[i+6+l2];
 	    memcpy(epg->lang,desc+i+2,3);
-	    mpeg_parse_psi_string(desc+i+6,    l2, epg->name,
+	    mpeg_parse_psi_string((char*)desc+i+6,    l2, epg->name,
 				  sizeof(epg->name)-1);
-	    mpeg_parse_psi_string(desc+i+7+l2, l3, epg->stext,
+	    mpeg_parse_psi_string((char*)desc+i+7+l2, l3, epg->stext,
 				  sizeof(epg->stext)-1);
 	    if (0 == strcmp(epg->name, epg->stext))
 		memset(epg->stext, 0, sizeof(epg->stext));
@@ -327,7 +327,7 @@ static void parse_eit_desc(unsigned char *desc, int dlen,
 	    epg->etext = realloc(epg->etext, len+512);
 	    l2 = desc[i+6];     /* item list (not implemented) */
 	    l3 = desc[i+7+l2];  /* description */
-	    mpeg_parse_psi_string(desc+i+8+l2, l3, epg->etext+len, 511);
+	    mpeg_parse_psi_string((char*)desc+i+8+l2, l3, epg->etext+len, 511);
 	    if (l2) {
 		if (verbose) {
 		    fprintf(stderr," [not implemented: item list (ext descr)]");
@@ -606,7 +606,7 @@ char     *cat[4];
 uint64_t flags;
 #endif
 
-static void write_string(FILE *fp, char *name, unsigned char *str)
+static void write_string(FILE *fp, char *name, char *str)
 {
     int i, len = strlen(str);
 
@@ -620,8 +620,8 @@ static void write_string(FILE *fp, char *name, unsigned char *str)
     fprintf(fp,";");
 }
 
-static int parse_string(unsigned char *dst, int dlen,
-			unsigned char *src, int slen)
+static int parse_string(char *dst, int dlen,
+			char *src, int slen)
 {
     int s,d,c;
 

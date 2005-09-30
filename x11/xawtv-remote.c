@@ -91,7 +91,7 @@ pass_cmd(Display *dpy, Atom atom, Window win, int argc, char **argv)
 {
     XEvent         event;
     int            i, len;
-    char           *pass;
+    unsigned char  *pass;
 
     if (debug)
 	printf("ctrl  0x%08lx: ",win);

@@ -27,8 +27,8 @@ struct alsa_handle {
     snd_pcm_sw_params_t  *swparams;
 
     unsigned int         btime, ptime, rate, fmtid, mul;
-    snd_pcm_sframes_t    bsize;
-    snd_pcm_sframes_t    psize;
+    snd_pcm_uframes_t    bsize;
+    snd_pcm_uframes_t    psize;
 };
 
 static int

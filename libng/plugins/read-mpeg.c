@@ -79,6 +79,7 @@ static int put_video(struct mpeg_handle *h,
     
     p1  = ptr;
     cut = NULL;
+    memset(&psc, 0, sizeof(psc));
     for (;;) {
 #if 0 /* for debugging, works for TS streams only */
 	if (bytes > TS_SIZE)
@@ -499,7 +500,7 @@ static void* mpeg_ts_open(char *moviename)
 		h->afmt.rate  = mpeg_get_audio_rate(h->ts.data+off);
 	    } else {
 		// must search for mpeg audio header
-		char *hdr;
+		unsigned char *hdr;
 		hdr = mpeg_find_audio_hdr(h->ts.data, off, h->ts.size);
 		if (NULL == hdr)
 		    continue;
@@ -547,7 +548,7 @@ static void* mpeg_ts_open(char *moviename)
 		mpeg_get_video_fmt(h, h->ts.data+off);
 	    } else {
 		// must search for header
-		char *hdr = NULL;
+		unsigned char *hdr = NULL;
 
 		hdr = memmem(h->ts.data+off,     h->ts.size-off,
 			     "\x00\x00\x01\xb3", 4);

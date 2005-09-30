@@ -156,7 +156,7 @@ static void
 add_window(Display *dpy, Window win)
 {
     Window rroot,parent,*children = NULL;
-    int i, n;
+    unsigned int i, n;
 
     if (NULL == args.watch && XtWindow(app_shell) == win)
 	/* don't f*ck up ourself */

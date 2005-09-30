@@ -627,7 +627,7 @@ cfg_sections_prev(char *dname, char *current)
     return section->name;
 }
 
-int cfg_sections_count(char *dname)
+unsigned int cfg_sections_count(char *dname)
 {
     struct list_head   *item;
     struct cfg_domain  *domain;
@@ -726,7 +726,7 @@ cfg_entries_prev(char *dname, char *sname, char *current)
     return entry->name;
 }
 
-int cfg_entries_count(char *dname, char *sname)
+unsigned int cfg_entries_count(char *dname, char *sname)
 {
     struct list_head   *item;
     struct cfg_section *section;
@@ -802,8 +802,8 @@ cfg_get_str(char *dname, char *sname, char *ename)
     return entry->value;
 }
 
-int
-cfg_get_int(char *dname, char *sname, char *ename, int def)
+unsigned int
+cfg_get_int(char *dname, char *sname, char *ename, unsigned int def)
 {
     char *val;
 
@@ -813,8 +813,8 @@ cfg_get_int(char *dname, char *sname, char *ename, int def)
     return atoi(val);
 }
 
-int
-cfg_get_signed_int(char *dname, char *sname, char *ename, unsigned int def)
+signed int
+cfg_get_signed_int(char *dname, char *sname, char *ename, signed int def)
 {
     char *val;
 
@@ -855,7 +855,7 @@ cfg_get_bool(char *dname, char *sname, char *ename, int def)
 /* ------------------------------------------------------------------------ */
 /* get/set flags                                                            */
 
-int cfg_get_sflags(char *dname, char *sname)
+unsigned int cfg_get_sflags(char *dname, char *sname)
 {
     struct cfg_section *section;
 
@@ -865,7 +865,7 @@ int cfg_get_sflags(char *dname, char *sname)
     return section->flags;
 }
 
-int cfg_get_eflags(char *dname, char *sname, char *ename)
+unsigned int cfg_get_eflags(char *dname, char *sname, char *ename)
 {
     struct cfg_entry   *entry;
 
@@ -875,8 +875,8 @@ int cfg_get_eflags(char *dname, char *sname, char *ename)
     return entry->flags;
 }
 
-int cfg_set_sflags(char *dname, char *sname,
-		   unsigned int mask, unsigned int bits)
+unsigned int cfg_set_sflags(char *dname, char *sname,
+			    unsigned int mask, unsigned int bits)
 {
     struct cfg_section *section;
 
@@ -888,8 +888,8 @@ int cfg_set_sflags(char *dname, char *sname,
     return section->flags;
 }
 
-int cfg_set_eflags(char *dname, char *sname, char *ename,
-		   unsigned int mask, unsigned int bits)
+unsigned int cfg_set_eflags(char *dname, char *sname, char *ename,
+			    unsigned int mask, unsigned int bits)
 {
     struct cfg_entry   *entry;
 

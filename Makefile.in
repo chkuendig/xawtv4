@@ -32,7 +32,10 @@ ifneq ($(wildcard .snapshot),)
 endif
 
 # for CFLAGS
-WARN_FLAGS	:= -Wall -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith
+WARN_FLAGS	:= -Wall
+WARN_FLAGS	+= -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith
+WARN_FLAGS	+= -Wno-pointer-sign	# insane for char
+
 LFS_FLAGS	:= -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 X11_FLAGS	:= @X_CFLAGS@ @XFT_FLAGS@ -I/usr/X11R6/include/X11/fonts
 LIB_FLAGS	:= -I. -I./vbistuff -I./x11 \

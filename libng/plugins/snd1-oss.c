@@ -525,7 +525,7 @@ oss_startplay(void *handle)
 }
 
 static void
-oss_bufread(int fd,char *buffer,int blocksize)
+oss_bufread(int fd, unsigned char *buffer, int blocksize)
 {
     int rc,count=0;
 

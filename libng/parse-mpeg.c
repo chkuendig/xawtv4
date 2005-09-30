@@ -690,7 +690,7 @@ static char* get_lang_tag(unsigned char *desc, int dlen)
 	l = desc[i+1];
 
 	if (0x0a == t)
-	    return desc+i+2;
+	    return (char*) desc+i+2;
     }
     return NULL;
 }

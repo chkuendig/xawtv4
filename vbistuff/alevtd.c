@@ -306,7 +306,7 @@ mainloop(void)
 
     struct REQUEST      *req,*prev,*tmp;
     struct timeval      tv;
-    int                 max,length;
+    unsigned int        max,length;
     fd_set              rd,wr;
 
     for (;!termsig;) {

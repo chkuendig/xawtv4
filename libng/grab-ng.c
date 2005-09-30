@@ -35,9 +35,10 @@ int  ng_log_bad_stream = 0;
 int  ng_log_resync     = 0;
 
 int  ng_chromakey      = 0x00ff00ff;
-int  ng_ratio_x        = 4;
-int  ng_ratio_y        = 3;
 int  ng_jpeg_quality   = 75;
+
+unsigned int  ng_ratio_x        = 4;
+unsigned int  ng_ratio_y        = 3;
 
 char ng_v4l_conf[256]  = "v4l-conf";
 
@@ -214,7 +215,7 @@ ng_malloc_audio_buf(struct ng_audio_fmt *fmt, int size)
     memset(buf,0,sizeof(*buf));
     buf->fmt  = *fmt;
     buf->size = size;
-    buf->data = (char*)buf + sizeof(*buf);
+    buf->data = (unsigned char*)buf + sizeof(*buf);
     malloc_audio_bufs++;
     return buf;
 }
@@ -367,7 +368,8 @@ ng_attr_parse_int(struct ng_attribute *attr, char *str)
 /* --------------------------------------------------------------------- */
 
 void
-ng_ratio_fixup(int *width, int *height, int *xoff, int *yoff)
+ng_ratio_fixup(unsigned int *width, unsigned int *height,
+	       int *xoff, int *yoff)
 {
     int h = *height;
     int w = *width;
@@ -386,8 +388,10 @@ ng_ratio_fixup(int *width, int *height, int *xoff, int *yoff)
 }
 
 void
-ng_ratio_fixup2(int *width, int *height, int *xoff, int *yoff,
-		int ratio_x, int ratio_y, int up)
+ng_ratio_fixup2(unsigned int *width, unsigned int *height,
+		int *xoff, int *yoff,
+		unsigned int ratio_x, unsigned int ratio_y,
+		int up)
 {
     int h = *height;
     int w = *width;

@@ -167,9 +167,8 @@ main(int argc, char *argv[])
     KeySym keysym;
     char c;
 
-    int ver, rel, req, ev, err, dummy;
-    int adaptors,attributes;
-    int i,stop,bg,newwin,do_mute,have_mute,grab;
+    unsigned int ver, rel, req, ev, err, adaptors;
+    int i, stop, bg, newwin, do_mute, have_mute, grab, dummy, attributes;
 
     dpy = XOpenDisplay(NULL);
     scr = DefaultScreenOfDisplay(dpy);

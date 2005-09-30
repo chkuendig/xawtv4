@@ -91,10 +91,10 @@ static int handle_control_8(unsigned char *src,  int slen,
     return d;
 }
 
-void mpeg_parse_psi_string(unsigned char *src, int slen,
-			   unsigned char *dest, int dlen)
+void mpeg_parse_psi_string(char *src, int slen,
+			   char *dest, int dlen)
 {
-    unsigned char *tmp;
+    char *tmp;
     int tlen,ch = 0;
 
     if (src[0] < 0x20) {
@@ -127,7 +127,7 @@ static void parse_nit_desc_1(unsigned char *desc, int dlen,
 
 	switch (t) {
 	case 0x40:
-	    mpeg_parse_psi_string(desc+i+2,l,dest,max);
+	    mpeg_parse_psi_string((char*)desc+i+2, l, dest, max);
 	    break;
 	}
     }
@@ -245,7 +245,7 @@ static void parse_sdt_desc(unsigned char *desc, int dlen,
 	case 0x48:
 	    pr->type = desc[i+2];
 	    pr->updated = 1;
-	    net = desc + i+3;
+	    net = (char*)desc + i+3;
 	    name = net + net[0] + 1;
 	    mpeg_parse_psi_string(net+1,  net[0],  pr->net,  sizeof(pr->net));
 	    mpeg_parse_psi_string(name+1, name[0], pr->name, sizeof(pr->name));

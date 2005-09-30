@@ -117,7 +117,7 @@ static gboolean table_data(GIOChannel *source, GIOCondition condition,
     struct psi_program *pr;
     struct psi_stream *stream;
     int id, version, current, old_tsid;
-    char buf[4096];
+    unsigned char buf[4096];
 
     list_for_each(item,&dm->tables) {
 	tab = list_entry(item, struct table, next);

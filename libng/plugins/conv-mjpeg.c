@@ -45,11 +45,11 @@ struct mjpeg_yuv_priv {
 };
 
 static void
-swap_rgb24(char *mem, int n)
+swap_rgb24(unsigned char *mem, int n)
 {
-    char  c;
-    char *p = mem;
-    int   i = n;
+    unsigned char  c;
+    unsigned char *p = mem;
+    int i = n;
     
     while (--i) {
 	c = p[0]; p[0] = p[2]; p[2] = c;

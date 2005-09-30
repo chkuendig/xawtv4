@@ -92,13 +92,13 @@ VirtualRootWindowOfScreen(screen) Screen *screen;
 				Atom actual_type;
 				int actual_format;
 				unsigned long nitems, bytesafter;
-				Window *newRoot = (Window *)0;
+				Window *newRoot = NULL;
 
 				if (XGetWindowProperty(dpy, children[i],
 					__SWM_VROOT, 0, 1, False, XA_WINDOW,
 					&actual_type, &actual_format,
 					&nitems, &bytesafter,
-					(unsigned char **) &newRoot) == Success
+					(unsigned char**)(&newRoot)) == Success
 				    && newRoot) {
 				    root = *newRoot;
 				    break;

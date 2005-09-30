@@ -151,7 +151,8 @@ struct avi_handle {
 /* idx1 frame index                                                        */
 
 static void
-avi_addindex(struct avi_handle *h, char *fourcc,int flags,int chunksize)
+avi_addindex(struct avi_handle *h, unsigned char *fourcc,
+	     int flags,int chunksize)
 {
     if (h->idx_index == h->idx_count) {
 	h->idx_count += 256;

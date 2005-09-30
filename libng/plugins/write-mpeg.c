@@ -147,7 +147,7 @@ mpeg_video(void *handle, struct ng_video_buf *buf)
 {
     struct mpeg_wr_handle *h = handle;
     int off,size,len = 0;
-    char hdr[256];
+    unsigned char hdr[256];
     
     len += build_ps_pack_hdr(hdr+len);
     if (0 == h->vfirst) {
@@ -171,7 +171,7 @@ mpeg_audio(void *handle, struct ng_audio_buf *buf)
 {
     struct mpeg_wr_handle *h = handle;
     int off,size,len = 0;
-    char hdr[256];
+    unsigned char hdr[256];
 
     len += build_ps_pack_hdr(hdr+len);
     if (0 == h->afirst) {
@@ -239,7 +239,7 @@ static int
 mp3_audio(void *handle, struct ng_audio_buf *buf)
 {
     struct mpeg_wr_handle *h = handle;
-    char *hdr = NULL;
+    unsigned char *hdr = NULL;
     int off;
 
     if (0 != h->afirst)

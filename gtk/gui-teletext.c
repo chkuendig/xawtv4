@@ -1128,7 +1128,7 @@ static void do_convert(struct vbi_window *vw, GtkSelectionData *sd,
 		       gint info)
 {
     struct vbi_selection *sel;
-    unsigned char *cdata;
+    char *cdata;
     int len;
     
     sel = selection_find(vw, sd->selection);

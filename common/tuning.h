@@ -9,7 +9,7 @@ extern int  curr_pnr;
 char* freqtab_get(void);
 void freqtab_set(char *name);
 int freqtab_lookup(char *channel);
-int tune_analog_freq(int freq);
+int tune_analog_freq(unsigned int freq);
 int tune_analog_channel(char *cname);
 int tune_analog_station(char *station);
 

@@ -218,7 +218,7 @@ unclutter_mouse(GtkWidget *widget, GdkEvent *event, gpointer data)
 
 static GdkCursor* empty_cursor(void)
 {
-    static unsigned char bits[32];
+    static char bits[32];
     GdkCursor *cursor;
     GdkPixmap *pixmap;
     GdkColor fg = { 0, 0, 0, 0 };

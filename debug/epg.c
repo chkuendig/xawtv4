@@ -54,7 +54,8 @@ static int export_tvbrowser_channels(char *filename)
 {
     xmlDocPtr doc;
     xmlNodePtr tv, chan;
-    char *list,*name,*enc;
+    char *list, *name;
+    unsigned char *enc;
     int type;
     char tz[8];
 
@@ -74,17 +75,17 @@ static int export_tvbrowser_channels(char *filename)
 	    continue;
 
 	chan = xmlNewChild(tv, NULL, BAD_CAST "channel", NULL);
-	xmlNewProp(chan, BAD_CAST "id", list);
+	xmlNewProp(chan, BAD_CAST "id", BAD_CAST list);
 
-	enc = xmlEncodeSpecialChars(doc, name);
+	enc = xmlEncodeSpecialChars(doc, BAD_CAST name);
 	xmlNewChild(chan, NULL, BAD_CAST "name", enc);
 	xmlFree(enc);
 
-	xmlNewChild(chan, NULL, BAD_CAST "group",     "dvbepg");
-	xmlNewChild(chan, NULL, BAD_CAST "time-zone", tz);
-	xmlNewChild(chan, NULL, BAD_CAST "country",   "xx");
-	xmlNewChild(chan, NULL, BAD_CAST "copyright", "(no copyright info)");
-	xmlNewChild(chan, NULL, BAD_CAST "url",       "about:blank");
+	xmlNewChild(chan, NULL, BAD_CAST "group",     BAD_CAST "dvbepg");
+	xmlNewChild(chan, NULL, BAD_CAST "time-zone", BAD_CAST tz);
+	xmlNewChild(chan, NULL, BAD_CAST "country",   BAD_CAST "xx");
+	xmlNewChild(chan, NULL, BAD_CAST "copyright", BAD_CAST "(no copyright info)");
+	xmlNewChild(chan, NULL, BAD_CAST "url",       BAD_CAST "about:blank");
     }
     
     xmlSaveFormatFileEnc(filename, doc, "UTF-8", 1);
@@ -101,7 +102,8 @@ static int export_xmltv(int tsid, char *filename)
     struct epgitem   *epg;
     struct list_head *item;
     struct tm *tm;
-    char buf[64],*list,*name,*enc;
+    char buf[64],*list,*name;
+    unsigned char *enc;
     int ts,pr,c,type;
 
     LIBXML_TEST_VERSION;
@@ -128,9 +130,9 @@ static int export_xmltv(int tsid, char *filename)
 		continue;
 	}
 	chan = xmlNewChild(tv, NULL, BAD_CAST "channel", NULL);
-	xmlNewProp(chan, BAD_CAST "id", list);
+	xmlNewProp(chan, BAD_CAST "id", BAD_CAST list);
 
-	enc = xmlEncodeSpecialChars(doc, name);
+	enc = xmlEncodeSpecialChars(doc, BAD_CAST name);
 	xmlNewChild(chan, NULL, BAD_CAST "display-name", enc);
 	xmlFree(enc);
     }
@@ -142,36 +144,36 @@ static int export_xmltv(int tsid, char *filename)
 	prog = xmlNewChild(tv, NULL, BAD_CAST "programme", NULL);
 
 	sprintf(buf,"%d-%d",epg->tsid,epg->pnr);
-	xmlNewProp(prog, BAD_CAST "channel", buf);
+	xmlNewProp(prog, BAD_CAST "channel", BAD_CAST buf);
 
 	/* time */
 	tm = localtime(&epg->start);
 	strftime(buf,sizeof(buf),"%Y%m%d%H%M%S %Z",tm);
-	xmlNewProp(prog, BAD_CAST "start", buf);
+	xmlNewProp(prog, BAD_CAST "start", BAD_CAST buf);
 	tm = localtime(&epg->stop);
 	strftime(buf,sizeof(buf),"%Y%m%d%H%M%S %Z",tm);
-	xmlNewProp(prog, BAD_CAST "stop", buf);
+	xmlNewProp(prog, BAD_CAST "stop", BAD_CAST buf);
 
 	/* description */
 	if (epg->name[0]) {
-	    enc = xmlEncodeSpecialChars(doc, epg->name);
+	    enc = xmlEncodeSpecialChars(doc, BAD_CAST epg->name);
 	    xmlNewChild(prog, NULL, BAD_CAST "title", enc);
 	    xmlFree(enc);
 	}
 	if (epg->stext[0]) {
-	    enc = xmlEncodeSpecialChars(doc, epg->stext);
+	    enc = xmlEncodeSpecialChars(doc, BAD_CAST epg->stext);
 	    xmlNewChild(prog, NULL, BAD_CAST "sub-title", enc);
 	    xmlFree(enc);
 	}
 	if (epg->etext) {
-	    enc = xmlEncodeSpecialChars(doc, epg->etext);
+	    enc = xmlEncodeSpecialChars(doc, BAD_CAST epg->etext);
 	    xmlNewChild(prog, NULL, BAD_CAST "desc", enc);
 	    xmlFree(enc);
 	}
 
 	/* category */
 	for (c = 0; c < DIMOF(epg->cat) && NULL != epg->cat[c]; c++) {
-	    enc = xmlEncodeSpecialChars(doc, epg->cat[c]);
+	    enc = xmlEncodeSpecialChars(doc, BAD_CAST epg->cat[c]);
 	    xmlNewChild(prog, NULL, BAD_CAST "category", enc);
 	    xmlFree(enc);
 	}
@@ -180,20 +182,20 @@ static int export_xmltv(int tsid, char *filename)
 	if (epg->flags & EPG_FLAGS_VIDEO) {
 	    attr = xmlNewChild(prog, NULL, BAD_CAST "video", NULL);
 	    if (epg->flags & EPG_FLAG_VIDEO_4_3)
-		xmlNewChild(attr, NULL, BAD_CAST "aspect", "4:3");
+		xmlNewChild(attr, NULL, BAD_CAST "aspect", BAD_CAST "4:3");
 	    else if (epg->flags & EPG_FLAG_VIDEO_16_9)
-		xmlNewChild(attr, NULL, BAD_CAST "aspect", "16:9");
+		xmlNewChild(attr, NULL, BAD_CAST "aspect", BAD_CAST "16:9");
 	}
 
 	/* audio attributes */
 	if (epg->flags & EPG_FLAGS_AUDIO) {
 	    attr = xmlNewChild(prog, NULL, BAD_CAST "audio", NULL);
 	    if (epg->flags & EPG_FLAG_AUDIO_SURROUND)
-		xmlNewChild(attr, NULL, BAD_CAST "stereo", "surround");
+		xmlNewChild(attr, NULL, BAD_CAST "stereo", BAD_CAST "surround");
 	    else if (epg->flags & EPG_FLAG_AUDIO_STEREO)
-		xmlNewChild(attr, NULL, BAD_CAST "stereo", "stereo");
+		xmlNewChild(attr, NULL, BAD_CAST "stereo", BAD_CAST "stereo");
 	    else if (epg->flags & EPG_FLAG_AUDIO_MONO)
-		xmlNewChild(attr, NULL, BAD_CAST "stereo", "mono");
+		xmlNewChild(attr, NULL, BAD_CAST "stereo", BAD_CAST "mono");
 	}
 
 	/* other attributes */

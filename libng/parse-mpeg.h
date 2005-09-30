@@ -191,8 +191,8 @@ unsigned char* mpeg_find_audio_hdr(unsigned char *buf, int off, int size);
 size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, int mask, off_t *pos);
 
 /* transport stream */
-void mpeg_parse_psi_string(unsigned char *src, int slen,
-			   unsigned char *dest, int dlen);
+void mpeg_parse_psi_string(char *src, int slen,
+			   char *dest, int dlen);
 int mpeg_parse_psi_pat(struct psi_info *info, unsigned char *data, int verbose);
 int mpeg_parse_psi_pmt(struct psi_program *program, unsigned char *data, int verbose);
 int mpeg_parse_psi(struct psi_info *info, struct mpeg_handle *h, int verbose);

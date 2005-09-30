@@ -15,13 +15,14 @@ extern int  ng_debug;
 extern int  ng_log_bad_stream;
 extern int  ng_log_resync;
 extern int  ng_chromakey;
-extern int  ng_ratio_x;
-extern int  ng_ratio_y;
 extern char ng_v4l_conf[256];
 
 extern int  ng_jpeg_quality;
 extern int  ng_mpeg_vpid;
 extern int  ng_mpeg_apid;
+
+extern unsigned int  ng_ratio_x;
+extern unsigned int  ng_ratio_y;
 
 #undef BUG_ON
 #undef BUG
@@ -236,7 +237,7 @@ struct ng_audio_buf {
     struct ng_audio_fmt  fmt;
     int                  size;
     int                  written; /* for partial writes */
-    char                 *data;
+    unsigned char        *data;
 
     struct {
 	int64_t          ts;
@@ -339,9 +340,12 @@ int ng_attr_parse_int(struct ng_attribute *attr, char *str);
 
 /* --------------------------------------------------------------------- */
 
-void ng_ratio_fixup(int *width, int *height, int *xoff, int *yoff);
-void ng_ratio_fixup2(int *width, int *height, int *xoff, int *yoff,
-		     int ratio_x, int ratio_y, int up);
+void ng_ratio_fixup(unsigned int *width, unsigned int *height,
+		    int *xoff, int *yoff);
+void ng_ratio_fixup2(unsigned int *width, unsigned int *height,
+		     int *xoff, int *yoff,
+		     unsigned int ratio_x, unsigned int ratio_y,
+		     int up);
 
 /* --------------------------------------------------------------------- */
 /* capture/overlay + sound interface drivers                             */
@@ -370,7 +374,7 @@ struct ng_vid_driver {
 		     struct OVERLAY_CLIP *oc, int count, int aspect);
 #else
     int   (*overlay)(void *handle,  int enable, int aspect,
-		     long window, int dw, int dh);
+		     long window, unsigned int dw, unsigned int dh);
 #endif
     
     /* capture */

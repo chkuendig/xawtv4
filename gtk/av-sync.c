@@ -403,7 +403,7 @@ static void av_media_process_video(struct media_stream *mm, int idle)
 	if (mm->reader) {
 	    if (mm->writer && VIDEO_NONE != mm->wvfmt.fmtid) {
 		/* don't drop frames when recording ... */
-		int nodrop = 0;
+		unsigned int nodrop = 0;
 		vbuf = mm->reader->rd_vdata(mm->rhandle,&nodrop);
 		if (vbuf)
 		    mm->writer->wr_video(mm->whandle, vbuf);
@@ -437,9 +437,10 @@ void av_media_setup_audio_reader(struct media_stream *mm,
 
 void av_media_setup_video_reader(struct media_stream *mm)
 {
-    unsigned int fmtids[2*VIDEO_FMT_COUNT],i;
+    int fmtids[2*VIDEO_FMT_COUNT],i;
     struct ng_video_fmt *vfmt;
-    struct ng_video_conv *vconv1,*vconv2;
+    struct ng_video_conv *vconv1 = NULL;
+    struct ng_video_conv *vconv2 = NULL;
     int ofmtid = 0;
 
     blit_get_formats(mm->blit,fmtids,DIMOF(fmtids));
@@ -497,7 +498,7 @@ void av_media_setup_video_reader(struct media_stream *mm)
 void av_media_setup_video_grab(struct media_stream *mm,
 			       GtkWidget *widget)
 {
-    unsigned int fmtids[2*VIDEO_FMT_COUNT],i;
+    int fmtids[2*VIDEO_FMT_COUNT],i;
     gint x,y,width,height,depth;
 
     gdk_window_get_geometry(widget->window, &x, &y, &width, &height, &depth);

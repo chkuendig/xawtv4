@@ -37,8 +37,8 @@ struct media_stream {
     struct ng_video_buf         *vbuf_next;
     int64_t                     frame;
     int64_t                     delay;
+    unsigned int                drop;
     int                         timeout;
-    int                         drop;
     int                         blitframe;
 
     /* source -- media stream parser */

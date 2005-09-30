@@ -66,7 +66,7 @@ int   grab_bg_b   = -1;
 /* jpeg stuff                                                             */
 
 static int
-write_file(int fd, char *data, int width, int height)
+write_file(int fd, unsigned char *data, int width, int height)
 {
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -125,7 +125,8 @@ struct xfer_state {
 struct xfer_ops {
     int  (*open)(struct xfer_state*);
     void (*info)(struct xfer_state*);
-    int  (*xfer)(struct xfer_state*, char *image, int width, int height);
+    int  (*xfer)(struct xfer_state*, unsigned char *image,
+		 unsigned int width, unsigned int height);
     void (*close)(struct xfer_state*);
 };
 
@@ -142,7 +143,8 @@ static void ftp_info(struct xfer_state *s)
 	    s->name,s->user,s->host,s->dir,s->tmpfile,s->file);
 }
 
-static int ftp_xfer(struct xfer_state *s, char *image, int width, int height)
+static int ftp_xfer(struct xfer_state *s, unsigned char *image,
+		    unsigned int width, unsigned int height)
 {
     char filename[1024];
     int fh;
@@ -187,7 +189,8 @@ static void ssh_info(struct xfer_state *s)
 	    s->name,s->user,s->host,s->dir,s->tmpfile,s->file);
 }
 
-static int ssh_xfer(struct xfer_state *s, char *image, int width, int height)
+static int ssh_xfer(struct xfer_state *s, unsigned char *image,
+		    unsigned int width, unsigned int height)
 {
     char filename[1024];
     char *cmd = s->data;
@@ -253,7 +256,8 @@ static void sshs_info(struct xfer_state *s)
 	    s->name,s->user,s->host,s->dir,s->tmpfile,s->file);
 }
 
-static int sshs_xfer(struct xfer_state *s, char *image, int width, int height)
+static int sshs_xfer(struct xfer_state *s, unsigned char *image,
+		     unsigned int width, unsigned int height)
 {
     char filename[1024];
     char *cmd = s->data;
@@ -328,7 +332,8 @@ static void local_info(struct xfer_state *s)
 	    s->name,s->tmpfile,s->file);
 }
 
-static int local_xfer(struct xfer_state *s, char *image, int width, int height)
+static int local_xfer(struct xfer_state *s, unsigned char *image,
+		      unsigned int width, unsigned int height)
 {
     int fh;
     
@@ -504,11 +509,12 @@ get_message(void)
 }
 
 static void
-add_text(char *image, int width, int height)
+add_text(unsigned char *image, unsigned int width, unsigned int height)
 {
     time_t      t;
     struct tm  *tm;
-    unsigned char line[MSG_MAXLEN+1],*ptr;
+    char        line[MSG_MAXLEN+1];
+    unsigned char *ptr;
     int         i,x,y,f,len;
 
     time(&t);
@@ -732,7 +738,8 @@ static int make_dirs(char *filename)
 int
 main(int argc, char *argv[])
 {
-    unsigned char *image,*val,*gimg,*lastimg = NULL;
+    unsigned char *image,*gimg,*lastimg = NULL;
+    char *val;
     int width, height, i, fh;
     char filename[1024];
     char *section;
@@ -927,10 +934,10 @@ main(int argc, char *argv[])
 	}
 
 	/* ok, label it and upload */
-	add_text(image,width,height);
+	add_text(image, width, height);
 	list_for_each(item,&connections) {
 	    s = list_entry(item, struct xfer_state, list);
-	    s->ops->xfer(s,image,width,height);
+	    s->ops->xfer(s, image, width, height);
 	}
 	if (archive) {
 	    time_t      t;
