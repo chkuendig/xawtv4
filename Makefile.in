@@ -32,9 +32,13 @@ ifneq ($(wildcard .snapshot),)
 endif
 
 # for CFLAGS
+cc-option = $(shell if $(CC) $(CFLAGS) $(1) -S -o /dev/null -xc /dev/null \
+             > /dev/null 2>&1; then echo "$(1)"; else echo "$(2)"; fi ;)
+
 WARN_FLAGS	:= -Wall
 WARN_FLAGS	+= -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith
-WARN_FLAGS	+= -Wno-pointer-sign	# insane for char
+# gcc4 is insane pedantic for character pointers :-/
+WARN_FLAGS	+= $(call cc-option, -Wno-pointer-sign)
 
 LFS_FLAGS	:= -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 X11_FLAGS	:= @X_CFLAGS@ @XFT_FLAGS@ -I/usr/X11R6/include/X11/fonts
