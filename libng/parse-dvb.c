@@ -38,6 +38,8 @@ static int iconv_string(char *from, char *to,
     size_t olen = max-1;
     iconv_t ic;
 
+    if (NULL == from)
+	return 0;
     ic = iconv_open(to,from);
     if (NULL == ic)
 	return 0;
