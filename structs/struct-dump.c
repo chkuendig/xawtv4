@@ -3,6 +3,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <ctype.h>
+#include <stddef.h>
 #include <sys/ioctl.h>
 
 #include "struct-dump.h"
@@ -13,6 +14,10 @@
 # define PRIx64 "llx"
 # define PRIu64 "llu"
 #endif
+
+struct al64 { char c; int64_t t; };
+static int al   = sizeof(long)-1;             /* struct + union */
+static int al64 = offsetof(struct al64, t)-1; /* 64bit values   */
 
 /* ---------------------------------------------------------------------- */
 
@@ -40,6 +45,7 @@ struct struct_desc desc_timeval[] = {{
 int print_struct(FILE *fp, struct struct_desc *desc, void *data,
 		 char *prefix, int tab)
 {
+	
 	char name[256];
 	unsigned char *ptr = data;
 	uint64_t u64;
@@ -50,7 +56,6 @@ int print_struct(FILE *fp, struct struct_desc *desc, void *data,
 	int16_t  s16;
 	uint8_t  u8;
 	int8_t   s8;
-	int al = sizeof(long)-1; /* struct + union + 64bit alignment */
 	void *p;
 	unsigned int i,j,first;
 
@@ -158,7 +163,7 @@ int print_struct(FILE *fp, struct struct_desc *desc, void *data,
 			ptr += 4;
 			break;
 		case BITS64:
-			ptr = (void*)(((intptr_t)ptr + al) & ~al);
+			ptr = (void*)(((intptr_t)ptr + al64) & ~al64);
 			u64 = *((uint64_t*)ptr);
 			first = 1;
 			fprintf(fp,"0x%" PRIx64 " [",u64);
@@ -175,13 +180,13 @@ int print_struct(FILE *fp, struct struct_desc *desc, void *data,
 			break;
 
 		case UINT64:
-			ptr = (void*)(((intptr_t)ptr + al) & ~al);
+			ptr = (void*)(((intptr_t)ptr + al64) & ~al64);
 			u64 = *((uint64_t*)ptr);
 			fprintf(fp,"%" PRIu64,u64);
 			ptr += 8;
 			break;
 		case SINT64:
-			ptr = (void*)(((intptr_t)ptr + al) & ~al);
+			ptr = (void*)(((intptr_t)ptr + al64) & ~al64);
 			s64 = *((int64_t*)ptr);
 			fprintf(fp,"%" PRId64,s64);
 			ptr += 8;
