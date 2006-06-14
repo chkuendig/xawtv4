@@ -611,6 +611,7 @@ int mpeg_check_video_fmt(struct mpeg_handle *h, unsigned char *header)
 
 size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, int mask, off_t *pos)
 {
+    unsigned int retries = 32;
     unsigned char *buf, *off;
     size_t size;
     off_t start = *pos;
@@ -624,6 +625,8 @@ size_t mpeg_find_ps_packet(struct mpeg_handle *h, int packet, int mask, off_t *p
 	    buf = mpeg_get_data(h, *pos, FILE_BUF_MIN/2);
 	    off = memchr(buf+1, 0, FILE_BUF_MIN/2-1);
 	    if (NULL == off)
+		return 0;
+	    if (0 == --retries)
 		return 0;
 	    if (ng_log_bad_stream)
 		fprintf(stderr,"mpeg ps: warning %d: skipped %d bytes to resync\n",
