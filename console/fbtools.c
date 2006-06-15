@@ -426,7 +426,7 @@ fb_init(char *device, char *mode, int vt)
     }
 #endif
     page_mask = getpagesize()-1;
-    fb_mem_offset = (unsigned long)(fb_fix.smem_start) & (~page_mask);
+    fb_mem_offset = (unsigned long)(fb_fix.smem_start) & page_mask;
     fb_mem = mmap(NULL,fb_fix.smem_len+fb_mem_offset,
 		  PROT_READ|PROT_WRITE,MAP_SHARED,fb,0);
     if (-1L == (long)fb_mem) {
@@ -449,7 +449,7 @@ fb_init(char *device, char *mode, int vt)
     fb_activate_current(tty);
 
     /* cls */
-    fb_memset(fb_mem+fb_mem_offset,0,fb_fix.smem_len);
+    fb_memset(fb_mem+fb_mem_offset, 0, fb_fix.line_length * fb_var.yres);
     return fb;
 
  err:
@@ -461,6 +461,8 @@ void
 fb_cleanup(void)
 {
     /* restore console */
+    if (-1 == ioctl(tty,KDSETMODE, kd_mode))
+	perror("ioctl KDSETMODE");
     if (-1 == ioctl(fb,FBIOPUT_VSCREENINFO,&fb_ovar))
 	perror("ioctl FBIOPUT_VSCREENINFO");
     if (-1 == ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix))
@@ -472,8 +474,6 @@ fb_cleanup(void)
     }
     close(fb);
 
-    if (-1 == ioctl(tty,KDSETMODE, kd_mode))
-	perror("ioctl KDSETMODE");
     if (-1 == ioctl(tty,VT_SETMODE, &vt_omode))
 	perror("ioctl VT_SETMODE");
     if (orig_vt_no && -1 == ioctl(tty, VT_ACTIVATE, orig_vt_no))
