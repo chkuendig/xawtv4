@@ -73,8 +73,8 @@ static int v4l2_tuned(void *handle);
 
 #define WANTED_BUFFERS 32
 
-#define MAX_INPUT   16
-#define MAX_NORM    16
+#define MAX_INPUT   32
+#define MAX_NORM    32
 #define MAX_FORMAT  32
 #define MAX_CTRL    32
 
