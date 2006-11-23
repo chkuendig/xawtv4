@@ -598,7 +598,7 @@ struct struct_desc desc_v4l2_queryctrl[] = {{
 	.type   = ENUM32,
 	.name   = "type",
 	.enums  = desc_v4l2_ctrl_type,
-	.length = sizeof(desc_v4l2_buf_type) / sizeof(char*),
+	.length = sizeof(desc_v4l2_ctrl_type) / sizeof(char*),
 },{
 	.type   = STRING,
 	.name   = "name",
