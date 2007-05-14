@@ -874,6 +874,7 @@ v4l2_waiton(struct v4l2_handle *h)
     /* get it */
     memset(&buf,0,sizeof(buf));
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
     if (-1 == xioctl(h->fd,VIDIOC_DQBUF,&buf, 0))
 	return -1;
     h->waiton++;
