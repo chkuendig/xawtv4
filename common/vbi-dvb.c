@@ -106,7 +106,7 @@ static int dvb_payload(struct vbi_capture_dvb *dvb,
     return slices;
 }
 
-static int dvb_wait(int fd, struct timeval *timeout)
+static int dvb_wait(int fd, struct timeval *timeout, int debug)
 {
     struct timeval tv = *timeout;
     int rc;
@@ -120,7 +120,7 @@ static int dvb_wait(int fd, struct timeval *timeout)
 	perror("dvb-vbi: select");
 	return -1;
     case 0:
-	if (dvb->debug)
+	if (debug)
 	    fprintf(stderr,"dvb-vbi: timeout\n");
 	return -1;
     default:
@@ -164,7 +164,7 @@ static int dvb_read(vbi_capture *cap,
     int ret = 0;
     int rc;
 
-    if (0 != dvb_wait(dvb->fd,timeout))
+    if (0 != dvb_wait(dvb->fd,timeout,dvb->debug))
 	return -1;
     rc = read(dvb->fd, dvb->buffer + dvb->bbytes,
 	      sizeof(dvb->buffer) - dvb->bbytes);
