@@ -109,9 +109,9 @@ static inline void linearBlend(unsigned char *src, int stride)
 static inline void linear_blend_line(unsigned char *dst, unsigned char *src,
 				     int bpl)
 {
-    unsigned char restrict *srcp = src - bpl;
-    unsigned char restrict *srch = src;
-    unsigned char restrict *srcn = src + bpl;
+    unsigned char *srcp = src - bpl;
+    unsigned char *srch = src;
+    unsigned char *srcn = src + bpl;
     int val,x = bpl;
 
     while (x--) {

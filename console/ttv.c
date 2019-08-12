@@ -9,7 +9,6 @@
 
 #include "grab-ng.h"
 #include "capture.h"
-#include "channel.h"
 #include "commands.h"
 #include "frequencies.h"
 #include "parseconfig.h"

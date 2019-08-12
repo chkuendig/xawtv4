@@ -346,12 +346,12 @@ struct ioctl_desc ioctls_dvb[256] = {
 	[_IOC_NR(DMX_GET_PES_PIDS)] = {
 		.name = "DMX_GET_PES_PIDS",
 	},
-	[_IOC_NR(DMX_GET_CAPS)] = {
-		.name = "DMX_GET_CAPS",
-	},
-	[_IOC_NR(DMX_SET_SOURCE)] = {
-		.name = "DMX_SET_SOURCE",
-	},
+//	[_IOC_NR(DMX_GET_CAPS)] = {
+//		.name = "DMX_GET_CAPS",
+//	},
+//	[_IOC_NR(DMX_SET_SOURCE)] = {
+//		.name = "DMX_SET_SOURCE",
+//	},
 	[_IOC_NR(DMX_GET_STC)] = {
 		.name = "DMX_GET_STC",
 	},

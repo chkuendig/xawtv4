@@ -312,8 +312,13 @@ fi
 QTLIBS=""
 if test "$FOUND_LQT" = "yes"; then
     QTLIBS="-lquicktime $quicktime_libs"
+    QT_FLAGS="`pkg-config libquicktime --cflags-only-I`"
+    if test "$QT_FLAGS" = ""; then
+	QT_FLAGS= "-I/usr/include/quicktime"
+    fi
 fi
 AC_SUBST(QTLIBS)
+AC_SUBST(QT_FLAGS)
 
 if test "$enable_xfree_ext" != "no"; then
     AC_CHECK_LIB(Xdpms, DPMSQueryExtension,,, 
