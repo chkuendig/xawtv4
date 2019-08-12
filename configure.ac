@@ -301,6 +301,9 @@ else
     echo "*** DV disabled"
 fi
 
+GLIB_FLAGS="`pkg-config --cflags glib-2.0`"
+AC_SUBST(GLIB_FLAGS)
+
 quicktime_libs="$DLFLAGS $(pkg-config --libs glib) $LIBPTHREAD"
 if test "$enable_quicktime" != "no"; then
     AC_CHECK_LIB(quicktime, lqt_query_registry,
@@ -316,8 +319,6 @@ if test "$FOUND_LQT" = "yes"; then
     if test "$QT_FLAGS" = ""; then
 	QT_FLAGS= "-I/usr/include/quicktime"
     fi
-    QT_FLAGS+="`pkg-config --cflags glib-2.0`"
-
 fi
 AC_SUBST(QTLIBS)
 AC_SUBST(QT_FLAGS)

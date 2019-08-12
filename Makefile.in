@@ -41,7 +41,7 @@ WARN_FLAGS	+= -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith
 WARN_FLAGS	+= $(call cc-option, -Wno-pointer-sign)
 
 LFS_FLAGS	:= -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-X11_FLAGS	:= @X_CFLAGS@ @XFT_FLAGS@ -I/usr/X11R6/include/X11/fonts @QT_FLAGS@
+X11_FLAGS	:= @X_CFLAGS@ @XFT_FLAGS@ -I/usr/X11R6/include/X11/fonts @QT_FLAGS@ @GLIB_FLAGS@
 LIB_FLAGS	:= -I. -I./vbistuff -I./x11 \
 		   -I$(srcdir)/jwz -I$(srcdir)/common -I$(srcdir)/console \
 		   -I$(srcdir)/x11 -I$(srcdir)/structs \
