@@ -14,6 +14,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <dlfcn.h>
 #include <fnmatch.h>
 #include <errno.h>
 #include <ctype.h>
