@@ -274,7 +274,7 @@ main(int argc, char **argv)
 	    exit(1);
 	}
 	if (ch)
-	    buf = ng_convert_frame(ch,NULL,buf);
+	    buf = ng_convert_single(ch,buf);
 
 	/* blit frame */
 	blitframe(buf);

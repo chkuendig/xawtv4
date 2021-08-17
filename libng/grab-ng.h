@@ -533,9 +533,6 @@ struct ng_convert_handle* ng_convert_alloc(struct ng_video_conv *conv,
 					   struct ng_video_fmt *i,
 					   struct ng_video_fmt *o);
 void ng_convert_init(struct ng_convert_handle *h);
-struct ng_video_buf* ng_convert_frame(struct ng_convert_handle *h,
-				      struct ng_video_buf *dest,
-				      struct ng_video_buf *buf);
 void ng_convert_fini(struct ng_convert_handle *h);
 struct ng_video_buf* ng_convert_single(struct ng_convert_handle *h,
 				       struct ng_video_buf *in);
