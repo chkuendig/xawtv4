@@ -44,12 +44,12 @@ debug/alsamixer:  debug/alsamixer.o
 
 debug/epg.o      : CFLAGS  += $(shell pkg-config --cflags glib-2.0 libxml-2.0)
 
-debug/xvideo     : LDLIBS  += $(ATHENA_LIBS)
-debug/alsamixer  : LDLIBS  += $(ALSA_LIBS)
+debug/xvideo     : LDLIBS  += $(ATHENA_LIBS) $(DLFLAGS)
+debug/alsamixer  : LDLIBS  += $(ALSA_LIBS) $(DLFLAGS)
 
-debug/dvb-signal : LDFLAGS += $(DLFLAGS)
-debug/vbi-rec    : LDFLAGS += $(DLFLAGS)
-debug/epg        : LDFLAGS += $(DLFLAGS) $(shell pkg-config --libs glib-2.0 libxml-2.0)
+debug/dvb-signal : LDLIBS += $(DLFLAGS)
+debug/vbi-rec    : LDLIBS += $(DLFLAGS)
+debug/epg        : LDLIBS += $(DLFLAGS) $(shell pkg-config --libs glib-2.0 libxml-2.0)
 
 # poor mans malloc debugging
 CFLAGS           += -fno-omit-frame-pointer

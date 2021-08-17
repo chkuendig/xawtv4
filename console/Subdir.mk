@@ -80,22 +80,15 @@ console/v4l-conf: console/v4l-conf.o
 # libraries to link
 console/fbtv     : LDLIBS  += \
 	$(THREAD_LIBS) $(CURSES_LIBS) $(LIRC_LIBS) $(ALSA_LIBS) \
-	$(FS_LIBS) -ljpeg -lm
-console/ttv          : LDLIBS  += $(THREAD_LIBS) $(AA_LIBS) -ljpeg -lm
-console/scantv       : LDLIBS  += $(THREAD_LIBS) $(VBI_LIBS) -ljpeg
-console/streamer     : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) -ljpeg -lm
-console/webcam       : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) -ljpeg -lm
-console/radio        : LDLIBS  += $(CURSES_LIBS)
-console/record       : LDLIBS  += $(CURSES_LIBS) $(OSS_LIBS)
-console/dump-mixers  : LDLIBS  += $(OSS_LIBS)
-console/v4l-conf     : LDLIBS  += $(X11_LIBS)
-
-# linker flags
-console/fbtv     : LDFLAGS += $(DLFLAGS)
-console/ttv      : LDFLAGS += $(DLFLAGS)
-console/scantv   : LDFLAGS += $(DLFLAGS)
-console/streamer : LDFLAGS += $(DLFLAGS)
-console/webcam   : LDFLAGS += $(DLFLAGS)
+	$(FS_LIBS) -ljpeg -lm $(DLFLAGS)
+console/ttv          : LDLIBS  += $(THREAD_LIBS) $(AA_LIBS) -ljpeg -lm $(DLFLAGS)
+console/scantv       : LDLIBS  += $(THREAD_LIBS) $(VBI_LIBS) -ljpeg $(DLFLAGS)
+console/streamer     : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) -ljpeg -lm $(DLFLAGS)
+console/webcam       : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) -ljpeg -lm $(DLFLAGS)
+console/radio        : LDLIBS  += $(CURSES_LIBS) $(DLFLAGS)
+console/record       : LDLIBS  += $(CURSES_LIBS) $(OSS_LIBS) $(DLFLAGS)
+console/dump-mixers  : LDLIBS  += $(OSS_LIBS) $(DLFLAGS)
+console/v4l-conf     : LDLIBS  += $(X11_LIBS) $(DLFLAGS)
 
 # global targets
 all:: $(TARGETS-console) $(TARGETS-v4l-conf)

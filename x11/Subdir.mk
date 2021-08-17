@@ -98,24 +98,17 @@ x11/propwatch:    x11/propwatch.o
 # libraries to link
 x11/xawtv        : LDLIBS  += \
 	$(THREAD_LIBS) $(LIRC_LIBS) \
-	$(ATHENA_LIBS) $(VBI_LIBS) $(GL_LIBS) -ljpeg -lm
+	$(ATHENA_LIBS) $(VBI_LIBS) $(GL_LIBS) -ljpeg -lm $(DLFLAGS)
 x11/motv         : LDLIBS  += \
 	$(THREAD_LIBS) $(LIRC_LIBS) \
-	$(MOTIF_LIBS) $(VBI_LIBS) $(GL_LIBS) -ljpeg -lm
+	$(MOTIF_LIBS) $(VBI_LIBS) $(GL_LIBS) -ljpeg -lm $(DLFLAGS)
 x11/pia          : LDLIBS  += \
-	$(THREAD_LIBS) $(ATHENA_LIBS) $(GL_LIBS) -ljpeg -lm
-x11/mtt          : LDLIBS  += $(THREAD_LIBS) $(MOTIF_LIBS) $(VBI_LIBS) -ljpeg
-x11/v4lctl       : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) $(ATHENA_LIBS) -ljpeg -lm
-x11/rootv        : LDLIBS  += $(ATHENA_LIBS)
-x11/xawtv-remote : LDLIBS  += $(ATHENA_LIBS)
-x11/propwatch    : LDLIBS  += $(ATHENA_LIBS)
-
-# linker flags
-x11/xawtv        : LDFLAGS += $(DLFLAGS)
-x11/motv         : LDFLAGS += $(DLFLAGS)
-x11/mtt          : LDFLAGS += $(DLFLAGS)
-x11/v4lctl       : LDFLAGS += $(DLFLAGS)
-x11/pia          : LDFLAGS += $(DLFLAGS)
+	$(THREAD_LIBS) $(ATHENA_LIBS) $(GL_LIBS) -ljpeg -lm $(DLFLAGS)
+x11/mtt          : LDLIBS  += $(THREAD_LIBS) $(MOTIF_LIBS) $(VBI_LIBS) -ljpeg $(DLFLAGS)
+x11/v4lctl       : LDLIBS  += $(THREAD_LIBS) $(ICONV_LIBS) $(ATHENA_LIBS) -ljpeg -lm $(DLFLAGS)
+x11/rootv        : LDLIBS  += $(ATHENA_LIBS) $(DLFLAGS)
+x11/xawtv-remote : LDLIBS  += $(ATHENA_LIBS) $(DLFLAGS)
+x11/propwatch    : LDLIBS  += $(ATHENA_LIBS) $(DLFLAGS)
 
 # compile flags
 x11/complete-xaw.o   : CFLAGS += -DATHENA=1

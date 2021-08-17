@@ -89,8 +89,7 @@ gtk/dvbrowse: \
 	$(OBJS-glib-dvb)
 
 $(TARGETS-gtk) : CFLAGS  += $(GTK_CFLAGS)
-$(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) $(THREAD_LIBS) -ljpeg -lm
-$(TARGETS-gtk) : LDFLAGS += $(DLFLAGS)
+$(TARGETS-gtk) : LDLIBS  += $(GTK_LIBS) $(GL_LIBS) $(THREAD_LIBS) -ljpeg -lm $(DLFLAGS)
 
 gtk/xawtv      : LDLIBS  += $(VBI_LIBS) $(ICONV_LIBS)
 gtk/mtt        : LDLIBS  += $(VBI_LIBS) $(ICONV_LIBS)
