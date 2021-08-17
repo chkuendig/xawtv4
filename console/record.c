@@ -431,7 +431,7 @@ ctrlc(int signal)
 {
     if (verbose)
 	fprintf(stderr,"\n%s - exiting\n",
-		sys_siglist[signal]);
+		strsignal(signal));
     stop = 1;
 }
 

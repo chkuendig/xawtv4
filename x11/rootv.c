@@ -130,7 +130,7 @@ catch_sig(int signal)
     termsig = signal;
     if (verbose)
 	fprintf(stderr,"received signal %d [%s]\n",
-		termsig,sys_siglist[termsig]);
+		termsig,strsignal(termsig));
 }
 
 static void usage(FILE *fp)
@@ -419,7 +419,7 @@ main(int argc, char *argv[])
     }
     if (verbose && termsig)
 	fprintf(stderr,"exiting on signal %d [%s]\n",
-		termsig,sys_siglist[termsig]);
+		termsig,strsignal(termsig));
     if (do_mute && have_mute)
 	XvSetPortAttribute(dpy,port,XV_MUTE,1);
     XvStopVideo(dpy,port,win);
