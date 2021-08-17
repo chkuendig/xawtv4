@@ -11,9 +11,8 @@
 
 #include "parseconfig.h"
 #include "tuning.h"
+#include "commands.h"
 #include "dvb-tuning.h"
-
-extern int debug;
 
 /* ---------------------------------------------------------------------------- */
 /* maintain current state                                                       */

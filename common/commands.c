@@ -49,7 +49,7 @@ void (*fullscreen_hook)(void);
 void (*exit_hook)(void);
 void (*movie_hook)(int argc, char **argv);
 
-int debug;
+int debug = 0;
 char *snapbase = "snap";
 int have_shmem;
 

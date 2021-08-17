@@ -38,7 +38,7 @@
 #include "dvb.h"
 #include "gui.h"
 
-int  debug;
+extern int debug;
 
 /* --------------------------------------------------------------------- */
 

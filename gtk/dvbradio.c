@@ -51,7 +51,6 @@
 /* ------------------------------------------------------------------------ */
 
 /* misc globals */
-int debug = 0;
 static gboolean   have_x11;
 
 static GtkWidget  *radio_win;

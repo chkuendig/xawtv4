@@ -29,7 +29,6 @@
 
 int           fs;
 
-char          *curr_station;
 char          *pick_device_new;
 
 GtkWidget     *main_win;

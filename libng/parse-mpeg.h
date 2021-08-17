@@ -14,7 +14,7 @@ extern int mpeg_rate_d[16];
 extern const char *mpeg_frame_s[];
 
 extern char *psi_charset[0x20];
-char *psi_service_type[0x100];
+extern char *psi_service_type[0x100];
 
 /* ----------------------------------------------------------------------- */
 

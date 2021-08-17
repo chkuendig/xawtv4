@@ -11,7 +11,7 @@ static Bool got_badwindow = False;
 
 Atom XA_SCREENSAVER_VERSION;
 Atom XA_SCREENSAVER;
-Atom XA_DEACTIVATE;
+static Atom XA_DEACTIVATE;
 
 static int BadWindow_ehandler(Display *dpy, XErrorEvent *error)
 {

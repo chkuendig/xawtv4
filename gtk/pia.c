@@ -40,8 +40,6 @@
 
 /* ------------------------------------------------------------------------ */
 
-int debug = 0;
-
 static GtkWidget *toplevel,*video,*menu;
 static Display *dpy;
 static Visual *visual;

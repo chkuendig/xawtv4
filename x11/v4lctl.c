@@ -27,7 +27,6 @@
 #include "atoms.h"
 #include "xv.h"
 
-int debug = 0;
 int have_dga = 0;
 Display *dpy;
 

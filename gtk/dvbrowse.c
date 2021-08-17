@@ -38,7 +38,6 @@
 /* ------------------------------------------------------------------------ */
 
 /* misc globals */
-int debug = 0;
 Display *dpy;
 static struct eit_state *eit;
 static int tune_secs = 32;
